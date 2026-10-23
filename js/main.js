@@ -236,40 +236,146 @@
     grid.innerHTML = featured.map(renderProductCard).join('');
   }
 
-function renderCatalogSections() {
+  let activeStorefrontFeedbacks = [];
+  let currentFeedbackLightboxIndex = 0;
+
+  function defaultStorefrontFeedbacks() {
+    return Array.from({ length: 13 }, (_, index) => ({
+      id: `fb-${index + 1}`,
+      title: `Feedback ${index + 1}`,
+      image: `assets/images/feedback-${index + 1}.webp`,
+      order: index + 1
+    }));
+  }
+
+  function renderCatalogSections(feedbacksList = null) {
     const holder = document.getElementById('catalog-product-sections');
     if (!holder) return;
-    const feedbackImages = Array.from({ length: 13 }, (_, index) => `assets/images/feedback-${index + 1}.webp`);
-    const feedbackModalControls = `<input class="feedback-viewer-toggle" type="radio" name="feedback-viewer" id="feedback-viewer-close" checked>`;
-    const feedbackModals = feedbackImages.map((src, index) => {
-      const current = index + 1;
-      const previous = index === 0 ? feedbackImages.length : index;
-      const next = index === feedbackImages.length - 1 ? 1 : index + 2;
-      // Use original image as fallback since -400/-800 variants don't exist for all images
-      return `<div class="feedback-native-modal feedback-native-modal--${current}" role="dialog" aria-modal="true" aria-label="Feedback de cliente ampliado"><label class="feedback-native-modal__backdrop" for="feedback-viewer-close" aria-label="Fechar imagem"></label><label class="feedback-native-modal__close" for="feedback-viewer-close" aria-label="Fechar imagem">×</label><label class="feedback-native-modal__nav feedback-native-modal__nav--previous" for="feedback-viewer-${previous}" aria-label="Feedback anterior">‹</label><img src="${src}" srcset="${src} 1200w" sizes="(min-width:700px) 860px, 92vw" alt="Feedback de cliente NT Eleganz ${current}" loading="lazy" decoding="async"><label class="feedback-native-modal__nav feedback-native-modal__nav--next" for="feedback-viewer-${next}" aria-label="Próximo feedback">›</label><span class="feedback-native-modal__count">${current} / ${feedbackImages.length}</span></div>`;
+
+    if (Array.isArray(feedbacksList) && feedbacksList.length) {
+      activeStorefrontFeedbacks = feedbacksList.filter(f => f.active !== false);
+    }
+    if (!activeStorefrontFeedbacks.length) {
+      activeStorefrontFeedbacks = defaultStorefrontFeedbacks();
+    }
+
+    // Ordena os feedbacks conforme a ordem definida no admin
+    activeStorefrontFeedbacks.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // Renderiza os cards (duplicamos a sequência para criar o carrossel infinito contínuo e suave)
+    const renderCards = (list, isDuplicate = false) => list.map((item, index) => {
+      const src = item.image || item;
+      const title = item.title || `Feedback ${index + 1}`;
+      const ariaHidden = isDuplicate ? 'aria-hidden="true"' : '';
+      return `<button type="button" class="feedback-section__card" data-index="${index}" ${ariaHidden} aria-label="Ampliar ${title}" style="background-image:url('${src}')"></button>`;
     }).join('');
+
     holder.innerHTML = `<section class="feedback-section" aria-labelledby="feedback-title">
-      ${feedbackModalControls}
       <header class="feedback-section__head">
         <div>
           <span class="feedback-section__eyebrow">Quem escolhe a NT</span>
           <h2 id="feedback-title" class="feedback-section__title">Feedbacks reais</h2>
         </div>
-        <span class="feedback-section__hint">Arraste para explorar <span aria-hidden="true">→</span></span>
+        <span class="feedback-section__hint">Passe o mouse para pausar e ampliar <span aria-hidden="true">→</span></span>
       </header>
-      <div class="feedback-section__track" role="list" aria-label="Feedbacks de clientes">
-        ${feedbackImages.map((src, index) => {
-          // Use original image as fallback for thumb
-          const thumb = src; // variants -400.webp don't exist for all images
-          return `<input class="feedback-section__card feedback-viewer-choice" type="radio" name="feedback-viewer" id="feedback-viewer-${index + 1}" aria-label="Ampliar feedback de cliente NT Eleganz ${index + 1}" style="background-image:url('${thumb}')">`;
-        }).join('')}
+      <div class="feedback-section__marquee" id="feedback-marquee">
+        <div class="feedback-section__track" id="feedback-track" role="list" aria-label="Feedbacks de clientes">
+          ${renderCards(activeStorefrontFeedbacks, false)}
+          ${renderCards(activeStorefrontFeedbacks, true)}
+        </div>
       </div>
-      ${feedbackModals}
+
+      <!-- Lightbox Modal para ampliação de qualquer feedback -->
+      <div class="feedback-lightbox-modal" id="feedback-lightbox-modal" role="dialog" aria-modal="true" aria-label="Depoimento ampliado" hidden>
+        <div class="feedback-lightbox-modal__backdrop" onclick="closeFeedbackLightbox()"></div>
+        <button type="button" class="feedback-lightbox-modal__close" onclick="closeFeedbackLightbox()" aria-label="Fechar">×</button>
+        <button type="button" class="feedback-lightbox-modal__nav feedback-lightbox-modal__nav--prev" onclick="stepFeedbackLightbox(-1)" aria-label="Feedback anterior">‹</button>
+        <div class="feedback-lightbox-modal__content">
+          <img class="feedback-lightbox-modal__img" id="feedback-lightbox-img" src="" alt="Feedback de cliente" loading="lazy" />
+          <span class="feedback-lightbox-modal__counter" id="feedback-lightbox-counter">1 / ${activeStorefrontFeedbacks.length}</span>
+        </div>
+        <button type="button" class="feedback-lightbox-modal__nav feedback-lightbox-modal__nav--next" onclick="stepFeedbackLightbox(1)" aria-label="Próximo feedback">›</button>
+      </div>
     </section>`;
+
+    initFeedbackGallery();
   }
 
+  window.openFeedbackLightbox = function (index) {
+    if (!activeStorefrontFeedbacks.length) return;
+    currentFeedbackLightboxIndex = (index + activeStorefrontFeedbacks.length) % activeStorefrontFeedbacks.length;
+    const item = activeStorefrontFeedbacks[currentFeedbackLightboxIndex];
+    const modal = document.getElementById('feedback-lightbox-modal');
+    const img = document.getElementById('feedback-lightbox-img');
+    const counter = document.getElementById('feedback-lightbox-counter');
+
+    if (!modal || !img) return;
+    img.src = item.image || item;
+    img.alt = item.title || `Feedback ${currentFeedbackLightboxIndex + 1}`;
+    if (counter) counter.textContent = `${currentFeedbackLightboxIndex + 1} / ${activeStorefrontFeedbacks.length}`;
+
+    modal.hidden = false;
+    modal.classList.add('is-open');
+    document.body.classList.add('lightbox-open');
+  };
+
+  window.closeFeedbackLightbox = function () {
+    const modal = document.getElementById('feedback-lightbox-modal');
+    if (modal) {
+      modal.classList.remove('is-open');
+      modal.hidden = true;
+    }
+    document.body.classList.remove('lightbox-open');
+  };
+
+  window.stepFeedbackLightbox = function (direction) {
+    window.openFeedbackLightbox(currentFeedbackLightboxIndex + direction);
+  };
+
   function initFeedbackGallery() {
-    // Event handlers are attached by the shared media viewer after rendering.
+    const track = document.getElementById('feedback-track');
+    if (!track) return;
+
+    track.querySelectorAll('.feedback-section__card').forEach(card => {
+      card.addEventListener('click', () => {
+        const idx = parseInt(card.dataset.index, 10);
+        if (!isNaN(idx)) window.openFeedbackLightbox(idx);
+      });
+    });
+
+    if (!window._feedbackKeyHandlerAttached) {
+      window._feedbackKeyHandlerAttached = true;
+      document.addEventListener('keydown', (e) => {
+        const modal = document.getElementById('feedback-lightbox-modal');
+        if (!modal || modal.hidden || !modal.classList.contains('is-open')) return;
+
+        if (e.key === 'Escape') window.closeFeedbackLightbox();
+        if (e.key === 'ArrowLeft') window.stepFeedbackLightbox(-1);
+        if (e.key === 'ArrowRight') window.stepFeedbackLightbox(1);
+      });
+    }
+
+    // Carrega feedbacks da API/JSON de forma assíncrona
+    if (!window._feedbacksFetched) {
+      window._feedbacksFetched = true;
+      fetch('/api/feedbacks.php', { cache: 'no-store' })
+        .then(res => res.json())
+        .then(data => {
+          if (data && Array.isArray(data.feedbacks) && data.feedbacks.length) {
+            renderCatalogSections(data.feedbacks);
+          }
+        })
+        .catch(() => {
+          fetch('/data/feedbacks.json', { cache: 'no-store' })
+            .then(res => res.json())
+            .then(list => {
+              if (Array.isArray(list) && list.length) {
+                renderCatalogSections(list);
+              }
+            })
+            .catch(() => {});
+        });
+    }
   }
 
   // ── Get product by ID ──

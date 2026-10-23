@@ -167,6 +167,8 @@
     overview: 'Visão Geral',
     financeiro: 'Financeiro',
     produtos: 'Produtos',
+    categorias: 'Categorias',
+    feedbacks: 'Feedbacks de Clientes',
     faq: 'Perguntas frequentes',
     pedidos: 'Pedidos',
     clientes: 'Base de Clientes',
@@ -200,6 +202,7 @@
       if (panelId === 'financeiro') await loadFinanceiro();
       if (panelId === 'produtos') syncProducts();
       if (panelId === 'categorias') loadCategories();
+      if (panelId === 'feedbacks') loadFeedbacks();
       if (panelId === 'faq') loadFaq();
 
       if (panelId === 'pedidos') refreshOrders();
@@ -3365,6 +3368,369 @@
 
       showToast('trash', 'Categoria Excluída', `A categoria "${name}" foi removida.`);
       await loadCategories(true);
+    } catch (err) {
+      alert('Erro ao excluir: ' + err.message);
+    }
+  };
+
+  // ══════════════════════════════════════════
+  //  FEEDBACKS DE CLIENTES (ADMIN)
+  // ══════════════════════════════════════════
+  let allFeedbacks = [];
+
+  function resolveFeedbackImg(img) {
+    if (!img) return '../assets/images/feedback-1.webp';
+    if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('data:')) return img;
+    const clean = img.replace(/^\/+/, '');
+    return clean.startsWith('assets/') ? '../' + clean : '../assets/images/' + clean;
+  }
+
+  window.loadFeedbacks = async function (forceRefresh = false) {
+    const grid = document.getElementById('feedbacks-grid');
+    const countEl = document.getElementById('feedbacks-result-count');
+    const alertEl = document.getElementById('feedback-alert');
+    if (alertEl) alertEl.innerHTML = '';
+
+    if (grid && (!allFeedbacks.length || forceRefresh)) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><div class="spinner" style="margin: 0 auto 12px;"></div>Carregando feedbacks...</div>';
+    }
+
+    try {
+      const res = await fetch('/api/feedbacks.php?all=1', { cache: 'no-store' });
+      const data = await res.json();
+      if (data && Array.isArray(data.feedbacks)) {
+        allFeedbacks = data.feedbacks;
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar feedbacks da API:', e);
+      if (!allFeedbacks.length) {
+        allFeedbacks = Array.from({ length: 13 }, (_, i) => ({
+          id: `fb-${i + 1}`,
+          title: `Feedback ${i + 1}`,
+          image: `/assets/images/feedback-${i + 1}.webp`,
+          order: i + 1,
+          active: true
+        }));
+      }
+    }
+
+    renderFeedbacksGrid();
+  };
+
+  function renderFeedbacksGrid() {
+    const grid = document.getElementById('feedbacks-grid');
+    const countEl = document.getElementById('feedbacks-result-count');
+    if (!grid) return;
+
+    if (countEl) {
+      countEl.textContent = `${allFeedbacks.length} ${allFeedbacks.length === 1 ? 'feedback cadastrado' : 'feedbacks cadastrados'} (exibidos no carrossel)`;
+    }
+
+    if (!allFeedbacks.length) {
+      grid.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px dashed var(--border);">
+          <div style="font-size: 32px; margin-bottom: 8px;">💬</div>
+          <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 4px;">Nenhum feedback cadastrado</h3>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Adicione fotos de conversas e depoimentos para exibir no carrossel da vitrine.</p>
+          <button type="button" class="btn btn-primary" onclick="openFeedbackModal()">+ Adicionar Feedback</button>
+        </div>
+      `;
+      return;
+    }
+
+    allFeedbacks.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    grid.innerHTML = allFeedbacks.map((fb, idx) => {
+      const imgSrc = resolveFeedbackImg(fb.image);
+      const safeTitle = (fb.title || `Feedback ${idx + 1}`).replace(/"/g, '&quot;');
+      const safeId = (fb.id || '').replace(/"/g, '&quot;');
+      const isFirst = idx === 0;
+      const isLast = idx === allFeedbacks.length - 1;
+
+      return `
+        <div class="feedback-admin-card" data-id="${safeId}" style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; box-shadow: var(--shadow-sm); position: relative;">
+          <!-- Top indicators -->
+          <div style="position: relative; width: 100%; aspect-ratio: 9/16; background: #0f0f10; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+            <img src="${imgSrc}" alt="${safeTitle}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='../assets/images/feedback-1.webp'" />
+            
+            <!-- Badge de Posição / Ordem -->
+            <span style="position: absolute; top: 10px; left: 10px; background: rgba(10,10,10,0.88); color: #fff; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.18);">
+              #${idx + 1}
+            </span>
+
+            <!-- Status de Visibilidade -->
+            <button type="button" onclick="toggleFeedbackActive('${safeId}')" title="${fb.active ? 'Ocultar na vitrine' : 'Exibir na vitrine'}" style="position: absolute; top: 10px; right: 10px; background: ${fb.active ? 'rgba(22,163,74,0.92)' : 'rgba(120,120,120,0.92)'}; color: #fff; border: none; border-radius: 9999px; padding: 3px 8px; font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;">
+              ${fb.active ? 'Ativo' : 'Oculto'}
+            </button>
+          </div>
+
+          <!-- Informações e Ações -->
+          <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; justify-content: space-between; border-top: 1px solid var(--border);">
+            <div>
+              <div style="font-weight: 600; font-size: 13px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${safeTitle}">
+                ${safeTitle}
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                Posição: ${idx + 1} de ${allFeedbacks.length}
+              </div>
+            </div>
+
+            <!-- Controles de Posição (Mover Frente / Trás) -->
+            <div style="display: flex; gap: 6px; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px dashed var(--border);">
+              <div style="display: flex; gap: 4px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="moveFeedback('${safeId}', -1)" ${isFirst ? 'disabled style="opacity:0.35; cursor:not-allowed;"' : ''} title="Mover para frente (posição anterior)" style="padding: 5px 9px;">
+                  ◀
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="moveFeedback('${safeId}', 1)" ${isLast ? 'disabled style="opacity:0.35; cursor:not-allowed;"' : ''} title="Mover para trás (próxima posição)" style="padding: 5px 9px;">
+                  ▶
+                </button>
+              </div>
+
+              <!-- Editar e Excluir -->
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openFeedbackModal('${safeId}')" title="Editar informações ou foto" style="padding: 5px 9px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button type="button" class="btn btn-sm" onclick="deleteFeedback('${safeId}', '${safeTitle}')" title="Excluir feedback" style="padding: 5px 9px; color: var(--danger); background: var(--danger-bg); border: 1px solid rgba(220,38,38,0.2);">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.moveFeedback = async function (id, direction) {
+    try {
+      const res = await fetch('/api/feedbacks.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'move', id, direction })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Erro ao alterar posição');
+      }
+      allFeedbacks = data.feedbacks;
+      renderFeedbacksGrid();
+      showToast('check', 'Posição Atualizada', 'A ordem dos feedbacks no carrossel foi salva.');
+    } catch (err) {
+      alert('Erro ao mover feedback: ' + err.message);
+    }
+  };
+
+  window.toggleFeedbackActive = async function (id) {
+    const item = allFeedbacks.find(f => f.id === id);
+    if (!item) return;
+    const newActive = !item.active;
+    try {
+      const res = await fetch('/api/feedbacks.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save',
+          feedback: {
+            id: item.id,
+            title: item.title,
+            image: item.image,
+            active: newActive
+          }
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Erro ao alterar visibilidade');
+      allFeedbacks = data.feedbacks;
+      renderFeedbacksGrid();
+      showToast('check', newActive ? 'Feedback Ativado' : 'Feedback Ocultado', `O feedback agora está ${newActive ? 'visível' : 'oculto'} no carrossel.`);
+    } catch (err) {
+      alert('Erro: ' + err.message);
+    }
+  };
+
+  window.openFeedbackModal = function (editId = null) {
+    const modal = document.getElementById('feedback-modal');
+    const titleEl = document.getElementById('feedback-modal-title');
+    const idInput = document.getElementById('fb-edit-id');
+    const titleInput = document.getElementById('fb-title');
+    const posSelect = document.getElementById('fb-position-select');
+    const imageVal = document.getElementById('fb-image-val');
+    const previewBox = document.getElementById('fb-preview-box');
+    const previewImg = document.getElementById('fb-preview-img');
+    const previewLabel = document.getElementById('fb-preview-label');
+
+    if (!modal) return;
+
+    if (editId) {
+      const item = allFeedbacks.find(f => f.id === editId);
+      if (!item) return;
+      if (titleEl) titleEl.textContent = 'Editar Feedback';
+      if (idInput) idInput.value = item.id;
+      if (titleInput) titleInput.value = item.title || '';
+      if (imageVal) imageVal.value = item.image || '';
+      if (posSelect) posSelect.style.display = 'none';
+
+      if (previewBox && previewImg) {
+        previewImg.src = resolveFeedbackImg(item.image);
+        if (previewLabel) previewLabel.textContent = 'Foto Atual';
+        previewBox.style.display = 'block';
+      }
+    } else {
+      if (titleEl) titleEl.textContent = 'Novo Feedback de Cliente';
+      if (idInput) idInput.value = '';
+      if (titleInput) titleInput.value = `Feedback ${allFeedbacks.length + 1}`;
+      if (imageVal) imageVal.value = '';
+      if (posSelect) posSelect.style.display = 'block';
+      if (previewBox) previewBox.style.display = 'none';
+      if (previewImg) previewImg.src = '';
+    }
+
+    modal.classList.add('active');
+  };
+
+  window.closeFeedbackModal = function () {
+    const modal = document.getElementById('feedback-modal');
+    if (modal) modal.classList.remove('active');
+    const fileInput = document.getElementById('fb-image-file');
+    if (fileInput) fileInput.value = '';
+  };
+
+  window.handleFeedbackImageSelect = function (event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const rawBase64 = e.target.result;
+      
+      const img = new Image();
+      img.onload = function () {
+        const maxWidth = 720;
+        const maxHeight = 1440;
+        let w = img.width;
+        let h = img.height;
+
+        if (w > maxWidth || h > maxHeight) {
+          const scale = Math.min(maxWidth / w, maxHeight / h);
+          w = Math.max(1, Math.round(w * scale));
+          h = Math.max(1, Math.round(h * scale));
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+
+        let optimizedBase64 = canvas.toDataURL('image/webp', 0.82);
+        if (!optimizedBase64.startsWith('data:image/webp')) {
+          optimizedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+        }
+
+        const previewBox = document.getElementById('fb-preview-box');
+        const previewImg = document.getElementById('fb-preview-img');
+        const previewLabel = document.getElementById('fb-preview-label');
+        const imageVal = document.getElementById('fb-image-val');
+
+        if (previewImg) previewImg.src = optimizedBase64;
+        if (imageVal) imageVal.value = optimizedBase64;
+        const approxKb = Math.round((optimizedBase64.length * 3 / 4) / 1024);
+        if (previewLabel) previewLabel.textContent = `Pronta (~${approxKb} KB otimizada)`;
+        if (previewBox) previewBox.style.display = 'block';
+      };
+      img.src = rawBase64;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  window.removeFeedbackSelectedImage = function () {
+    const previewBox = document.getElementById('fb-preview-box');
+    const previewImg = document.getElementById('fb-preview-img');
+    const imageVal = document.getElementById('fb-image-val');
+    const fileInput = document.getElementById('fb-image-file');
+
+    if (previewBox) previewBox.style.display = 'none';
+    if (previewImg) previewImg.src = '';
+    if (imageVal) imageVal.value = '';
+    if (fileInput) fileInput.value = '';
+  };
+
+  window.saveFeedback = async function () {
+    const idInput = document.getElementById('fb-edit-id');
+    const titleInput = document.getElementById('fb-title');
+    const posSelect = document.getElementById('fb-position-select');
+    const imageVal = document.getElementById('fb-image-val');
+    const saveBtn = document.getElementById('btn-save-feedback');
+
+    const image = imageVal?.value.trim();
+    if (!image) {
+      alert('Por favor, selecione uma foto de feedback do seu computador ou celular.');
+      return;
+    }
+
+    const editId = idInput?.value.trim() || '';
+    const title = titleInput?.value.trim() || `Feedback ${allFeedbacks.length + 1}`;
+    const position = posSelect ? posSelect.value : 'end';
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Otimizando e Salvando…';
+    }
+
+    const payload = {
+      action: 'save',
+      feedback: {
+        id: editId,
+        title: title,
+        image: image,
+        order: (!editId && position === 'start') ? 1 : null,
+        active: true
+      }
+    };
+
+    try {
+      const res = await fetch('/api/feedbacks.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Erro ao salvar feedback');
+      }
+
+      showToast('check', 'Feedback Salvo!', `"${title}" foi salvo com sucesso e adicionado ao carrossel.`);
+      closeFeedbackModal();
+      await loadFeedbacks(true);
+    } catch (err) {
+      alert('Falha ao salvar feedback: ' + err.message);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar Feedback';
+      }
+    }
+  };
+
+  window.deleteFeedback = async function (id, title) {
+    if (!confirm(`Deseja realmente excluir o feedback "${title}"? Ele será removido permanentemente do carrossel.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/feedbacks.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id: id })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Erro ao excluir feedback');
+      }
+
+      showToast('trash', 'Feedback Removido', `O feedback foi excluído do carrossel.`);
+      await loadFeedbacks(true);
     } catch (err) {
       alert('Erro ao excluir: ' + err.message);
     }
