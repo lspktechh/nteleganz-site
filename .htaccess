@@ -1,9 +1,10 @@
-# PHP Limits for file uploads
-php_value upload_max_filesize 64M
-php_value post_max_size 64M
-php_value max_execution_time 300
-php_value max_input_time 300
+# PHP Limits and Hardening
+php_value upload_max_filesize 24M
+php_value post_max_size 24M
+php_value max_execution_time 120
+php_value max_input_time 120
 php_value memory_limit 256M
+php_flag session.upload_progress.enabled Off
 
 # Disable mod_security for upload endpoint (prevents 406)
 <IfModule mod_security.c>
@@ -11,8 +12,10 @@ php_value memory_limit 256M
     SecRequestBodyAccess Off
 </IfModule>
 
-# Security headers
+# Security headers & anti-fingerprinting
 <IfModule mod_headers.c>
+    Header unset X-Powered-By
+    Header always unset X-Powered-By
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
