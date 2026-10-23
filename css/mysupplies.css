@@ -1037,87 +1037,239 @@ body {
   letter-spacing: -.065em;
 }
 
+.feedback-section__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .feedback-section__hint {
-  padding-bottom: 5px;
-  color: #555;
+  color: #666;
   font: 600 10px/1 var(--font-sans);
-  letter-spacing: .13em;
+  letter-spacing: .12em;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
-.feedback-section__hint span {
-  display: inline-block;
-  margin-left: 7px;
-  font-size: 16px;
-  vertical-align: -1px;
+.feedback-section__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.feedback-section {
-  position: relative;
-  overflow: hidden;
+.feedback-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  color: #111111;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s ease;
+  padding: 0;
 }
 
-.feedback-section__marquee {
+.feedback-nav-btn:hover {
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.16);
+}
+
+.feedback-nav-btn:active {
+  transform: translateY(0);
+}
+
+.feedback-showcase {
   position: relative;
   width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
   overflow: hidden;
-  padding: 16px 0 28px;
-  mask-image: linear-gradient(to right, transparent, black 32px, black calc(100% - 32px), transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, black 32px, black calc(100% - 32px), transparent);
+  padding: 10px 0 22px;
 }
 
-@keyframes feedbackCarouselScroll {
-  0% {
-    transform: translate3d(0, 0, 0);
-  }
-  100% {
-    transform: translate3d(-50%, 0, 0);
-  }
-}
-
-.feedback-section__track {
+.feedback-showcase__stage {
+  --card-offset: clamp(210px, 22vw, 290px);
+  position: relative;
+  width: 100%;
+  height: clamp(380px, 35vw, 500px);
+  margin: 0 auto;
   display: flex;
-  gap: 16px;
-  width: max-content;
-  animation: feedbackCarouselScroll 55s linear infinite;
-  will-change: transform;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
 }
 
-.feedback-section:hover .feedback-section__track,
-.feedback-section__track:hover,
-.feedback-section__track:active {
-  animation-play-state: paused;
-}
-
-.feedback-section__card {
-  -webkit-appearance: none;
-  appearance: none;
-  display: block;
-  flex: 0 0 clamp(160px, 13vw, 215px);
-  height: clamp(285px, 23vw, 385px);
-  aspect-ratio: 9/16;
+.feedback-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(190px, 17vw, 260px);
+  height: clamp(338px, 30.2vw, 460px);
   margin: 0;
   padding: 0;
+  border-radius: 18px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   background-color: #141416;
-  background-position: center top;
-  background-repeat: no-repeat;
-  background-size: cover;
-  color: inherit;
-  box-shadow: 0 9px 24px rgba(20, 18, 15, .15);
-  cursor: zoom-in;
-  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease, border-color 0.3s ease;
-  transform-origin: center center;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              filter 0.6s ease,
+              opacity 0.6s ease,
+              box-shadow 0.35s ease,
+              border-color 0.35s ease;
+  will-change: transform, filter, opacity;
 }
 
-.feedback-section__card:hover {
-  transform: scale(1.08) translateY(-4px);
-  box-shadow: 0 20px 44px rgba(0, 0, 0, .45);
-  border-color: rgba(255, 255, 255, 0.3);
+.feedback-card__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  pointer-events: none;
+  border-radius: 18px;
+}
+
+/* Imagem central com destaque */
+.feedback-card.is-center {
+  transform: translate(-50%, -50%) scale(1);
   z-index: 10;
+  filter: grayscale(0%) brightness(1);
+  opacity: 1;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+  border-color: rgba(0, 0, 0, 0.14);
+  cursor: zoom-in;
+}
+
+/* Quando passa ou deixa o mouse em cima da imagem central ela fica um pouco maior */
+@media (hover: hover) and (pointer: fine) {
+  .feedback-card.is-center:hover {
+    transform: translate(-50%, -50%) scale(1.08) !important;
+    box-shadow: 0 28px 65px rgba(0, 0, 0, 0.32);
+    border-color: rgba(0, 0, 0, 0.24);
+    z-index: 20;
+  }
+}
+
+/* Imagens acinzentadas do lado direito e esquerdo */
+.feedback-card.is-left {
+  transform: translate(calc(-50% - var(--card-offset)), -50%) scale(0.85);
+  z-index: 5;
+  filter: grayscale(100%) brightness(0.8) contrast(0.95);
+  opacity: 0.55;
+  cursor: pointer;
+}
+
+.feedback-card.is-left:hover {
+  filter: grayscale(60%) brightness(0.9);
+  opacity: 0.8;
+}
+
+.feedback-card.is-right {
+  transform: translate(calc(-50% + var(--card-offset)), -50%) scale(0.85);
+  z-index: 5;
+  filter: grayscale(100%) brightness(0.8) contrast(0.95);
+  opacity: 0.55;
+  cursor: pointer;
+}
+
+.feedback-card.is-right:hover {
+  filter: grayscale(60%) brightness(0.9);
+  opacity: 0.8;
+}
+
+/* Cards exteriores (transição suave para entrar e sair) */
+.feedback-card.is-hidden-left,
+.feedback-card.is-far-left {
+  transform: translate(calc(-50% - calc(var(--card-offset) * 1.8)), -50%) scale(0.7);
+  z-index: 1;
+  filter: grayscale(100%) brightness(0.6);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.feedback-card.is-hidden-right,
+.feedback-card.is-far-right {
+  transform: translate(calc(-50% + calc(var(--card-offset) * 1.8)), -50%) scale(0.7);
+  z-index: 1;
+  filter: grayscale(100%) brightness(0.6);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Cards completamente fora de vista */
+.feedback-card.is-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  transition: none !important;
+}
+
+/* Badge discreto de cliente verificado */
+.feedback-card__badge {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(17, 17, 17, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  font: 600 10px/1 var(--font-sans);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.feedback-card.is-center .feedback-card__badge {
+  opacity: 1;
+}
+
+.feedback-showcase__dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.feedback-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  border: none;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.feedback-dot.is-active {
+  width: 26px;
+  background: #111111;
+}
+
+.feedback-dot:hover:not(.is-active) {
+  background: rgba(0, 0, 0, 0.45);
 }
 
 .feedback-lightbox-modal {
@@ -2366,32 +2518,48 @@ body {
   }
 
   .feedback-section {
-    padding: 44px 16px 50px;
+    padding: 38px 16px 44px;
   }
 
   .feedback-section__head {
-    align-items: flex-start;
-    margin-bottom: 20px;
+    align-items: center;
+    margin-bottom: 16px;
   }
 
   .feedback-section__title {
-    font-size: 2.05rem;
+    font-size: 1.95rem;
   }
 
   .feedback-section__hint {
     display: none;
   }
 
-  .feedback-section__track {
-    margin-right: -16px;
-    padding-right: 16px;
-    gap: 9px;
+  .feedback-showcase__stage {
+    --card-offset: clamp(125px, 34vw, 160px);
+    height: clamp(320px, 86vw, 390px);
   }
 
-  .feedback-section__card {
-    flex-basis: min(60vw, 220px);
-    height: min(106.66vw, 391px);
-    border-radius: 10px;
+  .feedback-card {
+    width: clamp(160px, 46vw, 200px);
+    height: clamp(285px, 82vw, 355px);
+    border-radius: 14px;
+  }
+
+  .feedback-card__img {
+    border-radius: 14px;
+  }
+
+  .feedback-card.is-left {
+    opacity: 0.45;
+  }
+
+  .feedback-card.is-right {
+    opacity: 0.45;
+  }
+
+  .feedback-nav-btn {
+    width: 36px;
+    height: 36px;
   }
 
   .feedback-lightbox {

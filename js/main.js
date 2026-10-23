@@ -238,6 +238,9 @@
 
   let activeStorefrontFeedbacks = [];
   let currentFeedbackLightboxIndex = 0;
+  let feedbackStageIndex = 0;
+  let feedbackAutoPlayTimer = null;
+  let isFeedbackHovered = false;
 
   function defaultStorefrontFeedbacks() {
     return Array.from({ length: 13 }, (_, index) => ({
@@ -246,6 +249,78 @@
       image: `assets/images/feedback-${index + 1}.webp`,
       order: index + 1
     }));
+  }
+
+  function setFeedbackIndex(newIndex) {
+    const count = activeStorefrontFeedbacks.length;
+    if (!count) return;
+    feedbackStageIndex = (newIndex % count + count) % count;
+    updateFeedbackPositions();
+  }
+
+  function startFeedbackAutoPlay() {
+    stopFeedbackAutoPlay();
+    if (isFeedbackHovered) return;
+    feedbackAutoPlayTimer = setInterval(() => {
+      setFeedbackIndex(feedbackStageIndex + 1);
+    }, 2000);
+  }
+
+  function stopFeedbackAutoPlay() {
+    if (feedbackAutoPlayTimer) {
+      clearInterval(feedbackAutoPlayTimer);
+      feedbackAutoPlayTimer = null;
+    }
+  }
+
+  function updateFeedbackPositions() {
+    const stage = document.getElementById('feedback-stage');
+    if (!stage) return;
+    const cards = stage.querySelectorAll('.feedback-card');
+    const count = activeStorefrontFeedbacks.length;
+    if (!count || !cards.length) return;
+
+    cards.forEach((card) => {
+      const idx = parseInt(card.dataset.index, 10);
+      let diff = (idx - feedbackStageIndex) % count;
+      while (diff > count / 2) diff -= count;
+      while (diff < -count / 2) diff += count;
+
+      if (diff === 0) {
+        card.className = 'feedback-card is-center';
+        card.setAttribute('aria-hidden', 'false');
+        card.setAttribute('tabindex', '0');
+      } else if (diff === -1) {
+        card.className = 'feedback-card is-left';
+        card.setAttribute('aria-hidden', 'false');
+        card.setAttribute('tabindex', '0');
+      } else if (diff === 1) {
+        card.className = 'feedback-card is-right';
+        card.setAttribute('aria-hidden', 'false');
+        card.setAttribute('tabindex', '0');
+      } else if (diff === -2) {
+        card.className = 'feedback-card is-hidden-left';
+        card.setAttribute('aria-hidden', 'true');
+        card.setAttribute('tabindex', '-1');
+      } else if (diff === 2) {
+        card.className = 'feedback-card is-hidden-right';
+        card.setAttribute('aria-hidden', 'true');
+        card.setAttribute('tabindex', '-1');
+      } else if (diff < -2) {
+        card.className = 'feedback-card is-hidden is-far-left';
+        card.setAttribute('aria-hidden', 'true');
+        card.setAttribute('tabindex', '-1');
+      } else {
+        card.className = 'feedback-card is-hidden is-far-right';
+        card.setAttribute('aria-hidden', 'true');
+        card.setAttribute('tabindex', '-1');
+      }
+    });
+
+    const dots = document.querySelectorAll('.feedback-dot');
+    dots.forEach((dot, idx) => {
+      dot.classList.toggle('is-active', idx === feedbackStageIndex);
+    });
   }
 
   function renderCatalogSections(feedbacksList = null) {
@@ -262,12 +337,22 @@
     // Ordena os feedbacks conforme a ordem definida no admin
     activeStorefrontFeedbacks.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    // Renderiza os cards (duplicamos a sequência para criar o carrossel infinito contínuo e suave)
-    const renderCards = (list, isDuplicate = false) => list.map((item, index) => {
+    const count = activeStorefrontFeedbacks.length;
+    if (feedbackStageIndex >= count) feedbackStageIndex = 0;
+
+    // Renderiza os cards do carrossel 3D
+    const cardsHtml = activeStorefrontFeedbacks.map((item, index) => {
       const src = item.image || item;
       const title = item.title || `Feedback ${index + 1}`;
-      const ariaHidden = isDuplicate ? 'aria-hidden="true"' : '';
-      return `<button type="button" class="feedback-section__card" data-index="${index}" ${ariaHidden} aria-label="Ampliar ${title}" style="background-image:url('${src}')"></button>`;
+      return `<button type="button" class="feedback-card" data-index="${index}" aria-label="${title}">
+        <img class="feedback-card__img" src="${src}" alt="${title}" loading="lazy" />
+        <span class="feedback-card__badge" aria-hidden="true">✓ Cliente Verificado</span>
+      </button>`;
+    }).join('');
+
+    // Renderiza os dots indicadores
+    const dotsHtml = activeStorefrontFeedbacks.map((_, index) => {
+      return `<button type="button" class="feedback-dot ${index === feedbackStageIndex ? 'is-active' : ''}" data-index="${index}" aria-label="Depoimento ${index + 1}"></button>`;
     }).join('');
 
     holder.innerHTML = `<section class="feedback-section" aria-labelledby="feedback-title">
@@ -276,12 +361,25 @@
           <span class="feedback-section__eyebrow">Quem escolhe a NT</span>
           <h2 id="feedback-title" class="feedback-section__title">Feedbacks reais</h2>
         </div>
-        <span class="feedback-section__hint">Passe o mouse para pausar e ampliar <span aria-hidden="true">→</span></span>
+        <div class="feedback-section__actions">
+          <span class="feedback-section__hint">Passe o mouse para pausar e ampliar</span>
+          <div class="feedback-section__nav">
+            <button type="button" class="feedback-nav-btn feedback-nav-btn--prev" id="feedback-nav-prev" aria-label="Depoimento anterior">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button type="button" class="feedback-nav-btn feedback-nav-btn--next" id="feedback-nav-next" aria-label="Próximo depoimento">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+        </div>
       </header>
-      <div class="feedback-section__marquee" id="feedback-marquee">
-        <div class="feedback-section__track" id="feedback-track" role="list" aria-label="Feedbacks de clientes">
-          ${renderCards(activeStorefrontFeedbacks, false)}
-          ${renderCards(activeStorefrontFeedbacks, true)}
+
+      <div class="feedback-showcase" id="feedback-showcase">
+        <div class="feedback-showcase__stage" id="feedback-stage" role="region" aria-label="Carrossel de feedbacks de clientes">
+          ${cardsHtml}
+        </div>
+        <div class="feedback-showcase__dots" id="feedback-dots">
+          ${dotsHtml}
         </div>
       </div>
 
@@ -298,11 +396,12 @@
       </div>
     </section>`;
 
-    initFeedbackGallery();
+    initFeedbackShowcase();
   }
 
   window.openFeedbackLightbox = function (index) {
     if (!activeStorefrontFeedbacks.length) return;
+    stopFeedbackAutoPlay();
     currentFeedbackLightboxIndex = (index + activeStorefrontFeedbacks.length) % activeStorefrontFeedbacks.length;
     const item = activeStorefrontFeedbacks[currentFeedbackLightboxIndex];
     const modal = document.getElementById('feedback-lightbox-modal');
@@ -326,23 +425,113 @@
       modal.hidden = true;
     }
     document.body.classList.remove('lightbox-open');
+    if (!isFeedbackHovered) {
+      startFeedbackAutoPlay();
+    }
   };
 
   window.stepFeedbackLightbox = function (direction) {
     window.openFeedbackLightbox(currentFeedbackLightboxIndex + direction);
   };
 
-  function initFeedbackGallery() {
-    const track = document.getElementById('feedback-track');
-    if (!track) return;
+  function initFeedbackShowcase() {
+    const stage = document.getElementById('feedback-stage');
+    if (!stage) return;
 
-    track.querySelectorAll('.feedback-section__card').forEach(card => {
+    // Atualiza posições dos cards
+    updateFeedbackPositions();
+
+    // Eventos nos cards
+    const cards = stage.querySelectorAll('.feedback-card');
+    cards.forEach(card => {
       card.addEventListener('click', () => {
         const idx = parseInt(card.dataset.index, 10);
-        if (!isNaN(idx)) window.openFeedbackLightbox(idx);
+        if (card.classList.contains('is-center')) {
+          window.openFeedbackLightbox(idx);
+        } else if (card.classList.contains('is-left')) {
+          setFeedbackIndex(feedbackStageIndex - 1);
+          startFeedbackAutoPlay();
+        } else if (card.classList.contains('is-right')) {
+          setFeedbackIndex(feedbackStageIndex + 1);
+          startFeedbackAutoPlay();
+        } else {
+          setFeedbackIndex(idx);
+          startFeedbackAutoPlay();
+        }
       });
     });
 
+    // Hover pausando o carrossel no stage e na imagem central
+    stage.addEventListener('mouseenter', () => {
+      isFeedbackHovered = true;
+      stopFeedbackAutoPlay();
+    });
+
+    stage.addEventListener('mouseleave', () => {
+      isFeedbackHovered = false;
+      startFeedbackAutoPlay();
+    });
+
+    // Botões de navegação prev / next
+    const prevBtn = document.getElementById('feedback-nav-prev');
+    const nextBtn = document.getElementById('feedback-nav-next');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        setFeedbackIndex(feedbackStageIndex - 1);
+        startFeedbackAutoPlay();
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        setFeedbackIndex(feedbackStageIndex + 1);
+        startFeedbackAutoPlay();
+      });
+    }
+
+    // Dots de navegação
+    const dotsHolder = document.getElementById('feedback-dots');
+    if (dotsHolder) {
+      dotsHolder.addEventListener('click', (e) => {
+        const dot = e.target.closest('.feedback-dot');
+        if (!dot) return;
+        const idx = parseInt(dot.dataset.index, 10);
+        if (!isNaN(idx)) {
+          setFeedbackIndex(idx);
+          startFeedbackAutoPlay();
+        }
+      });
+    }
+
+    // Suporte a swipe touch no mobile
+    let touchStartX = 0;
+    stage.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0]) {
+        touchStartX = e.touches[0].clientX;
+      }
+      stopFeedbackAutoPlay();
+    }, { passive: true });
+
+    stage.addEventListener('touchend', (e) => {
+      if (e.changedTouches && e.changedTouches[0]) {
+        const touchEndX = e.changedTouches[0].clientX;
+        const diff = touchEndX - touchStartX;
+        if (Math.abs(diff) > 40) {
+          if (diff < 0) {
+            setFeedbackIndex(feedbackStageIndex + 1);
+          } else {
+            setFeedbackIndex(feedbackStageIndex - 1);
+          }
+        }
+      }
+      if (!isFeedbackHovered) {
+        startFeedbackAutoPlay();
+      }
+    }, { passive: true });
+
+    // Inicia autoplay de 2 em 2 segundos
+    startFeedbackAutoPlay();
+
+    // Eventos de teclado para fechar/navegar no lightbox
     if (!window._feedbackKeyHandlerAttached) {
       window._feedbackKeyHandlerAttached = true;
       document.addEventListener('keydown', (e) => {
@@ -352,6 +541,18 @@
         if (e.key === 'Escape') window.closeFeedbackLightbox();
         if (e.key === 'ArrowLeft') window.stepFeedbackLightbox(-1);
         if (e.key === 'ArrowRight') window.stepFeedbackLightbox(1);
+      });
+    }
+
+    // Pausar autoplay quando a aba vai para background
+    if (!window._feedbackVisibilityAttached) {
+      window._feedbackVisibilityAttached = true;
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          stopFeedbackAutoPlay();
+        } else if (!isFeedbackHovered) {
+          startFeedbackAutoPlay();
+        }
       });
     }
 
@@ -377,6 +578,8 @@
         });
     }
   }
+
+  const initFeedbackGallery = initFeedbackShowcase;
 
   // ── Get product by ID ──
   function getProduct(id) {
