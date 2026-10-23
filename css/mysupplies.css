@@ -1095,7 +1095,8 @@ body {
 }
 
 .feedback-showcase__stage {
-  --card-offset: clamp(210px, 22vw, 290px);
+  --card-offset-1: clamp(190px, 18vw, 245px);
+  --card-offset-2: clamp(340px, 33vw, 450px);
   position: relative;
   width: 100%;
   height: clamp(380px, 35vw, 500px);
@@ -1112,8 +1113,8 @@ body {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: clamp(190px, 17vw, 260px);
-  height: clamp(338px, 30.2vw, 460px);
+  width: clamp(180px, 16vw, 240px);
+  height: clamp(320px, 28.5vw, 426px);
   margin: 0;
   padding: 0;
   border-radius: 18px;
@@ -1164,48 +1165,75 @@ body {
   }
 }
 
-/* Imagens acinzentadas do lado direito e esquerdo */
-.feedback-card.is-left {
-  transform: translate(calc(-50% - var(--card-offset)), -50%) scale(0.85);
-  z-index: 5;
+/* ── 1º Nível Lateral: Menores e Acinzentadas ── */
+.feedback-card.is-left-1 {
+  transform: translate(calc(-50% - var(--card-offset-1)), -50%) scale(0.85);
+  z-index: 6;
   filter: grayscale(100%) brightness(0.8) contrast(0.95);
-  opacity: 0.55;
+  opacity: 0.6;
   cursor: pointer;
 }
 
-.feedback-card.is-left:hover {
-  filter: grayscale(60%) brightness(0.9);
-  opacity: 0.8;
+.feedback-card.is-left-1:hover {
+  filter: grayscale(50%) brightness(0.9);
+  opacity: 0.85;
 }
 
-.feedback-card.is-right {
-  transform: translate(calc(-50% + var(--card-offset)), -50%) scale(0.85);
-  z-index: 5;
+.feedback-card.is-right-1 {
+  transform: translate(calc(-50% + var(--card-offset-1)), -50%) scale(0.85);
+  z-index: 6;
   filter: grayscale(100%) brightness(0.8) contrast(0.95);
-  opacity: 0.55;
+  opacity: 0.6;
   cursor: pointer;
 }
 
-.feedback-card.is-right:hover {
-  filter: grayscale(60%) brightness(0.9);
-  opacity: 0.8;
+.feedback-card.is-right-1:hover {
+  filter: grayscale(50%) brightness(0.9);
+  opacity: 0.85;
 }
 
-/* Cards exteriores (transição suave para entrar e sair) */
+/* ── 2º Nível Lateral: Mais pro lado, ainda menores e mais atenuadas ── */
+.feedback-card.is-left-2 {
+  transform: translate(calc(-50% - var(--card-offset-2)), -50%) scale(0.70);
+  z-index: 3;
+  filter: grayscale(100%) brightness(0.68) contrast(0.9);
+  opacity: 0.32;
+  cursor: pointer;
+}
+
+.feedback-card.is-left-2:hover {
+  filter: grayscale(70%) brightness(0.85);
+  opacity: 0.6;
+}
+
+.feedback-card.is-right-2 {
+  transform: translate(calc(-50% + var(--card-offset-2)), -50%) scale(0.70);
+  z-index: 3;
+  filter: grayscale(100%) brightness(0.68) contrast(0.9);
+  opacity: 0.32;
+  cursor: pointer;
+}
+
+.feedback-card.is-right-2:hover {
+  filter: grayscale(70%) brightness(0.85);
+  opacity: 0.6;
+}
+
+/* ── Cards Exteriores (transição suave para entrar e sair) ── */
 .feedback-card.is-hidden-left,
 .feedback-card.is-far-left {
-  transform: translate(calc(-50% - calc(var(--card-offset) * 1.8)), -50%) scale(0.7);
+  transform: translate(calc(-50% - calc(var(--card-offset-2) * 1.45)), -50%) scale(0.55);
   z-index: 1;
-  filter: grayscale(100%) brightness(0.6);
+  filter: grayscale(100%) brightness(0.5);
   opacity: 0;
   pointer-events: none;
 }
 
 .feedback-card.is-hidden-right,
 .feedback-card.is-far-right {
-  transform: translate(calc(-50% + calc(var(--card-offset) * 1.8)), -50%) scale(0.7);
+  transform: translate(calc(-50% + calc(var(--card-offset-2) * 1.45)), -50%) scale(0.55);
   z-index: 1;
-  filter: grayscale(100%) brightness(0.6);
+  filter: grayscale(100%) brightness(0.5);
   opacity: 0;
   pointer-events: none;
 }
@@ -2535,13 +2563,14 @@ body {
   }
 
   .feedback-showcase__stage {
-    --card-offset: clamp(125px, 34vw, 160px);
+    --card-offset-1: clamp(105px, 28vw, 135px);
+    --card-offset-2: clamp(190px, 52vw, 245px);
     height: clamp(320px, 86vw, 390px);
   }
 
   .feedback-card {
-    width: clamp(160px, 46vw, 200px);
-    height: clamp(285px, 82vw, 355px);
+    width: clamp(155px, 44vw, 195px);
+    height: clamp(275px, 78vw, 345px);
     border-radius: 14px;
   }
 
@@ -2549,12 +2578,14 @@ body {
     border-radius: 14px;
   }
 
-  .feedback-card.is-left {
-    opacity: 0.45;
+  .feedback-card.is-left-1,
+  .feedback-card.is-right-1 {
+    opacity: 0.55;
   }
 
-  .feedback-card.is-right {
-    opacity: 0.45;
+  .feedback-card.is-left-2,
+  .feedback-card.is-right-2 {
+    opacity: 0.22;
   }
 
   .feedback-nav-btn {

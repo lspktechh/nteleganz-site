@@ -291,22 +291,30 @@
         card.setAttribute('aria-hidden', 'false');
         card.setAttribute('tabindex', '0');
       } else if (diff === -1) {
-        card.className = 'feedback-card is-left';
+        card.className = 'feedback-card is-left-1';
         card.setAttribute('aria-hidden', 'false');
         card.setAttribute('tabindex', '0');
       } else if (diff === 1) {
-        card.className = 'feedback-card is-right';
+        card.className = 'feedback-card is-right-1';
         card.setAttribute('aria-hidden', 'false');
         card.setAttribute('tabindex', '0');
       } else if (diff === -2) {
+        card.className = 'feedback-card is-left-2';
+        card.setAttribute('aria-hidden', 'false');
+        card.setAttribute('tabindex', '0');
+      } else if (diff === 2) {
+        card.className = 'feedback-card is-right-2';
+        card.setAttribute('aria-hidden', 'false');
+        card.setAttribute('tabindex', '0');
+      } else if (diff === -3) {
         card.className = 'feedback-card is-hidden-left';
         card.setAttribute('aria-hidden', 'true');
         card.setAttribute('tabindex', '-1');
-      } else if (diff === 2) {
+      } else if (diff === 3) {
         card.className = 'feedback-card is-hidden-right';
         card.setAttribute('aria-hidden', 'true');
         card.setAttribute('tabindex', '-1');
-      } else if (diff < -2) {
+      } else if (diff < -3) {
         card.className = 'feedback-card is-hidden is-far-left';
         card.setAttribute('aria-hidden', 'true');
         card.setAttribute('tabindex', '-1');
@@ -448,11 +456,17 @@
         const idx = parseInt(card.dataset.index, 10);
         if (card.classList.contains('is-center')) {
           window.openFeedbackLightbox(idx);
-        } else if (card.classList.contains('is-left')) {
+        } else if (card.classList.contains('is-left-1')) {
           setFeedbackIndex(feedbackStageIndex - 1);
           startFeedbackAutoPlay();
-        } else if (card.classList.contains('is-right')) {
+        } else if (card.classList.contains('is-right-1')) {
           setFeedbackIndex(feedbackStageIndex + 1);
+          startFeedbackAutoPlay();
+        } else if (card.classList.contains('is-left-2')) {
+          setFeedbackIndex(feedbackStageIndex - 2);
+          startFeedbackAutoPlay();
+        } else if (card.classList.contains('is-right-2')) {
+          setFeedbackIndex(feedbackStageIndex + 2);
           startFeedbackAutoPlay();
         } else {
           setFeedbackIndex(idx);
