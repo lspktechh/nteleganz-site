@@ -246,10 +246,9 @@
     if (!raw || typeof raw !== 'string') return PLACEHOLDER_IMG;
     const trimmed = raw.trim();
     if (!trimmed) return PLACEHOLDER_IMG;
-    if (trimmed.includes('137-131-233-254.sslip.io')) return trimmed;
     const match = trimmed.match(/([a-zA-Z0-9_\-\.]+\.webp)/i);
     if (match) {
-      return VPS_IMG_BASE + match[1];
+      return HOSTINGER_IMG_BASE + match[1];
     }
     return trimmed;
   }
@@ -264,10 +263,10 @@
     }
     const filename = img.dataset.origFile;
 
-    // 1. Tenta fallback na Hostinger caso tenha falhado na VPS
-    if (!img.dataset.triedHostinger) {
-      img.dataset.triedHostinger = '1';
-      img.src = HOSTINGER_IMG_BASE + filename;
+    // 1. Tenta fallback na VPS caso tenha falhado na Hostinger
+    if (!img.dataset.triedVps) {
+      img.dataset.triedVps = '1';
+      img.src = VPS_IMG_BASE + filename;
       return;
     }
 
@@ -319,6 +318,7 @@
     const filename = img.dataset.origFile || img.src.split('/').pop().split('?')[0];
     const bust = 't=' + Date.now();
 
+    delete img.dataset.triedVps;
     delete img.dataset.triedHostinger;
     img.classList.remove('has-error', 'is-loaded');
     wrap.classList.remove('is-loaded');
@@ -338,8 +338,8 @@
       window.handleProductImgError(img);
     };
 
-    // Tenta carregar novamente com cachebuster da VPS
-    img.src = VPS_IMG_BASE + filename + '?' + bust;
+    // Tenta carregar novamente com cachebuster da Hostinger
+    img.src = HOSTINGER_IMG_BASE + filename + '?' + bust;
   };
 
   function renderCard(p, index = 0) {

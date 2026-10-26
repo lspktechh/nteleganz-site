@@ -24,9 +24,6 @@
   <meta name="twitter:image" content="/assets/images/banner.webp" />
   <script id="product-schema" type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Produto NT Eleganz","description":"Compre grifes originais na NT Eleganz.","brand":{"@type":"Brand","name":"NT Eleganz"},"offers":{"@type":"Offer","url":"/products/","priceCurrency":"BRL","availability":"https://schema.org/InStock"}}</script>
 
-  <!-- High Performance Image CDN & VPS Preconnect -->
-  <link rel="preconnect" href="https://137-131-233-254.sslip.io" crossorigin />
-  <link rel="dns-prefetch" href="https://137-131-233-254.sslip.io" />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -120,7 +117,7 @@
     @media (max-width: 700px) { .product-page { padding-top: 1rem; } .product-meta, .related-section .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .related-section { padding: 3rem var(--gutter); } .related-box { border-radius: 16px; } }
     @media (max-width: 420px) { .breadcrumb { overflow: hidden; white-space: nowrap; } .product-name { font-size: 1.55rem; } .gallery-main-swiper { border-radius: 7px; } .gallery-main-swiper img { padding: 1rem; } .size-btn { width: 3.65rem; } .related-section .products-grid { gap: .7rem; } .related-box { padding: 1.15rem; } }
   </style>
-  <link rel="stylesheet" href="css/mysupplies.css?v=20261026b" />
+  <link rel="stylesheet" href="css/mysupplies.css?v=20261026c" />
 <script src="/js/image-compat.js" defer></script>
 </head>
 <body>
@@ -516,7 +513,7 @@
 <script src="js/checkout.js?v=20261006"></script>
 <script src="js/menu.js?v=20260930"></script>
 <script src="js/db.js?v=20260930"></script>
-<script src="js/main.js?v=20261026b"></script>
+<script src="js/main.js?v=20261026c"></script>
 <script src="/js/tracking.js?v=20261007"></script>
 
 <script>
@@ -612,7 +609,7 @@
     if (trimmed.includes('137-131-233-254.sslip.io')) return trimmed;
     const match = trimmed.match(/([a-zA-Z0-9_\-\.]+\.webp)/i);
     if (match) {
-      return VPS_IMG_BASE + match[1];
+      return HOSTINGER_IMG_BASE + match[1];
     }
     return trimmed;
   }
@@ -626,9 +623,9 @@
         img.dataset.origFile = fn;
       }
       const filename = img.dataset.origFile;
-      if (!img.dataset.triedHostinger) {
-        img.dataset.triedHostinger = '1';
-        img.src = HOSTINGER_IMG_BASE + filename;
+      if (!img.dataset.triedVps) {
+        img.dataset.triedVps = '1';
+        img.src = VPS_IMG_BASE + filename;
         return;
       }
       img.onerror = null;
@@ -655,6 +652,7 @@
       if (spanText) spanText.textContent = 'Carregando...';
       const filename = img.dataset.origFile || img.src.split('/').pop().split('?')[0];
       const bust = 't=' + Date.now();
+      delete img.dataset.triedVps;
       delete img.dataset.triedHostinger;
       img.classList.remove('has-error', 'is-loaded');
       wrap.classList.remove('is-loaded');
@@ -671,7 +669,7 @@
         if (spanText) spanText.textContent = 'Recarregar';
         window.handleProductImgError(img);
       };
-      img.src = VPS_IMG_BASE + filename + '?' + bust;
+      img.src = HOSTINGER_IMG_BASE + filename + '?' + bust;
     };
   }
 
