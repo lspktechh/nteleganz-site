@@ -183,6 +183,94 @@
     return trimmed;
   }
 
+  // ── Error Handling e Recarregamento de Imagens ──
+  window.handleProductImgError = function(img) {
+    if (!img) return;
+    const wrap = img.closest('.product-card__image-wrap, .catalog-card__img-wrap, .swiper-slide') || img.parentElement;
+    if (!img.dataset.origFile) {
+      const fn = img.src.split('/').pop().split('?')[0];
+      img.dataset.origFile = fn;
+    }
+    const filename = img.dataset.origFile;
+
+    // 1. Tenta fallback na Hostinger caso tenha falhado na VPS
+    if (!img.dataset.triedHostinger) {
+      img.dataset.triedHostinger = '1';
+      img.src = HOSTINGER_IMG_BASE + filename;
+      return;
+    }
+
+    // 2. Falhou em ambos -> aplica placeholder e exibe botão de recarregar
+    img.onerror = null;
+    img.src = PLACEHOLDER_IMG;
+    img.classList.add('has-error');
+
+    if (wrap) {
+      wrap.classList.add('has-img-error');
+      wrap.classList.remove('is-loaded');
+      let retryBtn = wrap.querySelector('.nte-img-retry-btn');
+      if (!retryBtn) {
+        retryBtn = document.createElement('button');
+        retryBtn.type = 'button';
+        retryBtn.className = 'nte-img-retry-btn';
+        retryBtn.setAttribute('aria-label', 'Recarregar imagem');
+        retryBtn.innerHTML = `
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/>
+          </svg>
+          <span>Recarregar</span>
+        `;
+        retryBtn.onclick = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.nteRetryImage(this, e);
+        };
+        wrap.appendChild(retryBtn);
+      }
+      retryBtn.style.display = 'inline-flex';
+    }
+  };
+
+  window.nteRetryImage = function(btn, evt) {
+    if (evt) {
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
+    const wrap = btn.closest('.product-card__image-wrap, .catalog-card__img-wrap, .swiper-slide') || btn.parentElement;
+    if (!wrap) return;
+    const img = wrap.querySelector('img');
+    if (!img) return;
+
+    btn.classList.add('is-retrying');
+    const spanText = btn.querySelector('span');
+    if (spanText) spanText.textContent = 'Carregando...';
+
+    const filename = img.dataset.origFile || img.src.split('/').pop().split('?')[0];
+    const bust = 't=' + Date.now();
+
+    delete img.dataset.triedHostinger;
+    img.classList.remove('has-error', 'is-loaded');
+    wrap.classList.remove('is-loaded');
+
+    img.onload = function() {
+      img.classList.add('is-loaded');
+      wrap.classList.add('is-loaded');
+      wrap.classList.remove('has-img-error');
+      btn.classList.remove('is-retrying');
+      if (spanText) spanText.textContent = 'Recarregar';
+      btn.style.display = 'none';
+    };
+
+    img.onerror = function() {
+      btn.classList.remove('is-retrying');
+      if (spanText) spanText.textContent = 'Recarregar';
+      window.handleProductImgError(img);
+    };
+
+    // Tenta carregar novamente com cachebuster da VPS
+    img.src = VPS_IMG_BASE + filename + '?' + bust;
+  };
+
   function respSrcset(src) {
     if (!src || src.includes('products/')) return '';
     if (src.includes('cutout')) {
@@ -209,7 +297,13 @@
           <img src="${image}" alt="${brand} ${name}" ${loadAttrs}
             style="${isOutOfStock ? 'filter: grayscale(100%); opacity: 0.6;' : ''}"
             onload="this.classList.add('is-loaded');if(this.parentElement)this.parentElement.classList.add('is-loaded');"
-            onerror="if(!this.dataset.triedHostinger){this.dataset.triedHostinger='1';this.src='${HOSTINGER_IMG_BASE}'+this.src.split('/').pop().split('?')[0];}else{this.onerror=null;this.src='${PLACEHOLDER_IMG}';}">
+            onerror="window.handleProductImgError(this);">
+          <button type="button" class="nte-img-retry-btn" aria-label="Recarregar imagem" title="Recarregar imagem" onclick="event.preventDefault();event.stopPropagation();window.nteRetryImage(this, event);">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/>
+            </svg>
+            <span>Recarregar</span>
+          </button>
           ${isOutOfStock ? '<span class="product-card__badge badge-out-of-stock" style="display:inline-flex !important; position:absolute; top:12px; left:12px; background:#dc2626 !important; color:#ffffff !important; font-size:11px !important; font-weight:700 !important; letter-spacing:0.8px !important; padding:4px 10px !important; border-radius:4px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.3) !important;">ESGOTADO</span>' : (product.badge ? `<span class="product-card__badge">${escHtml(product.badge)}</span>` : '')}
         </div>
         <div class="product-card__info">

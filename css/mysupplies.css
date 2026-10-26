@@ -2891,3 +2891,80 @@ img.is-out-of-stock,
 .catalog-card__img-wrap img[src*="placeholder"] {
   opacity: 1 !important;
 }
+
+/* ── Botão e Tratamento de Erro de Recarregamento de Imagem ── */
+.nte-img-retry-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(18, 18, 18, 0.88) !important;
+  color: #dfc37a !important;
+  border: 1px solid rgba(201, 168, 76, 0.5) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 20px !important;
+  padding: 8px 16px !important;
+  font-family: inherit !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.6px !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  z-index: 10 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  white-space: nowrap !important;
+}
+
+.nte-img-retry-btn:hover {
+  background: #c9a84c !important;
+  color: #121212 !important;
+  border-color: #dfc37a !important;
+  transform: translate(-50%, -50%) scale(1.05) !important;
+  box-shadow: 0 6px 18px rgba(201, 168, 76, 0.35) !important;
+}
+
+.nte-img-retry-btn:active {
+  transform: translate(-50%, -50%) scale(0.96) !important;
+}
+
+.nte-img-retry-btn svg {
+  flex-shrink: 0;
+  transition: transform 0.5s ease;
+}
+
+.nte-img-retry-btn.is-retrying svg {
+  animation: nteSpin 0.8s linear infinite !important;
+}
+
+.product-card__image-wrap.has-img-error,
+.catalog-card__img-wrap.has-img-error,
+.gallery-main-swiper .swiper-slide.has-img-error {
+  animation: none !important;
+  background: #181818 !important;
+}
+
+.product-card__image-wrap.has-img-error img,
+.catalog-card__img-wrap.has-img-error img,
+.gallery-main-swiper .swiper-slide.has-img-error img {
+  opacity: 0.45 !important;
+  filter: grayscale(80%) brightness(0.8) !important;
+}
+
+.gallery-main-swiper .swiper-slide {
+  position: relative;
+}
+
+.gallery-thumbs .nte-img-retry-btn {
+  display: none !important;
+}
+
+@keyframes nteSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

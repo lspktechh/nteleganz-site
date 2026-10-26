@@ -120,7 +120,7 @@
     @media (max-width: 700px) { .product-page { padding-top: 1rem; } .product-meta, .related-section .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .related-section { padding: 3rem var(--gutter); } .related-box { border-radius: 16px; } }
     @media (max-width: 420px) { .breadcrumb { overflow: hidden; white-space: nowrap; } .product-name { font-size: 1.55rem; } .gallery-main-swiper { border-radius: 7px; } .gallery-main-swiper img { padding: 1rem; } .size-btn { width: 3.65rem; } .related-section .products-grid { gap: .7rem; } .related-box { padding: 1.15rem; } }
   </style>
-  <link rel="stylesheet" href="css/mysupplies.css?v=20261026" />
+  <link rel="stylesheet" href="css/mysupplies.css?v=20261026b" />
 <script src="/js/image-compat.js" defer></script>
 </head>
 <body>
@@ -516,7 +516,7 @@
 <script src="js/checkout.js?v=20261006"></script>
 <script src="js/menu.js?v=20260930"></script>
 <script src="js/db.js?v=20260930"></script>
-<script src="js/main.js?v=20261026"></script>
+<script src="js/main.js?v=20261026b"></script>
 <script src="/js/tracking.js?v=20261007"></script>
 
 <script>
@@ -617,6 +617,64 @@
     return trimmed;
   }
 
+  if (!window.handleProductImgError) {
+    window.handleProductImgError = function(img) {
+      if (!img) return;
+      const wrap = img.closest('.product-card__image-wrap, .catalog-card__img-wrap, .swiper-slide') || img.parentElement;
+      if (!img.dataset.origFile) {
+        const fn = img.src.split('/').pop().split('?')[0];
+        img.dataset.origFile = fn;
+      }
+      const filename = img.dataset.origFile;
+      if (!img.dataset.triedHostinger) {
+        img.dataset.triedHostinger = '1';
+        img.src = HOSTINGER_IMG_BASE + filename;
+        return;
+      }
+      img.onerror = null;
+      img.src = PLACEHOLDER_IMG;
+      img.classList.add('has-error');
+      if (wrap) {
+        wrap.classList.add('has-img-error');
+        wrap.classList.remove('is-loaded');
+        let retryBtn = wrap.querySelector('.nte-img-retry-btn');
+        if (retryBtn) retryBtn.style.display = 'inline-flex';
+      }
+    };
+  }
+
+  if (!window.nteRetryImage) {
+    window.nteRetryImage = function(btn, evt) {
+      if (evt) { evt.preventDefault(); evt.stopPropagation(); }
+      const wrap = btn.closest('.product-card__image-wrap, .catalog-card__img-wrap, .swiper-slide') || btn.parentElement;
+      if (!wrap) return;
+      const img = wrap.querySelector('img');
+      if (!img) return;
+      btn.classList.add('is-retrying');
+      const spanText = btn.querySelector('span');
+      if (spanText) spanText.textContent = 'Carregando...';
+      const filename = img.dataset.origFile || img.src.split('/').pop().split('?')[0];
+      const bust = 't=' + Date.now();
+      delete img.dataset.triedHostinger;
+      img.classList.remove('has-error', 'is-loaded');
+      wrap.classList.remove('is-loaded');
+      img.onload = function() {
+        img.classList.add('is-loaded');
+        wrap.classList.add('is-loaded');
+        wrap.classList.remove('has-img-error');
+        btn.classList.remove('is-retrying');
+        if (spanText) spanText.textContent = 'Recarregar';
+        btn.style.display = 'none';
+      };
+      img.onerror = function() {
+        btn.classList.remove('is-retrying');
+        if (spanText) spanText.textContent = 'Recarregar';
+        window.handleProductImgError(img);
+      };
+      img.src = VPS_IMG_BASE + filename + '?' + bust;
+    };
+  }
+
   function renderGallery(product) {
     const slides = document.getElementById('gallery-slides');
     const thumbs = document.getElementById('thumb-slides');
@@ -644,7 +702,13 @@
       <div class="swiper-slide">
         <img src="${escapeAttr(vpsUrl)}" alt="${escapeAttr(product.name)} — foto ${i + 1}" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" ${imgStyle}
           onload="this.classList.add('is-loaded');"
-          onerror="if(!this.dataset.triedHostinger){this.dataset.triedHostinger='1';this.src='${HOSTINGER_IMG_BASE}'+this.src.split('/').pop().split('?')[0];}else{this.onerror=null;this.src='${PLACEHOLDER_IMG}';}" />
+          onerror="window.handleProductImgError(this);" />
+        <button type="button" class="nte-img-retry-btn" aria-label="Recarregar imagem" title="Recarregar imagem" onclick="event.preventDefault();event.stopPropagation();window.nteRetryImage(this, event);">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/>
+          </svg>
+          <span>Recarregar</span>
+        </button>
       </div>
     `}).join('');
 
@@ -654,7 +718,7 @@
       <div class="swiper-slide">
         <img src="${escapeAttr(vpsUrl)}" alt="${escapeAttr(product.name)} — foto ${i + 1}" loading="lazy" decoding="async" ${imgStyle}
           onload="this.classList.add('is-loaded');"
-          onerror="if(!this.dataset.triedHostinger){this.dataset.triedHostinger='1';this.src='${HOSTINGER_IMG_BASE}'+this.src.split('/').pop().split('?')[0];}else{this.onerror=null;this.src='${PLACEHOLDER_IMG}';}" />
+          onerror="window.handleProductImgError(this);" />
       </div>
     `}).join('');
 
@@ -779,7 +843,13 @@
         <div class="product-card__image-wrap">
           <img src="${escapeAttr(vpsRelated)}" alt="${brand} ${name}" loading="lazy" decoding="async"
             onload="this.classList.add('is-loaded');if(this.parentElement)this.parentElement.classList.add('is-loaded');"
-            onerror="if(!this.dataset.triedHostinger){this.dataset.triedHostinger='1';this.src='${HOSTINGER_IMG_BASE}'+this.src.split('/').pop().split('?')[0];}else{this.onerror=null;this.src='${PLACEHOLDER_IMG}';}">
+            onerror="window.handleProductImgError(this);">
+          <button type="button" class="nte-img-retry-btn" aria-label="Recarregar imagem" title="Recarregar imagem" onclick="event.preventDefault();event.stopPropagation();window.nteRetryImage(this, event);">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/>
+            </svg>
+            <span>Recarregar</span>
+          </button>
           ${p.badge ? `<span class="product-card__badge">${escapeAttr(p.badge)}</span>` : ''}
         </div>
         <div class="product-card__info">
