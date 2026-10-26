@@ -24,6 +24,10 @@
   <meta name="twitter:image" content="/assets/images/banner.webp" />
   <script id="product-schema" type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Produto NT Eleganz","description":"Compre grifes originais na NT Eleganz.","brand":{"@type":"Brand","name":"NT Eleganz"},"offers":{"@type":"Offer","url":"/products/","priceCurrency":"BRL","availability":"https://schema.org/InStock"}}</script>
 
+  <!-- High Performance Image CDN & VPS Preconnect -->
+  <link rel="preconnect" href="https://137-131-233-254.sslip.io" crossorigin />
+  <link rel="dns-prefetch" href="https://137-131-233-254.sslip.io" />
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -116,7 +120,7 @@
     @media (max-width: 700px) { .product-page { padding-top: 1rem; } .product-meta, .related-section .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .related-section { padding: 3rem var(--gutter); } .related-box { border-radius: 16px; } }
     @media (max-width: 420px) { .breadcrumb { overflow: hidden; white-space: nowrap; } .product-name { font-size: 1.55rem; } .gallery-main-swiper { border-radius: 7px; } .gallery-main-swiper img { padding: 1rem; } .size-btn { width: 3.65rem; } .related-section .products-grid { gap: .7rem; } .related-box { padding: 1.15rem; } }
   </style>
-  <link rel="stylesheet" href="css/mysupplies.css?v=20260930" />
+  <link rel="stylesheet" href="css/mysupplies.css?v=20261026" />
 <script src="/js/image-compat.js" defer></script>
 </head>
 <body>
@@ -512,7 +516,7 @@
 <script src="js/checkout.js?v=20261006"></script>
 <script src="js/menu.js?v=20260930"></script>
 <script src="js/db.js?v=20260930"></script>
-<script src="js/main.js?v=20260930"></script>
+<script src="js/main.js?v=20261026"></script>
 <script src="/js/tracking.js?v=20261007"></script>
 
 <script>
@@ -597,6 +601,22 @@
     if (schemaElement) schemaElement.textContent = JSON.stringify(schema).replace(/</g, '\\u003c');
   }
 
+  const VPS_IMG_BASE = 'https://137-131-233-254.sslip.io/nteleganz/uploads/';
+  const HOSTINGER_IMG_BASE = 'https://nteleganz.com.br/assets/images/products/';
+  const PLACEHOLDER_IMG = '/assets/images/placeholder-product.svg';
+
+  function resolveProductImg(raw) {
+    if (!raw || typeof raw !== 'string') return PLACEHOLDER_IMG;
+    const trimmed = raw.trim();
+    if (!trimmed) return PLACEHOLDER_IMG;
+    if (trimmed.includes('137-131-233-254.sslip.io')) return trimmed;
+    const match = trimmed.match(/([a-zA-Z0-9_\-\.]+\.webp)/i);
+    if (match) {
+      return VPS_IMG_BASE + match[1];
+    }
+    return trimmed;
+  }
+
   function renderGallery(product) {
     const slides = document.getElementById('gallery-slides');
     const thumbs = document.getElementById('thumb-slides');
@@ -618,17 +638,25 @@
 
     const imgStyle = isOutOfStock ? 'style="filter: grayscale(100%); opacity: 0.65;"' : '';
 
-    slides.innerHTML = images.map((img, i) => `
+    slides.innerHTML = images.map((img, i) => {
+      const vpsUrl = resolveProductImg(img);
+      return `
       <div class="swiper-slide">
-        <img src="${escapeAttr(img)}" alt="${escapeAttr(product.name)} — foto ${i + 1}" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" ${imgStyle} onerror="if(!this.dataset.triedVps){this.dataset.triedVps='1';this.src='https://137-131-233-254.sslip.io/nteleganz/uploads/'+this.src.split('/').pop().split('?')[0];}" />
+        <img src="${escapeAttr(vpsUrl)}" alt="${escapeAttr(product.name)} — foto ${i + 1}" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" ${imgStyle}
+          onload="this.classList.add('is-loaded');"
+          onerror="if(!this.dataset.triedHostinger){this.dataset.triedHostinger='1';this.src='${HOSTINGER_IMG_BASE}'+this.src.split('/').pop().split('?')[0];}else{this.onerror=null;this.src='${PLACEHOLDER_IMG}';}" />
       </div>
-    `).join('');
+    `}).join('');
 
-    thumbs.innerHTML = images.map((img, i) => `
+    thumbs.innerHTML = images.map((img, i) => {
+      const vpsUrl = resolveProductImg(img);
+      return `
       <div class="swiper-slide">
-        <img src="${escapeAttr(img)}" alt="${escapeAttr(product.name)} — foto ${i + 1}" loading="lazy" decoding="async" ${imgStyle} onerror="if(!this.dataset.triedVps){this.dataset.triedVps='1';this.src='https://137-131-233-254.sslip.io/nteleganz/uploads/'+this.src.split('/').pop().split('?')[0];}" />
+        <img src="${escapeAttr(vpsUrl)}" alt="${escapeAttr(product.name)} — foto ${i + 1}" loading="lazy" decoding="async" ${imgStyle}
+          onload="this.classList.add('is-loaded');"
+          onerror="if(!this.dataset.triedHostinger){this.dataset.triedHostinger='1';this.src='${HOSTINGER_IMG_BASE}'+this.src.split('/').pop().split('?')[0];}else{this.onerror=null;this.src='${PLACEHOLDER_IMG}';}" />
       </div>
-    `).join('');
+    `}).join('');
 
     // Init Swiper
     const thumbSwiper = new Swiper('#gallery-thumbs', {
@@ -745,10 +773,13 @@
       const brand = escapeAttr(p.brand || '');
       const name = escapeAttr(p.name || '');
       const cardUrl = window.ntWpp?.getProductUrl ? window.ntWpp.getProductUrl(p) : `/products/?id=${escapeAttr(p.id)}`;
+      const vpsRelated = resolveProductImg(relatedImg);
       return `
       <div class="product-card" onclick="window.location='${cardUrl}'" style="cursor:pointer;">
         <div class="product-card__image-wrap">
-          <img src="${escapeAttr(relatedImg)}"${relatedImgSrcset} alt="${brand} ${name}" loading="lazy" decoding="async" onerror="if(!this.dataset.triedVps){this.dataset.triedVps='1';this.src='https://137-131-233-254.sslip.io/nteleganz/uploads/'+this.src.split('/').pop().split('?')[0];}">
+          <img src="${escapeAttr(vpsRelated)}" alt="${brand} ${name}" loading="lazy" decoding="async"
+            onload="this.classList.add('is-loaded');if(this.parentElement)this.parentElement.classList.add('is-loaded');"
+            onerror="if(!this.dataset.triedHostinger){this.dataset.triedHostinger='1';this.src='${HOSTINGER_IMG_BASE}'+this.src.split('/').pop().split('?')[0];}else{this.onerror=null;this.src='${PLACEHOLDER_IMG}';}">
           ${p.badge ? `<span class="product-card__badge">${escapeAttr(p.badge)}</span>` : ''}
         </div>
         <div class="product-card__info">

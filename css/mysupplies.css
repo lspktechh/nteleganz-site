@@ -2852,3 +2852,42 @@ img.is-out-of-stock,
   z-index: 5 !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
 }
+
+/* ── Otimização de Performance e Skeleton Shimmer para Redes Lentas ── */
+@keyframes nteImageShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.product-card__image-wrap,
+.catalog-card__img-wrap {
+  position: relative !important;
+  aspect-ratio: 1 / 1 !important;
+  background: linear-gradient(90deg, #ece9e4 25%, #f6f4f0 50%, #ece9e4 75%) !important;
+  background-size: 200% 100% !important;
+  animation: nteImageShimmer 2.2s infinite ease-in-out !important;
+  overflow: hidden !important;
+}
+
+.product-card__image-wrap.is-loaded,
+.catalog-card__img-wrap.is-loaded {
+  background: #f0efed !important;
+  animation: none !important;
+}
+
+.product-card__image-wrap img,
+.catalog-card__img-wrap img {
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(0.2, 0, 0.2, 1), transform 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) !important;
+}
+
+.product-card__image-wrap img.is-loaded,
+.catalog-card__img-wrap img.is-loaded,
+.product-card__image-wrap img[src*="placeholder"],
+.catalog-card__img-wrap img[src*="placeholder"] {
+  opacity: 1 !important;
+}

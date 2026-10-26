@@ -167,6 +167,22 @@
   }
 
   // ── Render product card HTML ──
+  const VPS_IMG_BASE = 'https://137-131-233-254.sslip.io/nteleganz/uploads/';
+  const HOSTINGER_IMG_BASE = 'https://nteleganz.com.br/assets/images/products/';
+  const PLACEHOLDER_IMG = '/assets/images/placeholder-product.svg';
+
+  function resolveProductImg(raw) {
+    if (!raw || typeof raw !== 'string') return PLACEHOLDER_IMG;
+    const trimmed = raw.trim();
+    if (!trimmed) return PLACEHOLDER_IMG;
+    if (trimmed.includes('137-131-233-254.sslip.io')) return trimmed;
+    const match = trimmed.match(/([a-zA-Z0-9_\-\.]+\.webp)/i);
+    if (match) {
+      return VPS_IMG_BASE + match[1];
+    }
+    return trimmed;
+  }
+
   function respSrcset(src) {
     if (!src || src.includes('products/')) return '';
     if (src.includes('cutout')) {
@@ -176,19 +192,24 @@
     return '';
   }
 
-  function renderProductCard(product) {
+  function renderProductCard(product, index = 0) {
     const isOutOfStock = (product.stock !== undefined && Number(product.stock) <= 0) || product.inStock === false || product.available === false;
     const rawImage = product.image || (Array.isArray(product.images) && product.images[0]) || '';
-    const image = escHtml(rawImage);
+    const vpsUrl = resolveProductImg(rawImage);
+    const image = escHtml(vpsUrl);
     const brand = escHtml(product.brand || '');
     const name = escHtml(product.name || '');
     const productUrl = (window.ntWpp?.getProductUrl ? window.ntWpp.getProductUrl(product) : `/products/?id=${escHtml(product.id)}`);
+    const isAboveFold = (index < 4);
+    const loadAttrs = isAboveFold ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" decoding="async"';
+
     return `
       <a class="product-card ${isOutOfStock ? 'is-out-of-stock' : ''}" href="${productUrl}" data-product-id="${escHtml(product.id)}" aria-label="Ver ${name}">
         <div class="product-card__image-wrap">
-          <img src="${image}"${respSrcset(rawImage)} alt="${brand} ${name}" loading="lazy" decoding="async"
+          <img src="${image}" alt="${brand} ${name}" ${loadAttrs}
             style="${isOutOfStock ? 'filter: grayscale(100%); opacity: 0.6;' : ''}"
-            onerror="if(!this.dataset.triedVps){this.dataset.triedVps='1';this.src='https://137-131-233-254.sslip.io/nteleganz/uploads/'+this.src.split('/').pop().split('?')[0];}">
+            onload="this.classList.add('is-loaded');if(this.parentElement)this.parentElement.classList.add('is-loaded');"
+            onerror="if(!this.dataset.triedHostinger){this.dataset.triedHostinger='1';this.src='${HOSTINGER_IMG_BASE}'+this.src.split('/').pop().split('?')[0];}else{this.onerror=null;this.src='${PLACEHOLDER_IMG}';}">
           ${isOutOfStock ? '<span class="product-card__badge badge-out-of-stock" style="display:inline-flex !important; position:absolute; top:12px; left:12px; background:#dc2626 !important; color:#ffffff !important; font-size:11px !important; font-weight:700 !important; letter-spacing:0.8px !important; padding:4px 10px !important; border-radius:4px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.3) !important;">ESGOTADO</span>' : (product.badge ? `<span class="product-card__badge">${escHtml(product.badge)}</span>` : '')}
         </div>
         <div class="product-card__info">
@@ -208,7 +229,7 @@
     const grid = document.getElementById('products-grid');
     if (!grid) return;
     const filtered = getFilteredProducts();
-    grid.innerHTML = filtered.map(renderProductCard).join('');
+    grid.innerHTML = filtered.map((p, i) => renderProductCard(p, i)).join('');
 }
 
 // ── Render Mais Vendidos (bestsellers) ──
@@ -233,7 +254,7 @@
       return;
     }
     if (section) section.style.display = '';
-    grid.innerHTML = featured.map(renderProductCard).join('');
+    grid.innerHTML = featured.map((p, i) => renderProductCard(p, i)).join('');
   }
 
   let activeStorefrontFeedbacks = [];

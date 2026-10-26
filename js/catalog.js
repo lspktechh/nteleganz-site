@@ -238,19 +238,41 @@
     return '';
   }
 
-  function renderCard(p) {
+  const VPS_IMG_BASE = 'https://137-131-233-254.sslip.io/nteleganz/uploads/';
+  const HOSTINGER_IMG_BASE = 'https://nteleganz.com.br/assets/images/products/';
+  const PLACEHOLDER_IMG = '/assets/images/placeholder-product.svg';
+
+  function resolveProductImg(raw) {
+    if (!raw || typeof raw !== 'string') return PLACEHOLDER_IMG;
+    const trimmed = raw.trim();
+    if (!trimmed) return PLACEHOLDER_IMG;
+    if (trimmed.includes('137-131-233-254.sslip.io')) return trimmed;
+    const match = trimmed.match(/([a-zA-Z0-9_\-\.]+\.webp)/i);
+    if (match) {
+      return VPS_IMG_BASE + match[1];
+    }
+    return trimmed;
+  }
+
+  function renderCard(p, index = 0) {
     const isOutOfStock = (p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false;
     const badgeClass = p.badge === 'OFERTA' ? 'catalog-card__badge--sale' : p.badge === 'LUXO' ? 'catalog-card__badge--new' : '';
     const brand = esc(p.brand || '');
     const name = esc(p.name || '');
     const rawImg = p.image || (Array.isArray(p.images) && p.images[0]) || '';
+    const vpsUrl = resolveProductImg(rawImg);
+    const image = esc(vpsUrl);
     const productUrl = (window.ntWpp?.getProductUrl ? window.ntWpp.getProductUrl(p) : `/products/?id=${esc(p.id)}`);
+    const isAboveFold = (index < 4);
+    const loadAttrs = isAboveFold ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" decoding="async"';
+
     return `
       <article class="catalog-card ${isOutOfStock ? 'is-out-of-stock' : ''}" role="listitem" data-product-id="${esc(p.id)}">
         <a href="${productUrl}" class="catalog-card__img-wrap" aria-label="Ver ${name}">
-          <img src="${esc(rawImg)}"${cardSrcset(rawImg)} alt="${brand} — ${name}" loading="lazy" decoding="async"
+          <img src="${image}" alt="${brand} — ${name}" ${loadAttrs}
             style="${isOutOfStock ? 'filter: grayscale(100%); opacity: 0.6;' : ''}"
-            onerror="if(!this.dataset.triedVps){this.dataset.triedVps='1';this.src='https://137-131-233-254.sslip.io/nteleganz/uploads/'+this.src.split('/').pop().split('?')[0];}" />
+            onload="this.classList.add('is-loaded');if(this.parentElement)this.parentElement.classList.add('is-loaded');"
+            onerror="if(!this.dataset.triedHostinger){this.dataset.triedHostinger='1';this.src='${HOSTINGER_IMG_BASE}'+this.src.split('/').pop().split('?')[0];}else{this.onerror=null;this.src='${PLACEHOLDER_IMG}';}" />
           ${isOutOfStock
             ? '<span class="catalog-card__badge badge-out-of-stock" style="display:inline-flex !important; position:absolute; top:12px; left:12px; background:#dc2626 !important; color:#ffffff !important; font-size:11px !important; font-weight:700 !important; letter-spacing:0.8px !important; padding:4px 10px !important; border-radius:4px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.3) !important;">ESGOTADO</span>'
             : (p.badge ? `<span class="catalog-card__badge ${badgeClass}">${esc(p.badge)}</span>` : '')}
@@ -290,7 +312,7 @@
           <p>Nenhum produto encontrado.<br>Tente ajustar os filtros.</p><button class="filter-reset" data-clear-filters>Limpar filtros e ver produtos</button>
         </div>`;
     } else {
-      grid.innerHTML = slice.map(renderCard).join('');
+      grid.innerHTML = slice.map((p, idx) => renderCard(p, idx)).join('');
       grid.className = `catalog-grid grid-${currentGridCols}`;
     }
 

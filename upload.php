@@ -119,7 +119,8 @@ if (!$saved) {
     respond(500, 'Falha ao salvar imagem como WebP');
 }
 
-// Redundância Dupla: envia cópia idêntica da foto para o armazenamento da VPS
+// Armazenamento Primário na VPS + Backup na Hostinger
+$vpsSaved = false;
 try {
     $vpsUploadUrl = 'https://137-131-233-254.sslip.io/nteleganz/api/upload';
     $chVps = curl_init($vpsUploadUrl);
@@ -129,20 +130,29 @@ try {
         CURLOPT_POSTFIELDS => ['image' => $cfile],
         CURLOPT_HTTPHEADER => ['x-filename: ' . $filename],
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 4,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_TIMEOUT => 8,
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_SSL_VERIFYHOST => 0
     ]);
-    curl_exec($chVps);
+    $vpsResp = curl_exec($chVps);
+    $httpCode = curl_getinfo($chVps, CURLINFO_HTTP_CODE);
     curl_close($chVps);
+    if ($vpsResp !== false && $httpCode >= 200 && $httpCode < 300) {
+        $vpsSaved = true;
+    }
 } catch (\Throwable $t) {
     // Falha silenciosa para não travar o cliente caso a VPS esteja ocupada
 }
 
-// Retornar URL pública
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-$host = $_SERVER['HTTP_HOST'];
-$publicUrl = sprintf('%s://%s/assets/images/products/%s', $protocol, $host, $filename);
+// Retornar URL pública (VPS de alta performance como prioritária, Hostinger como redundância)
+if ($vpsSaved) {
+    $publicUrl = sprintf('https://137-131-233-254.sslip.io/nteleganz/uploads/%s', $filename);
+} else {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'];
+    $publicUrl = sprintf('%s://%s/assets/images/products/%s', $protocol, $host, $filename);
+}
 
 echo json_encode([
     'url' => $publicUrl,
