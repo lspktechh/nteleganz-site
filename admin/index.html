@@ -408,13 +408,15 @@
             <tbody id="products-tbody"></tbody>
           </table>
           <div class="pagination" id="products-pagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 16px; padding: 12px 0;">
-            <button class="btn btn-secondary btn-sm" id="pagination-prev" onclick="changeProductPage(-1)" disabled>Anterior</button>
-            <span id="pagination-info" style="color: var(--text-secondary); font-size: 14px;">Página 1 de 1</span>
-            <button class="btn btn-secondary btn-sm" id="pagination-next" onclick="changeProductPage(1)" disabled>Próxima</button>
+            <button class="btn btn-secondary btn-sm" id="pagination-prev" onclick="changeProductPage(-1)" disabled style="display: none;">Anterior</button>
+            <span id="pagination-info" style="color: var(--text-secondary); font-size: 14px;">Carregando produtos...</span>
+            <button class="btn btn-secondary btn-sm" id="pagination-next" onclick="changeProductPage(1)" disabled style="display: none;">Próxima</button>
             <select class="admin-select" id="pagination-page-size" onchange="changeProductPageSize(this.value)" style="width: auto; margin-left: 16px;">
-              <option value="20">20 por página</option>
-              <option value="50">50 por página</option>
+              <option value="500" selected>500 por página (todos)</option>
+              <option value="1000">1000 por página</option>
               <option value="100">100 por página</option>
+              <option value="50">50 por página</option>
+              <option value="20">20 por página</option>
             </select>
           </div>
           </div>
@@ -1276,7 +1278,7 @@
 <!-- Scripts -->
 <script src="../js/auth.js?v=20261007c"></script>
 <script src="../js/db.js?v=20261007c"></script>
-<script src="../js/admin.js?v=20261027b"></script>
+<script src="../js/admin.js?v=20261027c"></script>
 <script>
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');

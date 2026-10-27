@@ -27,7 +27,7 @@
   let priceMin = 0, priceMax = 99999;
   let searchQuery = '';
   let page = 1;
-  const PER_PAGE = 12;
+  const PER_PAGE = 500;
   const CATEGORY_LABELS = { todos:'Collections', camisetas:'Camisetas', shorts:'Shorts', calcados:'Calçados', hoodies:'Hoodies' };
   const getCategoryLabel = cat => CATEGORY_LABELS[cat] || (cat ? cat.charAt(0).toUpperCase() + cat.slice(1) : 'Collections');
   let currentGridCols = 4;

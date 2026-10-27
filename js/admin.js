@@ -17,7 +17,7 @@
   let confirmCallback = null;
   let currentDBMode = 'local';
   let productCurrentPage = 1;
-  let productPageSize = 20;
+  let productPageSize = 500;
 
   // ── Loader ──
   let loaderTimer = null;
@@ -1013,9 +1013,21 @@
     const nextBtn = document.getElementById('pagination-next');
     const info = document.getElementById('pagination-info');
 
-    if (prevBtn) prevBtn.disabled = productCurrentPage <= 1;
-    if (nextBtn) nextBtn.disabled = productCurrentPage >= totalPages;
-    if (info) info.textContent = `Página ${productCurrentPage} de ${totalPages} (${totalItems} itens)`;
+    if (prevBtn) {
+      prevBtn.disabled = productCurrentPage <= 1;
+      prevBtn.style.display = totalPages <= 1 ? 'none' : 'inline-flex';
+    }
+    if (nextBtn) {
+      nextBtn.disabled = productCurrentPage >= totalPages;
+      nextBtn.style.display = totalPages <= 1 ? 'none' : 'inline-flex';
+    }
+    if (info) {
+      if (totalPages <= 1) {
+        info.textContent = `Exibindo todos os ${totalItems} produtos em página única`;
+      } else {
+        info.textContent = `Página ${productCurrentPage} de ${totalPages} (${totalItems} itens)`;
+      }
+    }
   }
 
   window.changeProductPage = function (delta) {
