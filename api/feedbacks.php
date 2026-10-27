@@ -18,6 +18,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
     exit;
 }
 
+require_once __DIR__ . '/lib/image_store.php';
+require_once __DIR__ . '/lib/live_data.php';
+
+// Semente versionada. O que o gestor cadastra é gravado em feedbacks.live.json (fora do git).
 const FEEDBACKS_FILE = __DIR__ . '/../data/feedbacks.json';
 const FEEDBACKS_IMG_DIR = __DIR__ . '/../assets/images/feedbacks/';
 const PRODUCTS_IMG_DIR = __DIR__ . '/../assets/images/products/';
@@ -91,65 +95,75 @@ function callVpsFeedbackApi(string $method, string $path, ?array $body = null): 
 
 /**
  * Auto-cura de imagens ausentes na Hostinger:
- * Se um feedback apontar para uma foto que não existe no disco local da Hostinger,
- * baixa automaticamente uma cópia perfeita da VPS de imagens em segundo plano.
+ * Se um feedback apontar para uma foto que não existe (ou está corrompida) no disco da Hostinger,
+ * copia uma cópia íntegra da VPS. Só copia, nunca apaga. Fotos que já estão no disco (inclusive as
+ * fotos-padrão em /assets/images/) nem chegam a gerar requisição à VPS.
  */
 function autoCureFeedbackImages(array $feedbacks): void {
-    if (!is_dir(FEEDBACKS_IMG_DIR)) @mkdir(FEEDBACKS_IMG_DIR, 0755, true);
-    if (!is_dir(PRODUCTS_IMG_DIR)) @mkdir(PRODUCTS_IMG_DIR, 0755, true);
-
-    $syncCount = 0;
+    $attempts = 0;
     foreach ($feedbacks as $fb) {
-        if ($syncCount >= 4) break;
+        if ($attempts >= 4) break;
         $img = $fb['image'] ?? '';
         if (!$img || strpos($img, 'data:') === 0) continue;
 
-        $filename = basename(parse_url($img, PHP_URL_PATH));
-        if (!$filename || !preg_match('/^[a-zA-Z0-9_\-\.]+\.(webp|jpg|jpeg|png)$/i', $filename)) continue;
+        $path = (string)parse_url((string)$img, PHP_URL_PATH);
+        $filename = nte_img_safe_name($path);
+        if ($filename === null) continue;
 
-        $targetFeedbacks = FEEDBACKS_IMG_DIR . $filename;
-        $targetProducts = PRODUCTS_IMG_DIR . $filename;
+        // Arquivo exatamente como a loja o referencia
+        if (nte_img_local_ok(__DIR__ . '/..' . $path)) continue;
 
-        $needsDownload = (!file_exists($targetFeedbacks) || filesize($targetFeedbacks) === 0) &&
-                         (!file_exists($targetProducts) || filesize($targetProducts) === 0);
-
-        if ($needsDownload) {
-            $vpsImgUrl = VPS_UPLOADS_URL . $filename;
-            $ch = curl_init($vpsImgUrl);
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_CONNECTTIMEOUT => 2,
-                CURLOPT_TIMEOUT => 4,
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_SSL_VERIFYHOST => 0
-            ]);
-            $blob = curl_exec($ch);
-            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($blob !== false && $code === 200 && strlen($blob) > 200) {
-                @file_put_contents($targetFeedbacks, $blob);
-                @file_put_contents($targetProducts, $blob);
-                $syncCount++;
-            }
+        $attempts++;
+        $bytes = nte_img_fetch_from_vps($filename, 4);
+        if ($bytes !== null) {
+            nte_write_atomic(FEEDBACKS_IMG_DIR . $filename, $bytes);
+            nte_write_atomic(PRODUCTS_IMG_DIR . $filename, $bytes);
         }
     }
 }
 
-function readFeedbacks(bool $includeInactive = true): array {
-    // 1. Tenta obter da VPS (PostgreSQL) primeiro
-    $vps = callVpsFeedbackApi('GET', '/feedbacks' . ($includeInactive ? '?all=1' : ''));
-    if ($vps !== null && isset($vps['feedbacks']) && is_array($vps['feedbacks']) && !empty($vps['feedbacks'])) {
-        $list = $vps['feedbacks'];
-        foreach ($list as &$item) {
-            if (isset($item['image'])) {
-                $item['image'] = normalizeFeedbackImg((string)$item['image']);
-            }
-            $item['order'] = isset($item['order']) ? (int)$item['order'] : 999;
-            $item['active'] = !isset($item['active']) || (bool)$item['active'];
+/** Lista salva localmente (arquivo vivo; na 1ª leitura, a semente). Vazia se nada foi gravado ainda. */
+function readLocalFeedbacks(): array {
+    $data = nte_live_read(FEEDBACKS_FILE);
+    return is_array($data) ? array_values(array_filter($data, 'is_array')) : [];
+}
+
+/**
+ * Junta a lista da VPS com a local: o que existir só no cache local (ex.: cadastrado enquanto a VPS
+ * estava fora do ar) é preservado. Um feedback só deixa de existir quando o gestor o exclui pelo painel.
+ */
+function mergeLocalOnlyFeedbacks(array $vpsList, array $localList): array {
+    $known = [];
+    foreach ($vpsList as $fb) {
+        if (is_array($fb) && isset($fb['id'])) $known[(string)$fb['id']] = true;
+    }
+    foreach ($localList as $fb) {
+        if (!isset($fb['id']) || isset($known[(string)$fb['id']])) continue;
+        $vpsList[] = $fb;
+    }
+    return $vpsList;
+}
+
+function normalizeFeedbackList(array $list): array {
+    foreach ($list as &$item) {
+        if (isset($item['image'])) {
+            $item['image'] = normalizeFeedbackImg((string)$item['image']);
         }
-        unset($item);
-        usort($list, fn($a, $b) => ($a['order'] ?? 0) <=> ($b['order'] ?? 0));
+        $item['order'] = isset($item['order']) ? (int)$item['order'] : 999;
+        $item['active'] = !isset($item['active']) || (bool)$item['active'];
+    }
+    unset($item);
+    usort($list, fn($a, $b) => ($a['order'] ?? 0) <=> ($b['order'] ?? 0));
+    return $list;
+}
+
+function readFeedbacks(bool $includeInactive = true): array {
+    // 1. Tenta obter da VPS (PostgreSQL) primeiro. Pede SEMPRE a lista completa e filtra aqui: ao mesclar
+    //    com o cache local, "inativo" nunca pode ser confundido com "não existe".
+    $vps = callVpsFeedbackApi('GET', '/feedbacks?all=1');
+    if ($vps !== null && isset($vps['feedbacks']) && is_array($vps['feedbacks']) && !empty($vps['feedbacks'])) {
+        // O cache local nunca é simplesmente substituído: o que existir só nele é preservado
+        $list = normalizeFeedbackList(mergeLocalOnlyFeedbacks($vps['feedbacks'], readLocalFeedbacks()));
 
         // Atualiza o cache local silenciosamente
         saveLocalFeedbacksFile($list);
@@ -163,25 +177,14 @@ function readFeedbacks(bool $includeInactive = true): array {
     }
 
     // 2. Fallback de Segurança: se a VPS estiver offline, lê do arquivo local
-    if (!file_exists(FEEDBACKS_FILE)) {
-        $defs = defaultFeedbacks();
-        saveLocalFeedbacksFile($defs);
-        return $includeInactive ? $defs : array_values(array_filter($defs, fn($f) => !empty($f['active'])));
-    }
-    $raw = @file_get_contents(FEEDBACKS_FILE);
-    $data = $raw ? @json_decode($raw, true) : null;
-    $list = is_array($data) && !empty($data) ? $data : defaultFeedbacks();
-
-    foreach ($list as &$item) {
-        if (isset($item['image'])) {
-            $item['image'] = normalizeFeedbackImg((string)$item['image']);
+    $list = readLocalFeedbacks();
+    if (empty($list)) {
+        $list = defaultFeedbacks();
+        if (!nte_live_exists(FEEDBACKS_FILE)) {
+            saveLocalFeedbacksFile($list);
         }
-        $item['order'] = isset($item['order']) ? (int)$item['order'] : 999;
-        $item['active'] = !isset($item['active']) || (bool)$item['active'];
     }
-    unset($item);
-
-    usort($list, fn($a, $b) => ($a['order'] ?? 0) <=> ($b['order'] ?? 0));
+    $list = normalizeFeedbackList($list);
 
     if (!$includeInactive) {
         $list = array_values(array_filter($list, fn($f) => !empty($f['active'])));
@@ -190,9 +193,6 @@ function readFeedbacks(bool $includeInactive = true): array {
 }
 
 function saveLocalFeedbacksFile(array $feedbacks): bool {
-    $dir = dirname(FEEDBACKS_FILE);
-    if (!is_dir($dir)) @mkdir($dir, 0755, true);
-
     usort($feedbacks, fn($a, $b) => ($a['order'] ?? 0) <=> ($b['order'] ?? 0));
     $orderIndex = 1;
     foreach ($feedbacks as &$fb) {
@@ -200,7 +200,7 @@ function saveLocalFeedbacksFile(array $feedbacks): bool {
     }
     unset($fb);
 
-    return (bool)@file_put_contents(
+    return nte_live_write(
         FEEDBACKS_FILE,
         json_encode(array_values($feedbacks), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
     );
@@ -283,19 +283,8 @@ function saveOptimizedFeedbackImage(string $base64Data, string $id): ?string {
 
 function mirrorToVps(string $filepath, string $filename): void {
     try {
-        $ch = curl_init(VPS_UPLOAD_URL);
-        $cfile = curl_file_create($filepath, 'image/webp', $filename);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => ['image' => $cfile],
-            CURLOPT_HTTPHEADER => ['x-filename: ' . $filename],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 5,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0
-        ]);
-        @curl_exec($ch);
-        @curl_close($ch);
+        // Cópia conferida na VPS; se falhar, o sync-images.php completa depois (a foto segue salva aqui)
+        nte_img_push_to_vps($filepath, $filename);
     } catch (\Throwable $t) {
         // Falha silenciosa de redundância
     }
@@ -493,10 +482,12 @@ if ($method === 'POST') {
         ]);
 
         if ($vpsRes !== null && isset($vpsRes['feedbacks']) && is_array($vpsRes['feedbacks'])) {
-            saveLocalFeedbacksFile($vpsRes['feedbacks']);
+            // O cache local não é substituído pela lista da VPS: o que existir só nele é preservado
+            $synced = normalizeFeedbackList(mergeLocalOnlyFeedbacks($vpsRes['feedbacks'], readLocalFeedbacks()));
+            saveLocalFeedbacksFile($synced);
             echo json_encode([
                 'success' => true,
-                'feedbacks' => $vpsRes['feedbacks'],
+                'feedbacks' => $synced,
                 'item' => [
                     'id' => $id,
                     'title' => $title,

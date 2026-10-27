@@ -1,6 +1,8 @@
 <?php
 // NT ELEGANZ — Clean Image Proxy
 // Permite acessar a foto da peça por slug limpo: /foto/camiseta-polo-bear-rl-grey-g.jpg ou /foto/?p=...
+require_once __DIR__ . '/../api/lib/image_store.php';
+
 $productQuery = isset($_GET['p']) ? trim((string)$_GET['p']) : (isset($_GET['slug']) ? trim((string)$_GET['slug']) : (isset($_GET['id']) ? trim((string)$_GET['id']) : ''));
 
 if ($productQuery === '') {
@@ -124,30 +126,15 @@ $relPath = ltrim((string)$parsed, '/');
 $filePath = __DIR__ . '/../' . $relPath;
 
 $rawImageBytes = null;
-if (file_exists($filePath)) {
+if (nte_img_local_ok($filePath)) {
     $rawImageBytes = @file_get_contents($filePath);
 } else {
-    // Busca na VPS onde os uploads estão armazenados e salva em cache local
-    $vpsUrl = 'https://137-131-233-254.sslip.io/nteleganz/uploads/' . basename($img);
-    $ch = curl_init($vpsUrl);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => false,
-        CURLOPT_TIMEOUT => 8,
-    ]);
-    $res = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($code === 200 && !empty($res)) {
-        $rawImageBytes = $res;
-        $dir = dirname($filePath);
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0755, true);
-        }
-        @file_put_contents($filePath, $rawImageBytes);
+    // Falta (ou está corrompida) no disco: busca na VPS, confere que é uma imagem de verdade e salva
+    // em cache local de forma atômica
+    $vpsName = nte_img_safe_name(basename($img));
+    $rawImageBytes = $vpsName !== null ? nte_img_fetch_from_vps($vpsName) : null;
+    if ($rawImageBytes !== null) {
+        nte_write_atomic($filePath, $rawImageBytes);
     }
 }
 

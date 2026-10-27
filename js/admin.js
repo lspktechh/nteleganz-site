@@ -294,6 +294,16 @@
     }
   };
 
+  // Completa em segundo plano a segunda cópia das fotos (Hostinger <-> VPS). Só copia, nunca apaga.
+  function syncImagesInBackground() {
+    try {
+      const last = Number(localStorage.getItem('nte_img_sync_at') || 0);
+      if (Date.now() - last < 30 * 60 * 1000) return;
+      localStorage.setItem('nte_img_sync_at', String(Date.now()));
+    } catch (e) { /* sem localStorage: sincroniza mesmo assim */ }
+    fetch('/api/sync-images.php', { cache: 'no-store' }).catch(() => {});
+  }
+
   // ── Init ──
   async function init() {
     scheduleLoader();
@@ -369,6 +379,7 @@
       allOrders = await window.ntDB?.orders.getAll() || [];
       await refreshLeads(false);
       loadCategories().catch(e => console.warn('Falha ao inicializar categorias:', e));
+      syncImagesInBackground();
 
       // Load overview
       loadOverview();

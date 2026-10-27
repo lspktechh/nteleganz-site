@@ -32,3 +32,9 @@ data/tracking_settings.json
 # Feedbacks gerenciados no admin e persistidos no PostgreSQL da VPS
 # (Garante que deploys do Git nunca sobrescrevam os depoimentos adicionados pelo dono)
 data/feedbacks.backup.json
+
+# Dados cadastrados pelo gestor no painel (feedbacks, categorias, fretes) vivem em arquivos *.live.json
+# no servidor. Os data/*.json versionados sao apenas a semente inicial: um deploy pode troca-los sem
+# apagar nem reverter nada do que o gestor cadastrou.
+data/*.live.json
+data/.sync_images_stamp
