@@ -119,7 +119,7 @@ if (!$saved) {
     respond(500, 'Falha ao salvar imagem como WebP');
 }
 
-// Armazenamento Primário na VPS + Backup na Hostinger
+// Armazenamento com sincronização dupla: Hostinger (local) + VPS (remoto)
 $vpsSaved = false;
 try {
     $vpsUploadUrl = 'https://137-131-233-254.sslip.io/nteleganz/api/upload';
@@ -145,18 +145,17 @@ try {
     // Falha silenciosa para não travar o cliente caso a VPS esteja ocupada
 }
 
-// Retornar URL pública (VPS de alta performance como prioritária, Hostinger como redundância)
-if ($vpsSaved) {
-    $publicUrl = sprintf('https://137-131-233-254.sslip.io/nteleganz/uploads/%s', $filename);
-} else {
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'];
-    $publicUrl = sprintf('%s://%s/assets/images/products/%s', $protocol, $host, $filename);
-}
+// Retornar SEMPRE a URL canônica primária oficial do domínio nteleganz.com.br.
+// Isso evita que fotos fiquem invisíveis para clientes ou donos em redes/dispositivos
+// que bloqueiam domínios curinga como *.sslip.io (redes universitárias, corporativas, pi-hole, etc.).
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'https';
+$host = !empty($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'nteleganz.com.br';
+$publicUrl = sprintf('%s://%s/assets/images/products/%s', $protocol, $host, $filename);
 
 echo json_encode([
     'url' => $publicUrl,
-    'filename' => $filename
+    'filename' => $filename,
+    'vpsSynced' => $vpsSaved
 ]);
 
 // ──────────────────────────────────────────────

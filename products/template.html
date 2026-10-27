@@ -606,7 +606,6 @@
     if (!raw || typeof raw !== 'string') return PLACEHOLDER_IMG;
     const trimmed = raw.trim();
     if (!trimmed) return PLACEHOLDER_IMG;
-    if (trimmed.includes('137-131-233-254.sslip.io')) return trimmed;
     const match = trimmed.match(/([a-zA-Z0-9_\-\.]+\.webp)/i);
     if (match) {
       return HOSTINGER_IMG_BASE + match[1];

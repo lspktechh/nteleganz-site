@@ -1004,10 +1004,10 @@
         <div class="form-group">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
             <label style="margin:0;">Estoque disponível *</label>
-            <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:11px; height:auto; cursor:pointer;" onclick="document.getElementById('p-stock').value='0'">Zerar Estoque (Esgotado)</button>
+            <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:11px; height:auto; cursor:pointer;" onclick="document.getElementById('p-stock').value='0'; if (window.updateStockHint) window.updateStockHint();">Zerar Estoque (Esgotado)</button>
           </div>
-          <input type="number" class="form-control" id="p-stock" min="0" step="1" placeholder="0" required />
-          <small class="form-hint">Use 0 para marcar o produto como esgotado sem burocracia.</small>
+          <input type="number" class="form-control" id="p-stock" min="0" step="1" placeholder="1" required oninput="if (window.updateStockHint) window.updateStockHint();" />
+          <small class="form-hint" id="p-stock-hint">Estoque disponível para venda. Use 0 apenas se o produto estiver esgotado.</small>
         </div>
         <div class="form-group">
           <label>Badge (opcional)</label>
@@ -1048,9 +1048,9 @@
 
         <div class="form-group">
           <label>Status</label>
-          <select class="form-control" id="p-active">
-            <option value="true">Ativo</option>
-            <option value="false">Inativo</option>
+          <select class="form-control" id="p-active" onchange="if (window.handleActiveStatusChange) window.handleActiveStatusChange();">
+            <option value="true">Ativo (Visível na loja)</option>
+            <option value="false">Inativo (Oculto na loja)</option>
           </select>
         </div>
 
@@ -1276,7 +1276,7 @@
 <!-- Scripts -->
 <script src="../js/auth.js?v=20261007c"></script>
 <script src="../js/db.js?v=20261007c"></script>
-<script src="../js/admin.js?v=20261023"></script>
+<script src="../js/admin.js?v=20261027b"></script>
 <script>
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');

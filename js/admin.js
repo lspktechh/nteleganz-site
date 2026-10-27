@@ -546,21 +546,19 @@
 
   function getOrderThumbnail(o) {
     if (!o) return '';
+    let found = '';
     if (o.imageUrl && typeof o.imageUrl === 'string' && o.imageUrl.trim() !== '') {
-      return o.imageUrl;
-    }
-    if (Array.isArray(o.items) && o.items[0]?.image) {
-      return o.items[0].image;
-    }
-    if (o.productId && allProducts.length) {
+      found = o.imageUrl;
+    } else if (Array.isArray(o.items) && o.items[0]?.image) {
+      found = o.items[0].image;
+    } else if (o.productId && allProducts.length) {
       const p = allProducts.find(x => String(x.id) === String(o.productId));
-      if (p) return p.image || (Array.isArray(p.images) && p.images[0]) || '';
-    }
-    if (o.productName && allProducts.length) {
+      if (p) found = p.image || (Array.isArray(p.images) && p.images[0]) || '';
+    } else if (o.productName && allProducts.length) {
       const p = allProducts.find(x => x.name && x.name.toLowerCase() === o.productName.toLowerCase());
-      if (p) return p.image || (Array.isArray(p.images) && p.images[0]) || '';
+      if (p) found = p.image || (Array.isArray(p.images) && p.images[0]) || '';
     }
-    return '';
+    return found ? (typeof resolveAdminProductImg === 'function' ? resolveAdminProductImg(found) : found) : '';
   }
 
   function renderRecentOrders() {
@@ -865,6 +863,82 @@
     }
   }
 
+  // ── Resolução e Fallback Resiliente de Imagens do Catálogo ──
+  const VPS_IMG_BASE = 'https://137-131-233-254.sslip.io/nteleganz/uploads/';
+  const HOSTINGER_IMG_BASE = 'https://nteleganz.com.br/assets/images/products/';
+  const PLACEHOLDER_IMG = '/assets/images/placeholder-product.svg';
+
+  function resolveAdminProductImg(raw) {
+    if (!raw || typeof raw !== 'string') return PLACEHOLDER_IMG;
+    const trimmed = raw.trim();
+    if (!trimmed) return PLACEHOLDER_IMG;
+    if (trimmed.startsWith('data:image/')) return trimmed;
+    // Normaliza qualquer URL da VPS ou de terceiros para o domínio oficial de 1º nível da NT Eleganz
+    const match = trimmed.match(/([a-zA-Z0-9_\-\.]+\.webp)/i);
+    if (match) {
+      return HOSTINGER_IMG_BASE + match[1];
+    }
+    return trimmed;
+  }
+
+  window.handleAdminThumbError = function (img) {
+    if (!img) return;
+    const currentSrc = img.src || '';
+    const match = currentSrc.match(/([a-zA-Z0-9_\-\.]+\.webp)/i);
+    const filename = match ? match[1] : '';
+
+    // Tentativa 1: se falhou no domínio principal (Hostinger), tenta a VPS
+    if (filename && !img.dataset.triedVps) {
+      img.dataset.triedVps = '1';
+      img.src = VPS_IMG_BASE + filename;
+      return;
+    }
+
+    // Tentativa 2: fallback visual com o placeholder oficial elegante da NT Eleganz
+    img.onerror = null;
+    img.src = PLACEHOLDER_IMG;
+    img.style.objectFit = 'contain';
+    img.style.background = '#18181b';
+    img.title = 'Foto temporariamente indisponível - clique em Editar para atualizar';
+  };
+
+  // ── Dicas e Validação Inteligente de Estoque no Painel ──
+  window.updateStockHint = function () {
+    const stockInput = document.getElementById('p-stock');
+    const hint = document.getElementById('p-stock-hint');
+    const activeSelect = document.getElementById('p-active');
+    if (!stockInput || !hint) return;
+
+    const val = Number(stockInput.value);
+    const isActive = activeSelect?.value === 'true';
+
+    if (stockInput.value !== '' && val <= 0) {
+      hint.innerHTML = `<span style="color:#ef4444; font-weight:600;">⚠️ Atenção: Com estoque 0, o produto será exibido com selo de ESGOTADO na loja.</span>`;
+    } else if (val > 0) {
+      hint.innerHTML = `<span style="color:#22c55e; font-weight:600;">✅ Em estoque (${val} ${val === 1 ? 'unidade' : 'unidades'}) — Disponível para compra imediata.</span>`;
+    } else {
+      hint.textContent = 'Estoque disponível para venda. Use 0 apenas se o produto estiver esgotado.';
+    }
+  };
+
+  window.handleActiveStatusChange = function () {
+    const activeSelect = document.getElementById('p-active');
+    const stockInput = document.getElementById('p-stock');
+    if (!activeSelect || !stockInput) return;
+
+    if (activeSelect.value === 'true') {
+      const currentStock = Number(stockInput.value);
+      // Se o usuário ativar o produto e o estoque estiver zerado ou vazio,
+      // define automaticamente como 1 para evitar que fique como 'ESGOTADO' por acidente!
+      if (!stockInput.value || currentStock <= 0) {
+        stockInput.value = '1';
+        stockInput.style.borderColor = '#22c55e';
+        setTimeout(() => { if (stockInput) stockInput.style.borderColor = ''; }, 1200);
+      }
+    }
+    window.updateStockHint();
+  };
+
   function renderProductsTableData(products) {
     const tbody = document.getElementById('products-tbody');
     if (!tbody) return;
@@ -883,13 +957,14 @@
 
     tbody.innerHTML = pageProducts.map(p => {
       const isOutOfStock = (p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false;
+      const imgSrc = resolveAdminProductImg(p.image);
       return `
       <tr data-id="${p.id}">
         <td>
           <div style="position:relative; display:inline-block;">
-            <img class="product-thumb ${isOutOfStock ? 'is-out-of-stock' : ''}" src="${escHtml(p.image || 'data:image/svg+xml,<svg/>')}" alt="${escHtml(p.name)}"
+            <img class="product-thumb ${isOutOfStock ? 'is-out-of-stock' : ''}" src="${escHtml(imgSrc)}" alt="${escHtml(p.name)}"
               style="${isOutOfStock ? 'filter: grayscale(100%); opacity: 0.55;' : ''}"
-              onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'44\\' height=\\'56\\'/%3E'" />
+              onerror="window.handleAdminThumbError(this);" />
             ${isOutOfStock ? '<span style="position:absolute; bottom:2px; left:50%; transform:translateX(-50%); background:#dc2626; color:#fff; font-size:8px; font-weight:800; padding:1px 4px; border-radius:3px; letter-spacing:0.5px; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,0.4); text-transform:uppercase;">ESGOTADO</span>' : ''}
           </div>
         </td>
@@ -1041,7 +1116,7 @@
       if (el) el.value = '';
     });
     document.getElementById('p-category').value = allCategories[0]?.id || 'camisetas';
-    document.getElementById('p-stock').value = '';
+    document.getElementById('p-stock').value = '1'; // Padrão seguro de 1 unidade para produtos novos
     document.getElementById('p-active').value = 'true';
     renderImagePreviews();
     updateSizeSuggestions();
@@ -1059,6 +1134,8 @@
     if (productId) {
       const p = allProducts.find(p => p.id === productId);
       if (p) fillProductForm(p);
+    } else {
+      if (window.updateStockHint) window.updateStockHint();
     }
 
     // Apply modern minimalist styles (matching order modals)
@@ -1213,11 +1290,12 @@
     setValue('p-badge', p.badge || '');
     setValue('p-desc', p.desc || '');
     setValue('p-category', productCategory(p));
-    setValue('p-stock', Number.isFinite(Number(p.stock)) ? p.stock : '');
+    setValue('p-stock', Number.isFinite(Number(p.stock)) ? p.stock : 1);
     setValue('p-active', String(p.active !== false));
 
-    // Images
-    pendingImages = [...new Set((Array.isArray(p.images) && p.images.length ? p.images : [p.image]).filter(Boolean))];
+    // Images: Normaliza URLs legadas/VPS para a URL canônica oficial
+    const rawImages = (Array.isArray(p.images) && p.images.length ? p.images : [p.image]).filter(Boolean);
+    pendingImages = [...new Set(rawImages.map(resolveAdminProductImg))];
     setValue('p-image-url', pendingImages.filter(image => !image.startsWith('data:image/')).join('\n'));
     renderImagePreviews();
 
@@ -1235,6 +1313,8 @@
     const pDest = document.getElementById('p-destaque');
     if (pFeat) pFeat.checked = !!p.featured;
     if (pDest) pDest.checked = !!p.destaque;
+
+    if (window.updateStockHint) window.updateStockHint();
   }
 
   window.closeProductModal = function () {
@@ -1281,6 +1361,31 @@
       setValue('p-name', finalName);
     }
 
+    const rawStock = getVal('p-stock');
+    let stockNum = Number(rawStock);
+    const isActive = getVal('p-active') === 'true';
+
+    // Proteção definitiva: se o status for Ativo mas o estoque for 0,
+    // confirma a intenção do dono para evitar esgotamento/inativação acidental
+    if (isActive && stockNum === 0) {
+      const confirmZero = confirm(
+        'Atenção:\n\n' +
+        'O status deste produto está como "Ativo", mas o estoque está definido como 0.\n' +
+        'Isso fará o produto aparecer com o selo vermelho de "ESGOTADO" na vitrine da loja.\n\n' +
+        'Deseja colocar Estoque = 1 para deixá-lo disponível para venda agora?\n\n' +
+        '• Clique em OK para colocar Estoque = 1 (Disponível para venda)\n' +
+        '• Clique em Cancelar para manter Estoque = 0 (Esgotado)'
+      );
+      if (confirmZero) {
+        stockNum = 1;
+        setValue('p-stock', 1);
+        if (window.updateStockHint) window.updateStockHint();
+      }
+    }
+
+    // Normaliza todas as imagens salvas para o domínio oficial de 1º nível (nteleganz.com.br)
+    const normalizedImages = storedImages.map(resolveAdminProductImg);
+
     const productData = {
       id: productId,
       brand: getVal('p-brand'),
@@ -1290,15 +1395,15 @@
       badge: getVal('p-badge') || null,
       desc: getVal('p-desc'),
       category: getVal('p-category'),
-      stock: Number(getVal('p-stock')),
-      inStock: Number(getVal('p-stock')) > 0,
-      available: getVal('p-active') === 'true' && Number(getVal('p-stock')) > 0,
+      stock: stockNum,
+      inStock: stockNum > 0,
+      available: isActive && stockNum > 0,
       priceNum: fmt.parsePrice(getVal('p-price')),
-      active: getVal('p-active') === 'true',
+      active: isActive,
       sizes: [...editingSizes],
       colors: [...editingColors],
-      image: storedImages[0] || '',
-      images: [...storedImages],
+      image: normalizedImages[0] || '',
+      images: [...normalizedImages],
       slug: finalSlug,
       featured: document.getElementById('p-featured')?.checked || false,
       destaque: document.getElementById('p-destaque')?.checked || false,
@@ -1549,15 +1654,18 @@
   function renderImagePreviews() {
     const grid = document.getElementById('img-preview-grid');
     if (!grid) return;
-    grid.innerHTML = pendingImages.map((image, index) => `
+    grid.innerHTML = pendingImages.map((image, index) => {
+      const displaySrc = resolveAdminProductImg(image);
+      return `
       <div class="img-preview-item" style="position:relative;">
-        <img src="${escHtml(image)}" alt="Foto ${index + 1} do produto" style="width:100%; height:100%; object-fit:cover; border-radius:8px;" />
+        <img src="${escHtml(displaySrc)}" alt="Foto ${index + 1} do produto" style="width:100%; height:100%; object-fit:cover; border-radius:8px;" onerror="window.handleAdminThumbError(this);" />
         ${index === 0 
           ? '<span class="img-preview-primary" style="position:absolute; top:6px; left:6px; bottom:auto !important; right:auto !important; width:auto !important; height:auto !important; display:inline-block !important; background:#c9a84c; color:#000; font-size:9px; font-weight:800; padding:3px 7px; border-radius:4px; text-transform:uppercase; z-index:2; line-height:1.2 !important; box-shadow:0 2px 4px rgba(0,0,0,0.3);">Principal</span>' 
           : `<button type="button" class="btn btn-secondary btn-sm" onclick="setPrimaryProductImage(${index})" style="position:absolute; bottom:6px; left:6px; font-size:10px; padding:2px 6px; height:auto; background:rgba(0,0,0,0.8); color:#c9a84c; border:1px solid rgba(201,168,76,0.5); border-radius:4px; cursor:pointer; z-index:2;" title="Definir como foto principal na vitrine">Tornar Principal</button>`}
         <button type="button" class="img-preview-remove" onclick="removeProductImage(${index})" aria-label="Remover foto ${index + 1}" title="Excluir foto" style="z-index:3;">×</button>
       </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
   window.setPrimaryProductImage = function (index) {
