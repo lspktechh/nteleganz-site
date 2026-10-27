@@ -358,12 +358,19 @@
   let isFeedbackHovered = false;
 
   function defaultStorefrontFeedbacks() {
-    return Array.from({ length: 13 }, (_, index) => ({
+    const list = Array.from({ length: 13 }, (_, index) => ({
       id: `fb-${index + 1}`,
       title: `Feedback ${index + 1}`,
       image: `assets/images/feedback-${index + 1}.webp`,
       order: index + 1
     }));
+    list.push(
+      { id: 'fb-1792764945-313d8', title: 'Feedback 14 - Jaqueta Moncler', image: '/assets/images/products/feedback-fb-1792764945-313d8-1792764945.webp', order: 14 },
+      { id: 'fb-1792764983-c98cc', title: 'Feedback 15 - Camiseta CDG Play', image: '/assets/images/products/feedback-fb-1792764983-c98cc-1792764983.webp', order: 15 },
+      { id: 'fb-1792765021-b6911', title: 'Feedback 16 - Camiseta CDG Play', image: '/assets/images/products/feedback-fb-1792765021-b6911-1792765021.webp', order: 16 },
+      { id: 'fb-1792765096-77ca7', title: 'Feedback 17 - Bermuda Sundek', image: '/assets/images/products/feedback-fb-1792765096-77ca7-1792765096.webp', order: 17 }
+    );
+    return list;
   }
 
   function setFeedbackIndex(newIndex) {
@@ -447,7 +454,7 @@
   }
 
   function renderCatalogSections(feedbacksList = null) {
-    const holder = document.getElementById('catalog-product-sections');
+    const holder = document.getElementById('feedbacks-showcase-section') || document.getElementById('catalog-product-sections');
     if (!holder) return;
 
     if (Array.isArray(feedbacksList) && feedbacksList.length) {
@@ -463,12 +470,12 @@
     const count = activeStorefrontFeedbacks.length;
     if (feedbackStageIndex >= count) feedbackStageIndex = 0;
 
-    // Renderiza os cards do carrossel 3D
+    // Renderiza os cards do carrossel 3D com fallback automático para VPS se imagem falhar
     const cardsHtml = activeStorefrontFeedbacks.map((item, index) => {
       const src = item.image || item;
       const title = item.title || `Feedback ${index + 1}`;
       return `<button type="button" class="feedback-card" data-index="${index}" aria-label="${title}">
-        <img class="feedback-card__img" src="${src}" alt="${title}" loading="lazy" />
+        <img class="feedback-card__img" src="${src}" alt="${title}" loading="lazy" onerror="if(!this.dataset.vpsTried){this.dataset.vpsTried='1';this.src='https://137-131-233-254.sslip.io/nteleganz/uploads/'+this.src.split('/').pop();}else{this.src='/assets/images/feedback-1.webp';}" />
         <span class="feedback-card__badge" aria-hidden="true">✓ Cliente Verificado</span>
       </button>`;
     }).join('');
@@ -532,6 +539,14 @@
     const counter = document.getElementById('feedback-lightbox-counter');
 
     if (!modal || !img) return;
+    img.onerror = function() {
+      if (!this.dataset.vpsTried) {
+        this.dataset.vpsTried = '1';
+        this.src = 'https://137-131-233-254.sslip.io/nteleganz/uploads/' + this.src.split('/').pop();
+      } else {
+        this.src = '/assets/images/feedback-1.webp';
+      }
+    };
     img.src = item.image || item;
     img.alt = item.title || `Feedback ${currentFeedbackLightboxIndex + 1}`;
     if (counter) counter.textContent = `${currentFeedbackLightboxIndex + 1} / ${activeStorefrontFeedbacks.length}`;

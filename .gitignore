@@ -28,3 +28,7 @@ Thumbs.db
 # (pixels/IDs vivem no servidor Hostinger via api/tracking.php e o Git
 #  NUNCA deve sobrescrevê-los num deploy)
 data/tracking_settings.json
+
+# Feedbacks gerenciados no admin e persistidos no PostgreSQL da VPS
+# (Garante que deploys do Git nunca sobrescrevam os depoimentos adicionados pelo dono)
+data/feedbacks.backup.json

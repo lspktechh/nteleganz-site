@@ -3571,7 +3571,7 @@
         <div class="feedback-admin-card" data-id="${safeId}" style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; box-shadow: var(--shadow-sm); position: relative;">
           <!-- Top indicators -->
           <div style="position: relative; width: 100%; aspect-ratio: 9/16; background: #0f0f10; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-            <img src="${imgSrc}" alt="${safeTitle}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='../assets/images/feedback-1.webp'" />
+            <img src="${imgSrc}" alt="${safeTitle}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="if(!this.dataset.vpsTried){this.dataset.vpsTried='1';this.src='https://137-131-233-254.sslip.io/nteleganz/uploads/'+this.src.split('/').pop();}else{this.src='../assets/images/feedback-1.webp';}" />
             
             <!-- Badge de Posição / Ordem -->
             <span style="position: absolute; top: 10px; left: 10px; background: rgba(10,10,10,0.88); color: #fff; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.18);">
@@ -3692,6 +3692,12 @@
       if (posSelect) posSelect.style.display = 'none';
 
       if (previewBox && previewImg) {
+        previewImg.onerror = function() {
+          if (!this.dataset.vpsTried) {
+            this.dataset.vpsTried = '1';
+            this.src = 'https://137-131-233-254.sslip.io/nteleganz/uploads/' + this.src.split('/').pop();
+          }
+        };
         previewImg.src = resolveFeedbackImg(item.image);
         if (previewLabel) previewLabel.textContent = 'Foto Atual';
         previewBox.style.display = 'block';

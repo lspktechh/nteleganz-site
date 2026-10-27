@@ -1,7 +1,8 @@
 <?php
 /**
  * NT Eleganz — API de Feedbacks & Depoimentos
- * Permite listar, adicionar, editar, reordenar e excluir depoimentos de clientes.
+ * Sincronização Dupla: PostgreSQL na VPS (Fonte de Verdade Primária) + Cache JSON Local na Hostinger
+ * Auto-cura de imagens com failover imediato para VPS.
  */
 
 declare(strict_types=1);
@@ -19,6 +20,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
 
 const FEEDBACKS_FILE = __DIR__ . '/../data/feedbacks.json';
 const FEEDBACKS_IMG_DIR = __DIR__ . '/../assets/images/feedbacks/';
+const PRODUCTS_IMG_DIR = __DIR__ . '/../assets/images/products/';
+
+const VPS_API_BASE = 'https://137-131-233-254.sslip.io/nteleganz/api';
+const VPS_UPLOAD_URL = 'https://137-131-233-254.sslip.io/nteleganz/api/upload';
+const VPS_UPLOADS_URL = 'https://137-131-233-254.sslip.io/nteleganz/uploads/';
+const NTE_INTERNAL_SECRET = 'nte_sec_2026_isolated_vault';
 
 function defaultFeedbacks(): array {
     $list = [];
@@ -43,16 +50,128 @@ function normalizeFeedbackImg(string $img): string {
     return '/' . ltrim($img, './');
 }
 
-function readFeedbacks(): array {
+/**
+ * Chamada à API da VPS (PostgreSQL) com timeout curto para resiliência máxima
+ */
+function callVpsFeedbackApi(string $method, string $path, ?array $body = null): ?array {
+    $url = VPS_API_BASE . $path;
+    $ch = curl_init($url);
+    if (!$ch) return null;
+
+    $headers = [
+        'Accept: application/json',
+        'X-NTE-Secret: ' . NTE_INTERNAL_SECRET
+    ];
+    if ($body !== null) {
+        $headers[] = 'Content-Type: application/json';
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+    }
+
+    curl_setopt_array($ch, [
+        CURLOPT_CUSTOMREQUEST => $method,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_TIMEOUT => 6,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => 0
+    ]);
+
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($resp === false || $code < 200 || $code >= 400) {
+        return null;
+    }
+
+    $decoded = json_decode($resp, true);
+    return is_array($decoded) ? $decoded : null;
+}
+
+/**
+ * Auto-cura de imagens ausentes na Hostinger:
+ * Se um feedback apontar para uma foto que não existe no disco local da Hostinger,
+ * baixa automaticamente uma cópia perfeita da VPS de imagens em segundo plano.
+ */
+function autoCureFeedbackImages(array $feedbacks): void {
+    if (!is_dir(FEEDBACKS_IMG_DIR)) @mkdir(FEEDBACKS_IMG_DIR, 0755, true);
+    if (!is_dir(PRODUCTS_IMG_DIR)) @mkdir(PRODUCTS_IMG_DIR, 0755, true);
+
+    $syncCount = 0;
+    foreach ($feedbacks as $fb) {
+        if ($syncCount >= 4) break;
+        $img = $fb['image'] ?? '';
+        if (!$img || strpos($img, 'data:') === 0) continue;
+
+        $filename = basename(parse_url($img, PHP_URL_PATH));
+        if (!$filename || !preg_match('/^[a-zA-Z0-9_\-\.]+\.(webp|jpg|jpeg|png)$/i', $filename)) continue;
+
+        $targetFeedbacks = FEEDBACKS_IMG_DIR . $filename;
+        $targetProducts = PRODUCTS_IMG_DIR . $filename;
+
+        $needsDownload = (!file_exists($targetFeedbacks) || filesize($targetFeedbacks) === 0) &&
+                         (!file_exists($targetProducts) || filesize($targetProducts) === 0);
+
+        if ($needsDownload) {
+            $vpsImgUrl = VPS_UPLOADS_URL . $filename;
+            $ch = curl_init($vpsImgUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CONNECTTIMEOUT => 2,
+                CURLOPT_TIMEOUT => 4,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0
+            ]);
+            $blob = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($blob !== false && $code === 200 && strlen($blob) > 200) {
+                @file_put_contents($targetFeedbacks, $blob);
+                @file_put_contents($targetProducts, $blob);
+                $syncCount++;
+            }
+        }
+    }
+}
+
+function readFeedbacks(bool $includeInactive = true): array {
+    // 1. Tenta obter da VPS (PostgreSQL) primeiro
+    $vps = callVpsFeedbackApi('GET', '/feedbacks' . ($includeInactive ? '?all=1' : ''));
+    if ($vps !== null && isset($vps['feedbacks']) && is_array($vps['feedbacks']) && !empty($vps['feedbacks'])) {
+        $list = $vps['feedbacks'];
+        foreach ($list as &$item) {
+            if (isset($item['image'])) {
+                $item['image'] = normalizeFeedbackImg((string)$item['image']);
+            }
+            $item['order'] = isset($item['order']) ? (int)$item['order'] : 999;
+            $item['active'] = !isset($item['active']) || (bool)$item['active'];
+        }
+        unset($item);
+        usort($list, fn($a, $b) => ($a['order'] ?? 0) <=> ($b['order'] ?? 0));
+
+        // Atualiza o cache local silenciosamente
+        saveLocalFeedbacksFile($list);
+        // Auto-cura de imagens ausentes
+        autoCureFeedbackImages($list);
+
+        if (!$includeInactive) {
+            $list = array_values(array_filter($list, fn($f) => !empty($f['active'])));
+        }
+        return $list;
+    }
+
+    // 2. Fallback de Segurança: se a VPS estiver offline, lê do arquivo local
     if (!file_exists(FEEDBACKS_FILE)) {
         $defs = defaultFeedbacks();
-        saveFeedbacks($defs);
-        return $defs;
+        saveLocalFeedbacksFile($defs);
+        return $includeInactive ? $defs : array_values(array_filter($defs, fn($f) => !empty($f['active'])));
     }
     $raw = @file_get_contents(FEEDBACKS_FILE);
     $data = $raw ? @json_decode($raw, true) : null;
     $list = is_array($data) && !empty($data) ? $data : defaultFeedbacks();
-    
+
     foreach ($list as &$item) {
         if (isset($item['image'])) {
             $item['image'] = normalizeFeedbackImg((string)$item['image']);
@@ -62,16 +181,18 @@ function readFeedbacks(): array {
     }
     unset($item);
 
-    // Ordena por ordem crescente
     usort($list, fn($a, $b) => ($a['order'] ?? 0) <=> ($b['order'] ?? 0));
+
+    if (!$includeInactive) {
+        $list = array_values(array_filter($list, fn($f) => !empty($f['active'])));
+    }
     return $list;
 }
 
-function saveFeedbacks(array $feedbacks): bool {
+function saveLocalFeedbacksFile(array $feedbacks): bool {
     $dir = dirname(FEEDBACKS_FILE);
     if (!is_dir($dir)) @mkdir($dir, 0755, true);
 
-    // Re-indexa ordens de 1 a N
     usort($feedbacks, fn($a, $b) => ($a['order'] ?? 0) <=> ($b['order'] ?? 0));
     $orderIndex = 1;
     foreach ($feedbacks as &$fb) {
@@ -101,13 +222,13 @@ function saveOptimizedFeedbackImage(string $base64Data, string $id): ?string {
         return null;
     }
 
-    if (!is_dir(FEEDBACKS_IMG_DIR)) {
-        @mkdir(FEEDBACKS_IMG_DIR, 0755, true);
-    }
+    if (!is_dir(FEEDBACKS_IMG_DIR)) @mkdir(FEEDBACKS_IMG_DIR, 0755, true);
+    if (!is_dir(PRODUCTS_IMG_DIR)) @mkdir(PRODUCTS_IMG_DIR, 0755, true);
 
     $cleanId = preg_replace('/[^a-zA-Z0-9_-]/', '', $id) ?: 'fb';
     $filename = sprintf('feedback-%s-%d.webp', $cleanId, time());
     $destPath = FEEDBACKS_IMG_DIR . $filename;
+    $altDestPath = PRODUCTS_IMG_DIR . $filename;
     $publicPath = '/assets/images/feedbacks/' . $filename;
 
     if (function_exists('imagecreatefromstring')) {
@@ -132,6 +253,7 @@ function saveOptimizedFeedbackImage(string $base64Data, string $id): ?string {
 
             if (function_exists('imagewebp')) {
                 $saved = @imagewebp($im, $destPath, 82);
+                @imagewebp($im, $altDestPath, 82);
                 imagedestroy($im);
                 if ($saved) {
                     mirrorToVps($destPath, $filename);
@@ -150,8 +272,8 @@ function saveOptimizedFeedbackImage(string $base64Data, string $id): ?string {
         }
     }
 
-    // Fallback: grava binário direto caso GD não esteja ativo
     if (@file_put_contents($destPath, $binary)) {
+        @file_put_contents($altDestPath, $binary);
         mirrorToVps($destPath, $filename);
         return $publicPath;
     }
@@ -161,15 +283,14 @@ function saveOptimizedFeedbackImage(string $base64Data, string $id): ?string {
 
 function mirrorToVps(string $filepath, string $filename): void {
     try {
-        $vpsUploadUrl = 'https://137-131-233-254.sslip.io/nteleganz/api/upload';
-        $ch = curl_init($vpsUploadUrl);
+        $ch = curl_init(VPS_UPLOAD_URL);
         $cfile = curl_file_create($filepath, 'image/webp', $filename);
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => ['image' => $cfile],
             CURLOPT_HTTPHEADER => ['x-filename: ' . $filename],
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 3,
+            CURLOPT_TIMEOUT => 5,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_SSL_VERIFYHOST => 0
         ]);
@@ -184,10 +305,7 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if ($method === 'GET') {
     $all = isset($_GET['all']) && $_GET['all'] === '1';
-    $feedbacks = readFeedbacks();
-    if (!$all) {
-        $feedbacks = array_values(array_filter($feedbacks, fn($f) => !empty($f['active'])));
-    }
+    $feedbacks = readFeedbacks($all);
     echo json_encode([
         'success' => true,
         'feedbacks' => $feedbacks
@@ -206,7 +324,6 @@ if ($method === 'POST') {
     }
 
     $action = $input['action'] ?? 'save';
-    $feedbacks = readFeedbacks();
 
     // 1. Excluir Feedback
     if ($action === 'delete') {
@@ -217,7 +334,11 @@ if ($method === 'POST') {
             exit;
         }
 
-        // Se imagem foi salva na pasta feedbacks/, tenta remover o arquivo
+        // Tenta remover na VPS (PostgreSQL)
+        callVpsFeedbackApi('POST', '/feedbacks', ['action' => 'delete', 'id' => $targetId]);
+
+        // Remove do cache local
+        $feedbacks = readFeedbacks(true);
         foreach ($feedbacks as $fb) {
             if ($fb['id'] === $targetId && !empty($fb['image'])) {
                 if (strpos($fb['image'], '/assets/images/feedbacks/') !== false) {
@@ -229,19 +350,15 @@ if ($method === 'POST') {
         }
 
         $filtered = array_values(array_filter($feedbacks, fn($f) => ($f['id'] ?? '') !== $targetId));
-        if (saveFeedbacks($filtered)) {
-            echo json_encode(['success' => true, 'feedbacks' => readFeedbacks()]);
-        } else {
-            http_response_code(500);
-            echo json_encode(['error' => 'Erro ao salvar exclusão do feedback.']);
-        }
+        saveLocalFeedbacksFile($filtered);
+        echo json_encode(['success' => true, 'feedbacks' => readFeedbacks(true)]);
         exit;
     }
 
     // 2. Mover Posição (up / down / left / right)
     if ($action === 'move') {
         $targetId = trim((string)($input['id'] ?? ''));
-        $direction = (int)($input['direction'] ?? 0); // -1 (para cima/esquerda) ou +1 (para baixo/direita)
+        $direction = (int)($input['direction'] ?? 0);
 
         if ($targetId === '' || $direction === 0) {
             http_response_code(400);
@@ -249,6 +366,7 @@ if ($method === 'POST') {
             exit;
         }
 
+        $feedbacks = readFeedbacks(true);
         $currentIndex = -1;
         foreach ($feedbacks as $idx => $fb) {
             if ($fb['id'] === $targetId) {
@@ -265,23 +383,25 @@ if ($method === 'POST') {
 
         $newIndex = $currentIndex + $direction;
         if ($newIndex >= 0 && $newIndex < count($feedbacks)) {
-            // Troca de posição
             $temp = $feedbacks[$currentIndex];
             $feedbacks[$currentIndex] = $feedbacks[$newIndex];
             $feedbacks[$newIndex] = $temp;
 
-            // Re-indexa ordem
+            $orderedIds = [];
             foreach ($feedbacks as $idx => &$fb) {
                 $fb['order'] = $idx + 1;
+                $orderedIds[] = $fb['id'];
             }
             unset($fb);
 
-            if (saveFeedbacks($feedbacks)) {
-                echo json_encode(['success' => true, 'feedbacks' => readFeedbacks()]);
-            } else {
-                http_response_code(500);
-                echo json_encode(['error' => 'Erro ao salvar nova posição.']);
-            }
+            // Persiste na VPS (PostgreSQL)
+            callVpsFeedbackApi('POST', '/feedbacks', [
+                'action' => 'reorder',
+                'order' => $orderedIds
+            ]);
+
+            saveLocalFeedbacksFile($feedbacks);
+            echo json_encode(['success' => true, 'feedbacks' => readFeedbacks(true)]);
         } else {
             echo json_encode(['success' => true, 'feedbacks' => $feedbacks]);
         }
@@ -297,6 +417,13 @@ if ($method === 'POST') {
             exit;
         }
 
+        // Persiste na VPS (PostgreSQL)
+        callVpsFeedbackApi('POST', '/feedbacks', [
+            'action' => 'reorder',
+            'order' => $orderedIds
+        ]);
+
+        $feedbacks = readFeedbacks(true);
         $byId = [];
         foreach ($feedbacks as $fb) {
             $byId[$fb['id']] = $fb;
@@ -312,18 +439,13 @@ if ($method === 'POST') {
                 unset($byId[$id]);
             }
         }
-        // Sobras que não foram enviadas na lista
         foreach ($byId as $remaining) {
             $remaining['order'] = $orderCounter++;
             $newOrderList[] = $remaining;
         }
 
-        if (saveFeedbacks($newOrderList)) {
-            echo json_encode(['success' => true, 'feedbacks' => readFeedbacks()]);
-        } else {
-            http_response_code(500);
-            echo json_encode(['error' => 'Erro ao salvar reordenação.']);
-        }
+        saveLocalFeedbacksFile($newOrderList);
+        echo json_encode(['success' => true, 'feedbacks' => readFeedbacks(true)]);
         exit;
     }
 
@@ -336,6 +458,8 @@ if ($method === 'POST') {
         $order = isset($feedbackData['order']) ? (int)$feedbackData['order'] : null;
         $imgRaw = trim((string)($feedbackData['image'] ?? ''));
 
+        $feedbacks = readFeedbacks(true);
+
         if ($id === '') {
             $id = 'fb-' . time() . '-' . substr(md5(uniqid('', true)), 0, 5);
         }
@@ -345,7 +469,6 @@ if ($method === 'POST') {
         }
 
         $finalImg = null;
-        // Se imagem for base64, otimiza e salva em WebP
         if (strpos($imgRaw, 'data:image/') === 0) {
             $finalImg = saveOptimizedFeedbackImage($imgRaw, $id);
             if (!$finalImg) {
@@ -357,7 +480,34 @@ if ($method === 'POST') {
             $finalImg = normalizeFeedbackImg($imgRaw);
         }
 
-        // Verifica se já existe
+        // Tenta salvar na VPS (PostgreSQL) primeiro
+        $vpsRes = callVpsFeedbackApi('POST', '/feedbacks', [
+            'action' => 'save',
+            'feedback' => [
+                'id' => $id,
+                'title' => $title,
+                'image' => $finalImg ?: '/assets/images/feedback-1.webp',
+                'order' => $order,
+                'active' => $active
+            ]
+        ]);
+
+        if ($vpsRes !== null && isset($vpsRes['feedbacks']) && is_array($vpsRes['feedbacks'])) {
+            saveLocalFeedbacksFile($vpsRes['feedbacks']);
+            echo json_encode([
+                'success' => true,
+                'feedbacks' => $vpsRes['feedbacks'],
+                'item' => [
+                    'id' => $id,
+                    'title' => $title,
+                    'image' => $finalImg,
+                    'active' => $active
+                ]
+            ]);
+            exit;
+        }
+
+        // Fallback local se VPS não responder
         $existingIndex = -1;
         foreach ($feedbacks as $idx => $fb) {
             if ($fb['id'] === $id) {
@@ -367,7 +517,6 @@ if ($method === 'POST') {
         }
 
         if ($existingIndex >= 0) {
-            // Edição
             $feedbacks[$existingIndex]['title'] = $title;
             $feedbacks[$existingIndex]['active'] = $active;
             if ($finalImg) {
@@ -377,7 +526,6 @@ if ($method === 'POST') {
                 $feedbacks[$existingIndex]['order'] = $order;
             }
         } else {
-            // Novo
             if (!$finalImg) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Uma foto de feedback é obrigatória.']);
@@ -394,17 +542,16 @@ if ($method === 'POST') {
             ];
 
             if ($order !== null && $order > 0 && $order <= count($feedbacks)) {
-                // Insere na posição desejada
                 array_splice($feedbacks, $order - 1, 0, [$newItem]);
             } else {
                 $feedbacks[] = $newItem;
             }
         }
 
-        if (saveFeedbacks($feedbacks)) {
+        if (saveLocalFeedbacksFile($feedbacks)) {
             echo json_encode([
                 'success' => true,
-                'feedbacks' => readFeedbacks(),
+                'feedbacks' => readFeedbacks(true),
                 'item' => [
                     'id' => $id,
                     'title' => $title,
