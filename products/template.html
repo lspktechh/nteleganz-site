@@ -507,13 +507,14 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
+<script src="/js/image-loader.js?v=20261027"></script>
 <script src="js/whatsapp.js?v=20261003b"></script>
 <script src="js/customer-orders.js?v=20261003b"></script>
 <script src="js/cart.js?v=20261007wpp"></script>
 <script src="js/checkout.js?v=20261006"></script>
 <script src="js/menu.js?v=20260930"></script>
 <script src="js/db.js?v=20260930"></script>
-<script src="js/main.js?v=20261026c"></script>
+<script src="js/main.js?v=20261027e"></script>
 <script src="/js/tracking.js?v=20261007"></script>
 
 <script>
@@ -598,79 +599,8 @@
     if (schemaElement) schemaElement.textContent = JSON.stringify(schema).replace(/</g, '\\u003c');
   }
 
-  const VPS_IMG_BASE = 'https://137-131-233-254.sslip.io/nteleganz/uploads/';
-  const HOSTINGER_IMG_BASE = 'https://nteleganz.com.br/assets/images/products/';
-  const PLACEHOLDER_IMG = '/assets/images/placeholder-product.svg';
-
-  function resolveProductImg(raw) {
-    if (!raw || typeof raw !== 'string') return PLACEHOLDER_IMG;
-    const trimmed = raw.trim();
-    if (!trimmed) return PLACEHOLDER_IMG;
-    const match = trimmed.match(/([a-zA-Z0-9_\-\.]+\.webp)/i);
-    if (match) {
-      return HOSTINGER_IMG_BASE + match[1];
-    }
-    return trimmed;
-  }
-
-  if (!window.handleProductImgError) {
-    window.handleProductImgError = function(img) {
-      if (!img) return;
-      const wrap = img.closest('.product-card__image-wrap, .catalog-card__img-wrap, .swiper-slide') || img.parentElement;
-      if (!img.dataset.origFile) {
-        const fn = img.src.split('/').pop().split('?')[0];
-        img.dataset.origFile = fn;
-      }
-      const filename = img.dataset.origFile;
-      if (!img.dataset.triedVps) {
-        img.dataset.triedVps = '1';
-        img.src = VPS_IMG_BASE + filename;
-        return;
-      }
-      img.onerror = null;
-      img.src = PLACEHOLDER_IMG;
-      img.classList.add('has-error');
-      if (wrap) {
-        wrap.classList.add('has-img-error');
-        wrap.classList.remove('is-loaded');
-        let retryBtn = wrap.querySelector('.nte-img-retry-btn');
-        if (retryBtn) retryBtn.style.display = 'inline-flex';
-      }
-    };
-  }
-
-  if (!window.nteRetryImage) {
-    window.nteRetryImage = function(btn, evt) {
-      if (evt) { evt.preventDefault(); evt.stopPropagation(); }
-      const wrap = btn.closest('.product-card__image-wrap, .catalog-card__img-wrap, .swiper-slide') || btn.parentElement;
-      if (!wrap) return;
-      const img = wrap.querySelector('img');
-      if (!img) return;
-      btn.classList.add('is-retrying');
-      const spanText = btn.querySelector('span');
-      if (spanText) spanText.textContent = 'Carregando...';
-      const filename = img.dataset.origFile || img.src.split('/').pop().split('?')[0];
-      const bust = 't=' + Date.now();
-      delete img.dataset.triedVps;
-      delete img.dataset.triedHostinger;
-      img.classList.remove('has-error', 'is-loaded');
-      wrap.classList.remove('is-loaded');
-      img.onload = function() {
-        img.classList.add('is-loaded');
-        wrap.classList.add('is-loaded');
-        wrap.classList.remove('has-img-error');
-        btn.classList.remove('is-retrying');
-        if (spanText) spanText.textContent = 'Recarregar';
-        btn.style.display = 'none';
-      };
-      img.onerror = function() {
-        btn.classList.remove('is-retrying');
-        if (spanText) spanText.textContent = 'Recarregar';
-        window.handleProductImgError(img);
-      };
-      img.src = HOSTINGER_IMG_BASE + filename + '?' + bust;
-    };
-  }
+  // Resolução e recuperação das fotos de produto: js/image-loader.js (fonte única)
+  const resolveProductImg = window.NTImages.resolve;
 
   function renderGallery(product) {
     const slides = document.getElementById('gallery-slides');

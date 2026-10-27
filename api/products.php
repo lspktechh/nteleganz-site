@@ -40,6 +40,8 @@ const BACKUP_KEEP = 20;
 
 const VPS_API_BASE = 'https://137-131-233-254.sslip.io/nteleganz/api';
 
+require_once __DIR__ . '/lib/image_store.php';
+
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 const WRITE_RATE_MAX = 120;
 const WRITE_RATE_WINDOW = 3600;
@@ -161,54 +163,21 @@ if ($method === 'GET' || $method === 'HEAD') {
             respond(200, null, ['product' => $vps['product'], 'version' => $version]);
         }
         if (isset($vps['products']) && is_array($vps['products'])) {
-            // Sincroniza silenciosamente o cache local com a VPS (Fonte autoritativa)
+            // O cache local nunca é simplesmente substituído pela lista da VPS: produto que exista só
+            // localmente (gravado enquanto a VPS estava fora do ar) é preservado. Um produto só deixa
+            // de existir quando o gestor o exclui pelo painel.
+            $localCat = readCatalog();
+            $merged = mergeCatalogs($vps['products'], $localCat['products'] ?? []);
 
-            // Sincroniza silenciosamente o cache local
-            @file_put_contents(PRODUCTS_FILE, json_encode([
-                'version' => $version,
-                'updatedAt' => date('c'),
-                'products' => $vps['products']
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-
-            // Auto-cura de fotos: se alguma imagem estiver ausente na Hostinger, recupera da VPS em segundo plano
-            $localImgDir = __DIR__ . '/../assets/images/products/';
-            if (is_dir($localImgDir)) {
-                $syncLimit = 4;
-                foreach ($vps['products'] as $vp) {
-                    if ($syncLimit <= 0) break;
-                    $imgsToCheck = [];
-                    if (!empty($vp['image'])) $imgsToCheck[] = $vp['image'];
-                    if (!empty($vp['images']) && is_array($vp['images'])) {
-                        foreach ($vp['images'] as $vi) { if ($vi) $imgsToCheck[] = $vi; }
-                    }
-                    foreach ($imgsToCheck as $imgUrl) {
-                        if ($syncLimit <= 0) break;
-                        $fn = basename(parse_url($imgUrl, PHP_URL_PATH));
-                        if ($fn && preg_match('/^[a-zA-Z0-9_-]+\.webp$/', $fn)) {
-                            $target = $localImgDir . $fn;
-                            if (!file_exists($target) || filesize($target) === 0) {
-                                $vpsImgUrl = 'https://137-131-233-254.sslip.io/nteleganz/uploads/' . $fn;
-                                $chImg = curl_init($vpsImgUrl);
-                                curl_setopt_array($chImg, [
-                                    CURLOPT_RETURNTRANSFER => true,
-                                    CURLOPT_TIMEOUT => 2,
-                                    CURLOPT_SSL_VERIFYPEER => false,
-                                    CURLOPT_SSL_VERIFYHOST => 0
-                                ]);
-                                $blob = curl_exec($chImg);
-                                $cCode = curl_getinfo($chImg, CURLINFO_HTTP_CODE);
-                                curl_close($chImg);
-                                if ($blob !== false && $cCode === 200 && strlen($blob) > 500) {
-                                    @file_put_contents($target, $blob);
-                                    $syncLimit--;
-                                }
-                            }
-                        }
-                    }
-                }
+            // Só regrava o cache se algo mudou (evita reescrever o arquivo a cada visita)
+            if ($localCat === null || ($localCat['etag'] ?? '') !== catalogEtag($merged)) {
+                cacheCatalog($merged, $version);
             }
 
-            respond(200, null, ['products' => $vps['products'], 'version' => $version]);
+            // Auto-cura de fotos: se alguma imagem estiver ausente na Hostinger, copia da VPS
+            healCatalogImages($merged);
+
+            respond(200, null, ['products' => $merged, 'version' => $version]);
         }
     }
 
@@ -523,6 +492,63 @@ function writeCatalog(array $products, int $version): void
     if (!@rename($tmp, PRODUCTS_FILE)) {
         @unlink($tmp);
         respond(500, 'Falha ao substituir products.json.');
+    }
+}
+
+/**
+ * Junta a lista da VPS com o cache local sem perder nada: produto que só existe localmente (ex.: cadastrado
+ * enquanto a VPS estava fora do ar) é mantido. Para o mesmo id, a VPS continua sendo a fonte da verdade
+ * (estoque, preço etc.). A ordem da VPS é preservada.
+ */
+function mergeCatalogs(array $vpsProducts, array $localProducts): array
+{
+    $byId = [];
+    foreach ($vpsProducts as $p) {
+        if (is_array($p) && isset($p['id'])) {
+            $byId[(string)$p['id']] = $p;
+        }
+    }
+    foreach ($localProducts as $p) {
+        if (is_array($p) && isset($p['id']) && !isset($byId[(string)$p['id']])) {
+            $byId[(string)$p['id']] = $p;
+        }
+    }
+    return array_values($byId);
+}
+
+/** Grava o cache local do catálogo de forma atômica e silenciosa (nunca derruba a leitura pública). */
+function cacheCatalog(array $products, int $version): void
+{
+    $payload = json_encode(
+        ['version' => $version, 'updatedAt' => gmdate('c'), 'products' => $products],
+        JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+    );
+    if ($payload !== false) {
+        nte_write_atomic(PRODUCTS_FILE, $payload);
+    }
+}
+
+/**
+ * Auto-cura de fotos: copia da VPS o que faltar (ou estiver corrompido) no disco da Hostinger. Só olha
+ * produtos ativos (os que aparecem na loja) e limita as tentativas por requisição. Nunca apaga nada.
+ */
+function healCatalogImages(array $products): void
+{
+    $dir = __DIR__ . '/../assets/images/products/';
+    $budget = 6;
+    foreach ($products as $p) {
+        if (!is_array($p) || ($p['active'] ?? true) === false) {
+            continue;
+        }
+        foreach (nte_img_product_files($p) as $file) {
+            if (nte_img_local_ok($dir . $file)) {
+                continue;
+            }
+            if ($budget-- <= 0) {
+                return;
+            }
+            nte_img_ensure_local($dir, $file, 2);
+        }
     }
 }
 

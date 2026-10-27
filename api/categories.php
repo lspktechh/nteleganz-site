@@ -17,6 +17,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once __DIR__ . '/lib/live_data.php';
+
+// Semente versionada. O que o gestor cadastra é gravado em categories.live.json (fora do git).
 const CATEGORIES_FILE = __DIR__ . '/../data/categories.json';
 const CATEGORIES_IMG_DIR = __DIR__ . '/../assets/images/categories/';
 
@@ -59,14 +62,15 @@ function normalizeCategoryImg(string $img): string {
 }
 
 function readCategories(): array {
-    if (!file_exists(CATEGORIES_FILE)) {
+    $data = nte_live_read(CATEGORIES_FILE);
+    if ($data === null) {
         $defs = defaultCategories();
-        saveCategories($defs);
+        if (!nte_live_exists(CATEGORIES_FILE)) {
+            saveCategories($defs);
+        }
         return $defs;
     }
-    $raw = @file_get_contents(CATEGORIES_FILE);
-    $data = $raw ? @json_decode($raw, true) : null;
-    $list = is_array($data) ? $data : defaultCategories();
+    $list = $data;
     foreach ($list as &$item) {
         if (isset($item['image'])) {
             $item['image'] = normalizeCategoryImg((string)$item['image']);
@@ -77,9 +81,7 @@ function readCategories(): array {
 }
 
 function saveCategories(array $categories): bool {
-    $dir = dirname(CATEGORIES_FILE);
-    if (!is_dir($dir)) @mkdir($dir, 0755, true);
-    return (bool)@file_put_contents(
+    return nte_live_write(
         CATEGORIES_FILE,
         json_encode(array_values($categories), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
     );

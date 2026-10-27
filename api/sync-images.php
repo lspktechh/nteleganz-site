@@ -1,106 +1,113 @@
 <?php
 /**
- * NT Eleganz - Sincronizador Automático de Imagens
- * Baixa fotos da VPS para a pasta local da Hostinger se estiverem ausentes.
+ * NT Eleganz - Sincronizador de Imagens (nos dois sentidos, sem apagar nada)
+ *
+ *  - VPS -> Hostinger: baixa as fotos que faltarem (ou estiverem corrompidas) no disco da Hostinger.
+ *  - Hostinger -> VPS: envia para a VPS as fotos que ela não tiver, garantindo sempre duas cópias.
+ *
+ * Pode ser aberto no navegador ou agendado (cron da Hostinger, ex.: a cada 15 minutos).
+ * Esta rotina só copia: remover uma foto é decisão exclusiva do gestor, pelo painel.
  */
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 
-const VPS_UPLOADS_URL = 'https://137-131-233-254.sslip.io/nteleganz/uploads/';
+require_once __DIR__ . '/lib/image_store.php';
+
 const VPS_API_PRODUCTS = 'https://137-131-233-254.sslip.io/nteleganz/api/products';
 const LOCAL_IMG_DIR = __DIR__ . '/../assets/images/products/';
+const LOCAL_PRODUCTS_FILE = __DIR__ . '/../data/products.json';
+const SYNC_STAMP_FILE = __DIR__ . '/../data/.sync_images_stamp';
+const SYNC_MIN_INTERVAL = 30;  // segundos entre execuções (endpoint público: evita abuso)
+const SYNC_TIME_BUDGET = 40;   // segundos de trabalho por execução; o resto fica para a próxima
 
-if (!is_dir(LOCAL_IMG_DIR)) {
-    @mkdir(LOCAL_IMG_DIR, 0755, true);
+ignore_user_abort(true);
+@set_time_limit(SYNC_TIME_BUDGET + 20);
+
+if (is_file(SYNC_STAMP_FILE)) {
+    $age = time() - (int)@filemtime(SYNC_STAMP_FILE);
+    if ($age >= 0 && $age < SYNC_MIN_INTERVAL) {
+        echo json_encode(['ok' => true, 'throttled' => true, 'retry_in_seconds' => SYNC_MIN_INTERVAL - $age]);
+        exit;
+    }
 }
+@touch(SYNC_STAMP_FILE);
 
-// 1. Obter lista de produtos da VPS ou arquivo local
+// 1. Produtos: união do catálogo da VPS com o cache local (nenhuma foto referenciada fica de fora)
 $products = [];
-$ch = curl_init(VPS_API_PRODUCTS);
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 5,
-    CURLOPT_SSL_VERIFYPEER => false,
-    CURLOPT_SSL_VERIFYHOST => 0,
-]);
-$raw = curl_exec($ch);
-curl_close($ch);
-
-if ($raw) {
+[$code, $raw] = nte_img_http(VPS_API_PRODUCTS, 3, 6);
+if ($code === 200) {
     $data = json_decode($raw, true);
-    if (!empty($data['products'])) {
+    if (!empty($data['products']) && is_array($data['products'])) {
         $products = $data['products'];
     }
 }
-
-if (empty($products)) {
-    $localFile = __DIR__ . '/../data/products.json';
-    if (file_exists($localFile)) {
-        $localData = json_decode(file_get_contents($localFile), true);
-        $products = $localData['products'] ?? [];
+if (is_file(LOCAL_PRODUCTS_FILE)) {
+    $localData = json_decode((string)@file_get_contents(LOCAL_PRODUCTS_FILE), true);
+    if (!empty($localData['products']) && is_array($localData['products'])) {
+        $products = array_merge($products, $localData['products']);
     }
 }
 
-// 2. Extrair todas as fotos necessárias
+// 2. Todas as fotos referenciadas (sem repetição)
 $filenames = [];
 foreach ($products as $p) {
-    $all = [];
-    if (!empty($p['image'])) $all[] = $p['image'];
-    if (!empty($p['images']) && is_array($p['images'])) {
-        foreach ($p['images'] as $img) {
-            if (!empty($img)) $all[] = $img;
-        }
+    if (!is_array($p)) {
+        continue;
     }
-    foreach ($all as $u) {
-        $fn = basename(parse_url($u, PHP_URL_PATH));
-        if ($fn && preg_match('/^[a-zA-Z0-9_-]+\.webp$/', $fn)) {
-            $filenames[$fn] = true;
-        }
+    foreach (nte_img_product_files($p) as $name) {
+        $filenames[$name] = true;
     }
 }
 
-$total = count($filenames);
-$synced = 0;
-$alreadyExists = 0;
-$failed = 0;
+// 3. Garante as duas cópias de cada foto
+$deadline = microtime(true) + SYNC_TIME_BUDGET;
+$downloaded = 0;
+$uploaded = 0;
+$alreadyOk = 0;
+$missing = 0;
+$deferred = 0;
 $details = [];
 
 foreach (array_keys($filenames) as $filename) {
-    $targetPath = LOCAL_IMG_DIR . $filename;
-    if (file_exists($targetPath) && filesize($targetPath) > 0) {
-        $alreadyExists++;
+    if (microtime(true) > $deadline) {
+        $deferred++;
         continue;
     }
 
-    // Baixa da VPS
-    $vpsUrl = VPS_UPLOADS_URL . $filename;
-    $vch = curl_init($vpsUrl);
-    curl_setopt_array($vch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 6,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => 0,
-    ]);
-    $imgData = curl_exec($vch);
-    $httpCode = curl_getinfo($vch, CURLINFO_HTTP_CODE);
-    curl_close($vch);
+    $path = LOCAL_IMG_DIR . $filename;
+    $hadLocal = nte_img_local_ok($path);
 
-    if ($imgData !== false && $httpCode === 200 && strlen($imgData) > 500) {
-        @file_put_contents($targetPath, $imgData);
-        $synced++;
-        $details[] = ['file' => $filename, 'status' => 'synced', 'size' => strlen($imgData)];
+    if (!$hadLocal) {
+        // Falta na Hostinger: copia da VPS (se a VPS também não tiver, não há o que copiar)
+        if (nte_img_ensure_local(LOCAL_IMG_DIR, $filename, 6)) {
+            $downloaded++;
+            $details[] = ['file' => $filename, 'status' => 'downloaded_from_vps'];
+        } else {
+            $missing++;
+            $details[] = ['file' => $filename, 'status' => 'missing_on_both'];
+        }
+        continue;
+    }
+
+    // Está na Hostinger: confere se a VPS também tem; se não, envia
+    if (nte_img_vps_has($filename)) {
+        $alreadyOk++;
+    } elseif (nte_img_push_to_vps($path, $filename)) {
+        $uploaded++;
+        $details[] = ['file' => $filename, 'status' => 'uploaded_to_vps'];
     } else {
-        $failed++;
-        $details[] = ['file' => $filename, 'status' => 'not_on_vps_either', 'http' => $httpCode];
+        $details[] = ['file' => $filename, 'status' => 'vps_unreachable_will_retry'];
     }
 }
 
 echo json_encode([
     'ok' => true,
-    'total_unique_images' => $total,
-    'synced_from_vps' => $synced,
-    'already_existed' => $alreadyExists,
-    'not_found_on_vps' => $failed,
-    'details' => $details
+    'total_unique_images' => count($filenames),
+    'already_on_both' => $alreadyOk,
+    'synced_from_vps' => $downloaded,
+    'uploaded_to_vps' => $uploaded,
+    'not_found_on_vps' => $missing,
+    'deferred_to_next_run' => $deferred,
+    'details' => $details,
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

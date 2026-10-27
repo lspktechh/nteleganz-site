@@ -19,6 +19,8 @@ header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Upload-Token');
 header('X-Content-Type-Options: nosniff');
 
+require_once __DIR__ . '/api/lib/image_store.php';
+
 // Configuração pública do Supabase (mesma de js/db.js). A chave é publicável:
 // a proteção real está nas políticas RLS + na checagem de admin abaixo.
 const SUPABASE_URL = 'https://erpyzjxtxztokpxxpirq.supabase.co';
@@ -119,28 +121,12 @@ if (!$saved) {
     respond(500, 'Falha ao salvar imagem como WebP');
 }
 
-// Armazenamento com sincronização dupla: Hostinger (local) + VPS (remoto)
+// Armazenamento com sincronização dupla: Hostinger (local) + VPS (remoto).
+// A cópia na VPS é conferida de verdade (a VPS precisa estar servindo o arquivo). Se falhar, a foto
+// continua salva na Hostinger e o api/sync-images.php completa a segunda cópia depois.
 $vpsSaved = false;
 try {
-    $vpsUploadUrl = 'https://137-131-233-254.sslip.io/nteleganz/api/upload';
-    $chVps = curl_init($vpsUploadUrl);
-    $cfile = curl_file_create($filepath, 'image/webp', $filename);
-    curl_setopt_array($chVps, [
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => ['image' => $cfile],
-        CURLOPT_HTTPHEADER => ['x-filename: ' . $filename],
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CONNECTTIMEOUT => 3,
-        CURLOPT_TIMEOUT => 8,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => 0
-    ]);
-    $vpsResp = curl_exec($chVps);
-    $httpCode = curl_getinfo($chVps, CURLINFO_HTTP_CODE);
-    curl_close($chVps);
-    if ($vpsResp !== false && $httpCode >= 200 && $httpCode < 300) {
-        $vpsSaved = true;
-    }
+    $vpsSaved = nte_img_push_to_vps($filepath, $filename);
 } catch (\Throwable $t) {
     // Falha silenciosa para não travar o cliente caso a VPS esteja ocupada
 }
