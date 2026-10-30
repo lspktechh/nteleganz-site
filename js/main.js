@@ -673,6 +673,10 @@
 
   // ── Search bar ──
   function initSearch() {
+    if (window.NTSearch?.init) {
+      window.NTSearch.init();
+      return;
+    }
     const searchBar = document.getElementById('search-bar');
     const searchBtn = document.getElementById('search-btn');
     const searchClose = document.getElementById('search-close');

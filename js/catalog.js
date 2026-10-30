@@ -39,6 +39,13 @@
   const categoryParam = (pathCategory && pathCategory !== 'index.html' ? pathCategory : null) || new URLSearchParams(location.search).get('categoria');
   if (categoryParam && categoryParam !== 'todos') activeCategory = categoryParam;
 
+  const urlSearchParam = new URLSearchParams(location.search).get('q')
+    || new URLSearchParams(location.search).get('busca')
+    || new URLSearchParams(location.search).get('search');
+  if (urlSearchParam) {
+    searchQuery = urlSearchParam.trim().toLocaleLowerCase('pt-BR');
+  }
+
   function filterState() { return { ...selected, category: activeCategory, sort: activeSort, min: priceMin, max: priceMax, query: searchQuery }; }
   function resetFilters() {
     selected.brands = []; selected.sizes = []; selected.stock = false; selected.sale = false;
@@ -48,6 +55,11 @@
     syncControls(); render();
   }
   function syncControls() {
+    if (searchQuery) {
+      document.querySelectorAll('#search-input, #catalog-search').forEach(input => {
+        if (!input.value) input.value = searchQuery;
+      });
+    }
     document.querySelectorAll('[data-filter-group]').forEach(input => {
       const group = input.dataset.filterGroup;
       input.checked = Array.isArray(selected[group]) ? selected[group].includes(input.value) : selected[group];
@@ -449,23 +461,19 @@
   }
 
   function initSearch() {
-    const bar   = document.getElementById('search-bar');
-    const btn   = document.getElementById('search-btn');
-    const close = document.getElementById('search-close');
-    const input = document.getElementById('search-input');
-    if (!bar) return;
-    btn?.addEventListener('click', () => { bar.classList.add('open'); setTimeout(() => input?.focus(), 100); });
-    close?.addEventListener('click', () => bar.classList.remove('open'));
-    input?.addEventListener('input', () => {
-      searchQuery = input.value.trim().toLocaleLowerCase('pt-BR');
-      document.getElementById('catalog-search').value = input.value;
+    if (window.NTSearch?.init) {
+      window.NTSearch.init();
+    }
+    const catSearch = document.getElementById('catalog-search');
+    catSearch?.addEventListener('input', event => {
+      searchQuery = event.target.value.trim().toLocaleLowerCase('pt-BR');
+      const headerInput = document.getElementById('search-input');
+      if (headerInput && headerInput.value !== event.target.value) {
+        headerInput.value = event.target.value;
+      }
       page = 1;
       render();
     });
-    document.getElementById('catalog-search')?.addEventListener('input', event => {
-      searchQuery = event.target.value.trim(); input.value = event.target.value; page = 1; render();
-    });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') bar.classList.remove('open'); });
   }
 
   // ══════════════════════════════════════════
@@ -573,6 +581,19 @@
       if (wpp.number && window.ntWpp) window.ntWpp._number = wpp.number;
     } catch(e) {}
   });
+
+  window.ntCatalog = {
+    setSearch: function (q) {
+      searchQuery = String(q || '').trim().toLocaleLowerCase('pt-BR');
+      const catSearch = document.getElementById('catalog-search');
+      if (catSearch && catSearch.value !== q) catSearch.value = q;
+      page = 1;
+      render();
+    },
+    resetFilters: resetFilters,
+    render: render
+  };
+
   window.addEventListener('popstate', () => location.reload());
 
 })();
