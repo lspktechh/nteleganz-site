@@ -531,7 +531,7 @@
       .filter(o => o.status !== 'cancelado')
       .reduce((sum, o) => sum + fmt.parsePrice(o.value), 0);
 
-    const activeProducts = allProducts.filter(p => p.active !== false).length;
+    const activeProducts = allProducts.length;
     const ticketMedio = allOrders.length > 0 ? totalRevenue / allOrders.filter(o => o.status !== 'cancelado').length : 0;
 
     // KPI Cards
@@ -804,9 +804,10 @@
       const matchSearch = !search || [p.name, p.brand, p.desc].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR').includes(search);
       const matchBrand = !brand || p.brand === brand;
       const matchCat = !cat || productCategory(p) === cat;
+      const isOutOfStock = (p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false;
       const matchStatus = !status
-        || (status === 'active' && p.active !== false)
-        || (status === 'inactive' && p.active === false)
+        || ((status === 'in_stock' || status === 'active') && !isOutOfStock)
+        || ((status === 'out_of_stock' || status === 'inactive') && isOutOfStock)
         || (status === 'featured' && (p.featured || p.destaque));
       return matchSearch && matchBrand && matchCat && matchStatus;
     });
@@ -836,10 +837,12 @@
       const brands = [...new Set(allProducts.map(p => p.brand))].sort();
       brandFilter.innerHTML = `<option value="">Todas as marcas</option>` + brands.map(b => `<option value="${escHtml(b)}">${escHtml(b)}</option>`).join('');
     }
+    const inStockCount = allProducts.filter(p => !((p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false)).length;
+    const outOfStockCount = allProducts.filter(p => (p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false).length;
     setText('products-summary-total', allProducts.length);
-    setText('products-summary-active', allProducts.filter(p => p.active !== false).length);
+    setText('products-summary-active', inStockCount); // Exibido como "Em estoque"
     setText('products-summary-featured', allProducts.filter(p => p.featured || p.destaque).length);
-    setText('products-summary-inactive', allProducts.filter(p => p.active === false).length);
+    setText('products-summary-inactive', outOfStockCount); // Exibido como "Esgotados"
     filterProducts();
   }
 
@@ -852,7 +855,7 @@
         ? await window.ntDB?.products.reload() || []
         : await window.ntDB?.products.getAll() || [];
       renderProductsTable();
-      setText('kpi-products', allProducts.filter(p => p.active !== false).length);
+      setText('kpi-products', allProducts.length);
     } finally {
       if (showLoaderFlag) cancelLoader();
     }
@@ -914,41 +917,47 @@
   };
 
   // ── Dicas e Validação Inteligente de Estoque no Painel ──
+  // REGRA DE NEGÓCIO: Produtos NUNCA são inativados, apenas esgotados via estoque (stock = 0).
   window.updateStockHint = function () {
     const stockInput = document.getElementById('p-stock');
     const hint = document.getElementById('p-stock-hint');
-    const activeSelect = document.getElementById('p-active');
+    const availSelect = document.getElementById('p-availability-status');
     if (!stockInput || !hint) return;
 
     const val = Number(stockInput.value);
-    const isActive = activeSelect?.value === 'true';
 
     if (stockInput.value !== '' && val <= 0) {
-      hint.innerHTML = `<span style="color:#ef4444; font-weight:600;">⚠️ Atenção: Com estoque 0, o produto será exibido com selo de ESGOTADO na loja.</span>`;
+      if (availSelect) availSelect.value = 'out_of_stock';
+      hint.innerHTML = `<span style="color:#ef4444; font-weight:600;">⚠️ Produto ESGOTADO: Será exibido na loja com selo de ESGOTADO (não permite compras).</span>`;
     } else if (val > 0) {
+      if (availSelect) availSelect.value = 'in_stock';
       hint.innerHTML = `<span style="color:#22c55e; font-weight:600;">✅ Em estoque (${val} ${val === 1 ? 'unidade' : 'unidades'}) — Disponível para compra imediata.</span>`;
     } else {
-      hint.textContent = 'Estoque disponível para venda. Use 0 apenas se o produto estiver esgotado.';
+      hint.textContent = 'Estoque disponível para venda. Use 0 para marcar como esgotado.';
     }
   };
 
-  window.handleActiveStatusChange = function () {
-    const activeSelect = document.getElementById('p-active');
+  window.handleAvailabilityStatusChange = function () {
+    const availSelect = document.getElementById('p-availability-status');
     const stockInput = document.getElementById('p-stock');
-    if (!activeSelect || !stockInput) return;
+    if (!availSelect || !stockInput) return;
 
-    if (activeSelect.value === 'true') {
+    if (availSelect.value === 'in_stock') {
       const currentStock = Number(stockInput.value);
-      // Se o usuário ativar o produto e o estoque estiver zerado ou vazio,
-      // define automaticamente como 1 para evitar que fique como 'ESGOTADO' por acidente!
       if (!stockInput.value || currentStock <= 0) {
         stockInput.value = '1';
         stockInput.style.borderColor = '#22c55e';
         setTimeout(() => { if (stockInput) stockInput.style.borderColor = ''; }, 1200);
       }
+    } else if (availSelect.value === 'out_of_stock') {
+      stockInput.value = '0';
+      stockInput.style.borderColor = '#ef4444';
+      setTimeout(() => { if (stockInput) stockInput.style.borderColor = ''; }, 1200);
     }
     window.updateStockHint();
   };
+
+  window.handleActiveStatusChange = window.handleAvailabilityStatusChange;
 
   function renderProductsTableData(products) {
     const tbody = document.getElementById('products-tbody');
@@ -995,14 +1004,14 @@
         </td>
         <td>
           ${isOutOfStock
-            ? '<span class="badge" style="background:#dc2626; color:#fff; font-weight:700; text-transform:uppercase;">ESGOTADO</span>'
-            : (p.active !== false
-                ? '<span class="badge badge-success">Ativo</span>'
-                : '<span class="badge badge-muted">Inativo</span>')}
-          ${isOutOfStock && p.active === false ? '<br><span class="badge badge-muted" style="margin-top:4px;">Inativo</span>' : ''}
+            ? '<span class="badge" style="background:#dc2626; color:#fff; font-weight:700; text-transform:uppercase; padding:4px 8px; border-radius:4px; font-size:11px;">ESGOTADO</span>'
+            : `<span class="badge badge-success" style="padding:4px 8px; border-radius:4px; font-size:11px;">Em estoque (${Number.isFinite(Number(p.stock)) ? p.stock : 1})</span>`}
         </td>
         <td>
-          <div style="display:flex; gap:6px;">
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button class="btn btn-secondary btn-sm" type="button" onclick="window.quickToggleStock(this.dataset.productId, ${isOutOfStock ? 1 : 0})" data-product-id="${escHtml(p.id)}" title="${isOutOfStock ? 'Colocar 1 unidade em estoque' : 'Marcar como esgotado (estoque 0)'}" style="padding:4px 8px; font-size:11px; white-space:nowrap; border-color:${isOutOfStock ? '#16a34a' : '#dc2626'}; color:${isOutOfStock ? '#16a34a' : '#dc2626'}; font-weight:600;">
+              ${isOutOfStock ? 'Repor' : 'Esgotar'}
+            </button>
             <button class="btn btn-secondary btn-sm btn-icon-only" type="button" onclick="editProduct(this.dataset.productId)" data-product-id="${escHtml(p.id)}" title="Editar" aria-label="Editar ${escHtml(p.name || 'produto')}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
@@ -1055,6 +1064,33 @@
     productPageSize = parseInt(size, 10);
     productCurrentPage = 1;
     filterProducts();
+  };
+
+  // Ação rápida de 1 clique: Esgotar / Repor estoque
+  window.quickToggleStock = async function (productId, targetStock) {
+    const product = allProducts.find(p => p.id === productId);
+    if (!product) return;
+    const isEsgotando = targetStock <= 0;
+    const confirmMsg = isEsgotando
+      ? `Deseja marcar "${product.name}" como ESGOTADO?\nO produto continuará visível no site com o selo vermelho de ESGOTADO.`
+      : `Deseja repor estoque de "${product.name}"?\nSerá colocada 1 unidade em estoque disponível para compra imediata.`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const updateData = {
+        ...product,
+        stock: targetStock,
+        inStock: targetStock > 0,
+        available: targetStock > 0,
+        active: true
+      };
+      const updated = await window.ntDB.products.update(productId, updateData);
+      allProducts = allProducts.map(p => (p.id === productId ? (updated || updateData) : p));
+      renderProductsTable();
+      showToast('check', isEsgotando ? 'Produto Esgotado' : 'Estoque Reposto', `"${product.name}" agora está ${isEsgotando ? 'marcado como ESGOTADO' : 'em estoque'}.`);
+    } catch (err) {
+      alert('Erro ao atualizar estoque do produto: ' + (err.message || err));
+    }
   };
 
   // ── Diferenciação Automática de Nomes e Slugs de Produtos ──
@@ -1141,6 +1177,8 @@
     document.getElementById('p-category').value = allCategories[0]?.id || 'camisetas';
     document.getElementById('p-stock').value = '1'; // Padrão seguro de 1 unidade para produtos novos
     document.getElementById('p-active').value = 'true';
+    const pAvail = document.getElementById('p-availability-status');
+    if (pAvail) pAvail.value = 'in_stock';
     renderImagePreviews();
     updateSizeSuggestions();
     const pFeat = document.getElementById('p-featured');
@@ -1313,8 +1351,12 @@
     setValue('p-badge', p.badge || '');
     setValue('p-desc', p.desc || '');
     setValue('p-category', productCategory(p));
-    setValue('p-stock', Number.isFinite(Number(p.stock)) ? p.stock : 1);
-    setValue('p-active', String(p.active !== false));
+    const stk = Number.isFinite(Number(p.stock)) ? Number(p.stock) : 1;
+    const isOut = stk <= 0 || p.inStock === false || p.available === false;
+    setValue('p-stock', stk);
+    setValue('p-active', 'true');
+    const pAvail = document.getElementById('p-availability-status');
+    if (pAvail) pAvail.value = isOut ? 'out_of_stock' : 'in_stock';
 
     // Images: Normaliza URLs legadas/VPS para a URL canônica oficial
     const rawImages = (Array.isArray(p.images) && p.images.length ? p.images : [p.image]).filter(Boolean);
@@ -1386,25 +1428,15 @@
 
     const rawStock = getVal('p-stock');
     let stockNum = Number(rawStock);
-    const isActive = getVal('p-active') === 'true';
-
-    // Proteção definitiva: se o status for Ativo mas o estoque for 0,
-    // confirma a intenção do dono para evitar esgotamento/inativação acidental
-    if (isActive && stockNum === 0) {
-      const confirmZero = confirm(
-        'Atenção:\n\n' +
-        'O status deste produto está como "Ativo", mas o estoque está definido como 0.\n' +
-        'Isso fará o produto aparecer com o selo vermelho de "ESGOTADO" na vitrine da loja.\n\n' +
-        'Deseja colocar Estoque = 1 para deixá-lo disponível para venda agora?\n\n' +
-        '• Clique em OK para colocar Estoque = 1 (Disponível para venda)\n' +
-        '• Clique em Cancelar para manter Estoque = 0 (Esgotado)'
-      );
-      if (confirmZero) {
-        stockNum = 1;
-        setValue('p-stock', 1);
-        if (window.updateStockHint) window.updateStockHint();
-      }
+    const availStatus = getVal('p-availability-status');
+    if (availStatus === 'out_of_stock' && stockNum > 0) {
+      stockNum = 0;
+      setValue('p-stock', 0);
+    } else if (availStatus === 'in_stock' && stockNum <= 0) {
+      stockNum = 1;
+      setValue('p-stock', 1);
     }
+    const isAvailable = stockNum > 0;
 
     // Normaliza todas as imagens salvas para o domínio oficial de 1º nível (nteleganz.com.br)
     const normalizedImages = storedImages.map(resolveAdminProductImg);
@@ -1418,11 +1450,11 @@
       badge: getVal('p-badge') || null,
       desc: getVal('p-desc'),
       category: getVal('p-category'),
-      stock: stockNum,
-      inStock: stockNum > 0,
-      available: isActive && stockNum > 0,
+      stock: Math.max(0, stockNum),
+      inStock: isAvailable,
+      available: isAvailable,
       priceNum: fmt.parsePrice(getVal('p-price')),
-      active: isActive,
+      active: true, // Sempre ativo: produtos sem estoque exibem 'ESGOTADO' na vitrine e nunca somem
       sizes: [...editingSizes],
       colors: [...editingColors],
       image: normalizedImages[0] || '',

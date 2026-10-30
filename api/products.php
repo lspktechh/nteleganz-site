@@ -375,6 +375,13 @@ function readCatalog(): ?array
         ? array_values($decoded['products'])
         : array_values($decoded);
     $products = array_values(array_filter($products, 'is_array'));
+    foreach ($products as &$p) {
+        $p['active'] = true;
+        $stk = (int)($p['stock'] ?? 0);
+        $p['inStock'] = $stk > 0;
+        $p['available'] = $stk > 0;
+    }
+    unset($p);
 
     $version = isset($decoded['version']) ? (int)$decoded['version'] : 0;
 
@@ -505,11 +512,19 @@ function mergeCatalogs(array $vpsProducts, array $localProducts): array
     $byId = [];
     foreach ($vpsProducts as $p) {
         if (is_array($p) && isset($p['id'])) {
+            $p['active'] = true;
+            $stk = (int)($p['stock'] ?? 0);
+            $p['inStock'] = $stk > 0;
+            $p['available'] = $stk > 0;
             $byId[(string)$p['id']] = $p;
         }
     }
     foreach ($localProducts as $p) {
         if (is_array($p) && isset($p['id']) && !isset($byId[(string)$p['id']])) {
+            $p['active'] = true;
+            $stk = (int)($p['stock'] ?? 0);
+            $p['inStock'] = $stk > 0;
+            $p['available'] = $stk > 0;
             $byId[(string)$p['id']] = $p;
         }
     }
@@ -764,11 +779,17 @@ function sanitizeProduct(array $input, bool $partial = false): ?array
         $record[$field] = $value === null ? $default : max(0, $value);
     }
 
-    foreach (['active', 'featured', 'inStock', 'available', 'destaque'] as $flag) {
+    foreach (['featured', 'destaque'] as $flag) {
         if (array_key_exists($flag, $input)) {
             $record[$flag] = $bool($input[$flag]);
         }
     }
+
+    // Produtos NUNCA são inativados: sempre ativos, apenas esgotados via estoque
+    $record['active'] = true;
+    $stkVal = (int)($record['stock'] ?? 0);
+    $record['inStock'] = $stkVal > 0;
+    $record['available'] = $stkVal > 0;
 
     // Derivados: o storefront e a vitrine esperam image = images[0].
     if (array_key_exists('image', $input) || array_key_exists('images', $input)) {

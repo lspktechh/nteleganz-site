@@ -359,9 +359,9 @@
         </div>
         <div class="catalog-summary" aria-label="Resumo do catálogo">
           <div class="catalog-summary__item"><span>Total</span><strong id="products-summary-total">0</strong></div>
-          <div class="catalog-summary__item"><span>Ativos</span><strong id="products-summary-active">0</strong></div>
+          <div class="catalog-summary__item"><span>Em estoque</span><strong id="products-summary-active">0</strong></div>
           <div class="catalog-summary__item"><span>Em destaque</span><strong id="products-summary-featured">0</strong></div>
-          <div class="catalog-summary__item"><span>Inativos</span><strong id="products-summary-inactive">0</strong></div>
+          <div class="catalog-summary__item"><span>Esgotados</span><strong id="products-summary-inactive">0</strong></div>
         </div>
         <div class="data-card">
           <div class="data-card-header">
@@ -384,8 +384,8 @@
                 </select>
                 <select class="admin-select" id="product-filter-status" onchange="filterProducts()">
                   <option value="">Todos os status</option>
-                  <option value="active">Ativos</option>
-                  <option value="inactive">Inativos</option>
+                  <option value="in_stock">Em estoque</option>
+                  <option value="out_of_stock">Esgotados</option>
                   <option value="featured">Em destaque</option>
                 </select>
                 <button class="btn btn-secondary" id="product-clear-filters" onclick="clearProductFilters()" hidden>Limpar</button>
@@ -1049,11 +1049,12 @@
         </div>
 
         <div class="form-group">
-          <label>Status</label>
-          <select class="form-control" id="p-active" onchange="if (window.handleActiveStatusChange) window.handleActiveStatusChange();">
-            <option value="true">Ativo (Visível na loja)</option>
-            <option value="false">Inativo (Oculto na loja)</option>
+          <label>Disponibilidade na Loja</label>
+          <select class="form-control" id="p-availability-status" onchange="if (window.handleAvailabilityStatusChange) window.handleAvailabilityStatusChange();">
+            <option value="in_stock">Em Estoque (Disponível para venda)</option>
+            <option value="out_of_stock">Esgotado (Exibe selo ESGOTADO na loja)</option>
           </select>
+          <input type="hidden" id="p-active" value="true" />
         </div>
 
         <div class="form-group form-col-full">
@@ -1278,7 +1279,7 @@
 <!-- Scripts -->
 <script src="../js/auth.js?v=20261007c"></script>
 <script src="../js/db.js?v=20261007c"></script>
-<script src="../js/admin.js?v=20261027e"></script>
+<script src="../js/admin.js?v=20261030b"></script>
 <script>
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
