@@ -38,3 +38,4 @@ data/feedbacks.backup.json
 # apagar nem reverter nada do que o gestor cadastrou.
 data/*.live.json
 data/.sync_images_stamp
+data/.img_missing.json

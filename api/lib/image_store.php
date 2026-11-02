@@ -238,3 +238,33 @@ function nte_img_product_files(array $product): array
     }
     return array_keys($files);
 }
+
+/** Quanto tempo uma foto que falhou nos dois servidores fica sem ser tentada de novo pela auto-cura (segundos). */
+const NTE_IMG_MISSING_TTL = 900;
+
+/** Fotos que falharam há pouco (nome => momento da tentativa). Fica em data/ (fora do git, bloqueado na web). */
+function nte_img_missing_path(): string
+{
+    return __DIR__ . '/../../data/.img_missing.json';
+}
+
+/** @return array<string,int> */
+function nte_img_missing_load(): array
+{
+    $raw = @file_get_contents(nte_img_missing_path());
+    $data = $raw ? @json_decode($raw, true) : null;
+    return is_array($data) ? $data : [];
+}
+
+/** Grava sem as entradas já vencidas. Melhor esforço: se falhar, só acontece uma nova tentativa mais cedo. */
+function nte_img_missing_save(array $missing): void
+{
+    $now = time();
+    $fresh = [];
+    foreach ($missing as $file => $at) {
+        if (is_int($at) && $now - $at < NTE_IMG_MISSING_TTL) {
+            $fresh[$file] = $at;
+        }
+    }
+    nte_write_atomic(nte_img_missing_path(), (string)json_encode($fresh));
+}

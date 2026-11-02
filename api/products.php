@@ -174,10 +174,8 @@ if ($method === 'GET' || $method === 'HEAD') {
                 cacheCatalog($merged, $version);
             }
 
-            // Auto-cura de fotos: se alguma imagem estiver ausente na Hostinger, copia da VPS
-            healCatalogImages($merged);
-
-            respond(200, null, ['products' => $merged, 'version' => $version]);
+            // Responde e depois faz a auto-cura de fotos (copia da VPS o que faltar na Hostinger)
+            respondThenHeal($merged, $version);
         }
     }
 
@@ -505,30 +503,39 @@ function writeCatalog(array $products, int $version): void
 /**
  * Junta a lista da VPS com o cache local sem perder nada: produto que só existe localmente (ex.: cadastrado
  * enquanto a VPS estava fora do ar) é mantido. Para o mesmo id, a VPS continua sendo a fonte da verdade
- * (estoque, preço etc.). A ordem da VPS é preservada.
+ * (estoque, preço etc.). A ordem da VPS é preservada e nada que a VPS devolveu é descartado (nem item sem
+ * id, nem id repetido); do cache local só entra o que a VPS não tem.
  */
 function mergeCatalogs(array $vpsProducts, array $localProducts): array
 {
-    $byId = [];
+    // Produtos nunca são inativados: sempre ativos, esgotados apenas pelo estoque
+    $normalize = static function (array $p): array {
+        $p['active'] = true;
+        $stk = (int)($p['stock'] ?? 0);
+        $p['inStock'] = $stk > 0;
+        $p['available'] = $stk > 0;
+        return $p;
+    };
+
+    $merged = [];
+    $seen = [];
     foreach ($vpsProducts as $p) {
-        if (is_array($p) && isset($p['id'])) {
-            $p['active'] = true;
-            $stk = (int)($p['stock'] ?? 0);
-            $p['inStock'] = $stk > 0;
-            $p['available'] = $stk > 0;
-            $byId[(string)$p['id']] = $p;
+        if (!is_array($p)) {
+            continue;
+        }
+        $merged[] = $normalize($p);
+        if (isset($p['id'])) {
+            $seen[(string)$p['id']] = true;
         }
     }
+    // Item local sem id não volta: não dá para saber se a VPS já o devolveu, e voltaria duplicado a cada visita
     foreach ($localProducts as $p) {
-        if (is_array($p) && isset($p['id']) && !isset($byId[(string)$p['id']])) {
-            $p['active'] = true;
-            $stk = (int)($p['stock'] ?? 0);
-            $p['inStock'] = $stk > 0;
-            $p['available'] = $stk > 0;
-            $byId[(string)$p['id']] = $p;
+        if (is_array($p) && isset($p['id']) && !isset($seen[(string)$p['id']])) {
+            $merged[] = $normalize($p);
+            $seen[(string)$p['id']] = true;
         }
     }
-    return array_values($byId);
+    return $merged;
 }
 
 /** Grava o cache local do catálogo de forma atômica e silenciosa (nunca derruba a leitura pública). */
@@ -545,26 +552,84 @@ function cacheCatalog(array $products, int $version): void
 
 /**
  * Auto-cura de fotos: copia da VPS o que faltar (ou estiver corrompido) no disco da Hostinger. Só olha
- * produtos ativos (os que aparecem na loja) e limita as tentativas por requisição. Nunca apaga nada.
+ * produtos ativos (os que aparecem na loja) e limita as tentativas por requisição. Foto que falhou na VPS
+ * não é tentada de novo antes de NTE_IMG_MISSING_TTL: sem isso, uma foto que não existe em lugar nenhum
+ * custaria uma ida à VPS a cada visita ao catálogo. Nunca apaga nada.
  */
 function healCatalogImages(array $products): void
 {
     $dir = __DIR__ . '/../assets/images/products/';
-    $budget = 6;
+    $missing = nte_img_missing_load();
+    $now = time();
+
+    $todo = [];
     foreach ($products as $p) {
         if (!is_array($p) || ($p['active'] ?? true) === false) {
             continue;
         }
         foreach (nte_img_product_files($p) as $file) {
-            if (nte_img_local_ok($dir . $file)) {
+            if (isset($todo[$file]) || nte_img_local_ok($dir . $file)) {
                 continue;
             }
-            if ($budget-- <= 0) {
-                return;
+            if (isset($missing[$file]) && $now - (int)$missing[$file] < NTE_IMG_MISSING_TTL) {
+                continue;
             }
-            nte_img_ensure_local($dir, $file, 2);
+            $todo[$file] = true;
+            if (count($todo) >= 6) {
+                break 2;
+            }
         }
     }
+    if (!$todo) {
+        return;
+    }
+
+    // Marca antes de tentar: visitas simultâneas não repetem as mesmas idas à VPS
+    foreach ($todo as $file => $_) {
+        $missing[$file] = $now;
+    }
+    nte_img_missing_save($missing);
+
+    $healed = false;
+    foreach ($todo as $file => $_) {
+        if (nte_img_ensure_local($dir, $file, 2)) {
+            unset($missing[$file]);
+            $healed = true;
+        }
+    }
+    if ($healed) {
+        nte_img_missing_save($missing);
+    }
+}
+
+/**
+ * Responde o catálogo e só então cura as fotos: o visitante não espera a ida à VPS. Sem
+ * fastcgi_finish_request/litespeed_finish_request não há como liberar a conexão antes, então a cura (já
+ * limitada pelo cache de falhas) roda antes da resposta. HEAD não cura.
+ */
+function respondThenHeal(array $products, int $version): void
+{
+    if ($_SERVER['REQUEST_METHOD'] === 'HEAD') {
+        respond(200);
+    }
+
+    $finish = function_exists('fastcgi_finish_request') ? 'fastcgi_finish_request'
+        : (function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : null);
+    if ($finish === null) {
+        healCatalogImages($products);
+        respond(200, null, ['products' => $products, 'version' => $version]);
+    }
+
+    $body = json_encode(['products' => $products, 'version' => $version], JSON_UNESCAPED_UNICODE);
+    if ($body === false) {
+        respond(500, 'Falha ao serializar o catálogo.');
+    }
+    ignore_user_abort(true);
+    http_response_code(200);
+    echo $body;
+    $finish();
+    healCatalogImages($products);
+    exit;
 }
 
 function backupCatalog(array $products, int $version): void
