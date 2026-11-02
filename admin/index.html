@@ -670,6 +670,104 @@
             </div>
           </div>
 
+          <!-- Roteamento de Checkout Dinâmico -->
+          <div class="settings-card" style="grid-column: 1 / -1;" id="dynamic-checkout-settings-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:12px;">
+              <div>
+                <div class="settings-card-title" style="margin-bottom:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:22px;height:22px;color:var(--gold,#c9a84c);flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span>Roteamento de Checkout Dinâmico</span>
+                  <span id="dynamic-checkout-live-indicator" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;background:rgba(37,211,102,0.15);color:#25D366;border:1px solid rgba(37,211,102,0.3);">Carregando status...</span>
+                </div>
+                <div class="settings-card-desc" style="margin-bottom:0;max-width:850px;">
+                  Alterne automaticamente entre o atendimento humanizado no <strong>WhatsApp</strong> durante o expediente e o <strong>Checkout Online Integrado</strong> (PIX / Cartão com banco) fora do horário comercial, à noite e finais de semana.
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:11px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  Horário Oficial de Brasília (UTC-3)
+                </span>
+              </div>
+            </div>
+
+            <div id="dynamic-checkout-alert"></div>
+
+            <!-- Seletor de Modo -->
+            <label style="font-size:12px;font-weight:700;color:var(--text-primary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block;">Modo de Operação</label>
+            <div class="db-mode-selector" style="margin-bottom:18px;">
+              <div class="db-mode-option chk-mode-btn active" data-chk-mode="schedule" onclick="selectCheckoutMode('schedule', this)">
+                <span class="db-mode-icon" style="font-size:20px;">⏰</span>
+                <span class="db-mode-name">Horário Programado</span>
+                <span style="font-size:10px; color:var(--text-muted); margin-top:2px; text-align:center;">WhatsApp no expediente / Checkout Online fora</span>
+              </div>
+              <div class="db-mode-option chk-mode-btn" data-chk-mode="always_wpp" onclick="selectCheckoutMode('always_wpp', this)">
+                <span class="db-mode-icon" style="font-size:20px;">💬</span>
+                <span class="db-mode-name">Sempre WhatsApp</span>
+                <span style="font-size:10px; color:var(--text-muted); margin-top:2px; text-align:center;">Direto para WhatsApp 24 horas</span>
+              </div>
+              <div class="db-mode-option chk-mode-btn" data-chk-mode="always_bank" onclick="selectCheckoutMode('always_bank', this)">
+                <span class="db-mode-icon" style="font-size:20px;">💳</span>
+                <span class="db-mode-name">Sempre Checkout Online</span>
+                <span style="font-size:10px; color:var(--text-muted); margin-top:2px; text-align:center;">Pagamento no site 24 horas</span>
+              </div>
+            </div>
+
+            <!-- Configuração do Horário do WhatsApp -->
+            <div id="chk-schedule-settings" style="background:var(--bg-secondary,#141414);border:1px solid var(--border,rgba(255,255,255,0.08));border-radius:10px;padding:16px;margin-bottom:16px;">
+              <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#25D366;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
+                Janela de Atendimento do WhatsApp (Expediente da Loja)
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;margin-bottom:14px;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:5px;">Horário de Início do WhatsApp</label>
+                  <input type="time" class="form-control" id="chk-wpp-start" value="09:00" onchange="updateDynamicCheckoutLivePreview()" />
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:5px;">Horário de Término do WhatsApp</label>
+                  <input type="time" class="form-control" id="chk-wpp-end" value="19:00" onchange="updateDynamicCheckoutLivePreview()" />
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:8px;">Dias da Semana com WhatsApp Ativo</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;" id="chk-days-container">
+                  <label style="display:inline-flex;align-items:center;gap:6px;background:var(--bg-card,#1a1a1a);border:1px solid var(--border,rgba(255,255,255,0.1));padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;">
+                    <input type="checkbox" id="chk-day-1" value="1" checked onchange="updateDynamicCheckoutLivePreview()" /> Seg
+                  </label>
+                  <label style="display:inline-flex;align-items:center;gap:6px;background:var(--bg-card,#1a1a1a);border:1px solid var(--border,rgba(255,255,255,0.1));padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;">
+                    <input type="checkbox" id="chk-day-2" value="2" checked onchange="updateDynamicCheckoutLivePreview()" /> Ter
+                  </label>
+                  <label style="display:inline-flex;align-items:center;gap:6px;background:var(--bg-card,#1a1a1a);border:1px solid var(--border,rgba(255,255,255,0.1));padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;">
+                    <input type="checkbox" id="chk-day-3" value="3" checked onchange="updateDynamicCheckoutLivePreview()" /> Qua
+                  </label>
+                  <label style="display:inline-flex;align-items:center;gap:6px;background:var(--bg-card,#1a1a1a);border:1px solid var(--border,rgba(255,255,255,0.1));padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;">
+                    <input type="checkbox" id="chk-day-4" value="4" checked onchange="updateDynamicCheckoutLivePreview()" /> Qui
+                  </label>
+                  <label style="display:inline-flex;align-items:center;gap:6px;background:var(--bg-card,#1a1a1a);border:1px solid var(--border,rgba(255,255,255,0.1));padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;">
+                    <input type="checkbox" id="chk-day-5" value="5" checked onchange="updateDynamicCheckoutLivePreview()" /> Sex
+                  </label>
+                  <label style="display:inline-flex;align-items:center;gap:6px;background:var(--bg-card,#1a1a1a);border:1px solid var(--border,rgba(255,255,255,0.1));padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;">
+                    <input type="checkbox" id="chk-day-6" value="6" checked onchange="updateDynamicCheckoutLivePreview()" /> Sáb
+                  </label>
+                  <label style="display:inline-flex;align-items:center;gap:6px;background:var(--bg-card,#1a1a1a);border:1px solid var(--border,rgba(255,255,255,0.1));padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;">
+                    <input type="checkbox" id="chk-day-0" value="0" onchange="updateDynamicCheckoutLivePreview()" /> Dom
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Explicação Dinâmica / Resumo -->
+            <div id="chk-explanation-banner" style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.25);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--text-secondary,#ddd);line-height:1.5;margin-bottom:16px;">
+              <strong style="color:var(--gold,#c9a84c);">Como funciona agora:</strong> <span id="chk-explanation-text">Carregando regra...</span>
+            </div>
+
+            <div style="margin-top:18px;display:flex;justify-content:flex-end;">
+              <button type="button" class="btn btn-primary" id="btn-save-dynamic-checkout" onclick="saveDynamicCheckoutSettings()">Salvar Configurações de Checkout</button>
+            </div>
+          </div>
+
           <!-- Formas de Envio & Frete (Checkout de Luxo) -->
           <div class="settings-card" style="grid-column: 1 / -1;" id="shipping-settings-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">

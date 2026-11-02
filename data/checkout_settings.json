@@ -1,0 +1,17 @@
+{
+  "mode": "schedule",
+  "wppStartTime": "09:00",
+  "wppEndTime": "19:00",
+  "wppActiveDays": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "timezone": "America/Sao_Paulo",
+  "wppButtonText": "Finalizar pedido no WhatsApp",
+  "bankButtonText": "Finalizar Pedido Seguro",
+  "updatedAt": "2026-11-01T21:00:00-03:00"
+}

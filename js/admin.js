@@ -2837,6 +2837,11 @@
     if (typeof window.loadAdminShippingMethods === 'function') {
       window.loadAdminShippingMethods();
     }
+
+    // Carrega configurações de roteamento dinâmico de checkout
+    if (typeof window.loadDynamicCheckoutSettings === 'function') {
+      window.loadDynamicCheckoutSettings();
+    }
   }
 
   window.selectDBMode = function (mode, el, updateDOM = true) {
@@ -3100,7 +3105,215 @@
     }
   };
 
-  // ── Marketing & Tracking (Pixels & Conversions API) ──
+  // ── Roteamento de Checkout Dinâmico (WhatsApp vs Checkout Banco) ──
+  let dynamicCheckoutMode = 'schedule';
+
+  window.selectCheckoutMode = function (mode, el) {
+    dynamicCheckoutMode = mode;
+    document.querySelectorAll('.chk-mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.chkMode === mode);
+    });
+    const schedBlock = document.getElementById('chk-schedule-settings');
+    if (schedBlock) {
+      schedBlock.style.display = (mode === 'schedule') ? 'block' : 'none';
+    }
+    updateDynamicCheckoutLivePreview();
+  };
+
+  window.loadDynamicCheckoutSettings = async function () {
+    const alertEl = document.getElementById('dynamic-checkout-alert');
+    if (alertEl) alertEl.innerHTML = '';
+    try {
+      const res = await fetch('/api/checkout_settings.php?admin=1', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Falha ao carregar configurações de checkout');
+      const data = await res.json();
+      const settings = (data && data.settings) ? data.settings : (data || {});
+
+      dynamicCheckoutMode = settings.mode || 'schedule';
+      document.querySelectorAll('.chk-mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.chkMode === dynamicCheckoutMode);
+      });
+
+      const schedBlock = document.getElementById('chk-schedule-settings');
+      if (schedBlock) {
+        schedBlock.style.display = dynamicCheckoutMode === 'schedule' ? 'block' : 'none';
+      }
+
+      const startInput = document.getElementById('chk-wpp-start');
+      if (startInput) startInput.value = settings.wppStartTime || '09:00';
+
+      const endInput = document.getElementById('chk-wpp-end');
+      if (endInput) endInput.value = settings.wppEndTime || '19:00';
+
+      const activeDays = Array.isArray(settings.wppActiveDays) ? settings.wppActiveDays : [1, 2, 3, 4, 5, 6];
+      for (let d = 0; d <= 6; d++) {
+        const chk = document.getElementById(`chk-day-${d}`);
+        if (chk) chk.checked = activeDays.includes(d);
+      }
+
+      updateDynamicCheckoutLivePreview(data);
+    } catch (err) {
+      console.warn('[dynamic-checkout] Erro ao carregar configurações:', err);
+      updateDynamicCheckoutLivePreview();
+    }
+  };
+
+  window.updateDynamicCheckoutLivePreview = function (serverStatus) {
+    const indicator = document.getElementById('dynamic-checkout-live-indicator');
+    const explanation = document.getElementById('chk-explanation-text');
+    if (!indicator || !explanation) return;
+
+    const startVal = (document.getElementById('chk-wpp-start')?.value || '09:00').trim();
+    const endVal = (document.getElementById('chk-wpp-end')?.value || '19:00').trim();
+
+    const selectedDays = [];
+    const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    for (let d = 0; d <= 6; d++) {
+      if (document.getElementById(`chk-day-${d}`)?.checked) {
+        selectedDays.push(d);
+      }
+    }
+
+    // Calcular status atual com base no Horário de Brasília
+    let isWppNow = false;
+    let reason = '';
+
+    if (dynamicCheckoutMode === 'always_wpp') {
+      isWppNow = true;
+      reason = 'Modo Fixo 24h: 100% dos cliques em comprar ou finalizar pedido vão para o WhatsApp da loja.';
+      indicator.innerHTML = '🟢 WhatsApp 24h Ativo';
+      indicator.style.background = 'rgba(37,211,102,0.15)';
+      indicator.style.color = '#25D366';
+      indicator.style.borderColor = 'rgba(37,211,102,0.3)';
+    } else if (dynamicCheckoutMode === 'always_bank') {
+      isWppNow = false;
+      reason = 'Modo Fixo 24h: 100% dos cliques em comprar ou finalizar pedido vão para o Checkout Online com pagamento integrado no site.';
+      indicator.innerHTML = '🟣 Checkout Banco 24h Ativo';
+      indicator.style.background = 'rgba(168,85,247,0.15)';
+      indicator.style.color = '#c084fc';
+      indicator.style.borderColor = 'rgba(168,85,247,0.3)';
+    } else {
+      // Modo horário programado
+      try {
+        const now = new Date();
+        const bsbFormatter = new Intl.DateTimeFormat('pt-BR', {
+          timeZone: 'America/Sao_Paulo',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        const parts = bsbFormatter.formatToParts(now);
+        const curHour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+        const curMin = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+        const curTotalMin = curHour * 60 + curMin;
+
+        const dayFormatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/Sao_Paulo',
+          weekday: 'short'
+        });
+        const dayStr = dayFormatter.format(now).toLowerCase();
+        const dayMap = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+        const bsbDay = dayMap[dayStr] !== undefined ? dayMap[dayStr] : now.getDay();
+
+        const [sH, sM] = startVal.split(':').map(n => parseInt(n, 10));
+        const [eH, eM] = endVal.split(':').map(n => parseInt(n, 10));
+        const startMin = (sH || 0) * 60 + (sM || 0);
+        const endMin = (eH || 0) * 60 + (eM || 0);
+
+        const isDayActive = selectedDays.includes(bsbDay);
+        let isTimeActive = false;
+
+        if (startMin <= endMin) {
+          isTimeActive = (curTotalMin >= startMin && curTotalMin < endMin);
+        } else {
+          isTimeActive = (curTotalMin >= startMin || curTotalMin < endMin);
+        }
+
+        isWppNow = isDayActive && isTimeActive;
+
+        const curFormattedTime = `${String(curHour).padStart(2, '0')}:${String(curMin).padStart(2, '0')}`;
+        const daysLabels = selectedDays.length === 7 ? 'Todos os dias' : (selectedDays.length === 6 && !selectedDays.includes(0) ? 'Segunda a Sábado' : selectedDays.map(d => dayNames[d]).join(', '));
+
+        if (isWppNow) {
+          indicator.innerHTML = `🟢 WhatsApp Ativo Agora (${curFormattedTime})`;
+          indicator.style.background = 'rgba(37,211,102,0.15)';
+          indicator.style.color = '#25D366';
+          indicator.style.borderColor = 'rgba(37,211,102,0.3)';
+          reason = `Agora são ${curFormattedTime} em Brasília (dentro do expediente configurado). O botão está direcionando para o WhatsApp. Após as ${endVal}, o site direcionará automaticamente para o Checkout Online com pagamento integrado.`;
+        } else {
+          indicator.innerHTML = `🟣 Checkout Banco Ativo Agora (${curFormattedTime})`;
+          indicator.style.background = 'rgba(168,85,247,0.15)';
+          indicator.style.color = '#c084fc';
+          indicator.style.borderColor = 'rgba(168,85,247,0.3)';
+          reason = `Agora são ${curFormattedTime} em Brasília (fora do horário de WhatsApp: ${daysLabels} das ${startVal} às ${endVal}). O site está direcionando automaticamente para o Checkout Online com pagamento integrado (PIX / Cartão).`;
+        }
+      } catch (e) {
+        reason = `Horário configurado: ${startVal} às ${endVal}.`;
+      }
+    }
+
+    explanation.textContent = reason;
+  };
+
+  window.saveDynamicCheckoutSettings = async function () {
+    const alertEl = document.getElementById('dynamic-checkout-alert');
+    const saveBtn = document.getElementById('btn-save-dynamic-checkout');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Salvando...';
+    }
+
+    const startVal = (document.getElementById('chk-wpp-start')?.value || '09:00').trim();
+    const endVal = (document.getElementById('chk-wpp-end')?.value || '19:00').trim();
+    const selectedDays = [];
+    for (let d = 0; d <= 6; d++) {
+      if (document.getElementById(`chk-day-${d}`)?.checked) {
+        selectedDays.push(d);
+      }
+    }
+
+    const payload = {
+      mode: dynamicCheckoutMode,
+      wppStartTime: startVal,
+      wppEndTime: endVal,
+      wppActiveDays: selectedDays
+    };
+
+    try {
+      const authHeader = (typeof getUploadAuthHeader === 'function') ? await getUploadAuthHeader() : {};
+      const res = await fetch('/api/checkout_settings.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authHeader || {})
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Erro ao salvar configurações de checkout');
+      }
+
+      if (alertEl) {
+        alertEl.innerHTML = '<div class="alert alert-success" style="margin-bottom:14px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:6px;"><polyline points="20 6 9 17 4 12"/></svg>Configurações de checkout dinâmico atualizadas com sucesso!</div>';
+        setTimeout(() => { if (alertEl) alertEl.innerHTML = ''; }, 4500);
+      }
+
+      const isWpp = (data.currentStatus && data.currentStatus.isWhatsAppActive !== undefined) ? data.currentStatus.isWhatsAppActive : data.isWhatsAppActive;
+      showToast('check', 'Checkout Dinâmico Salvo!', isWpp ? 'WhatsApp ativo agora' : 'Checkout Banco ativo agora');
+      updateDynamicCheckoutLivePreview(data.currentStatus || data);
+    } catch (err) {
+      if (alertEl) {
+        alertEl.innerHTML = `<div class="alert alert-danger" style="margin-bottom:14px;">${err.message}</div>`;
+      }
+      showToast('!', 'Erro ao salvar checkout', err.message);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar Configurações de Checkout';
+      }
+    }
+  };
   window.loadTrackingSettings = async function () {
     const alertEl = document.getElementById('tracking-alert');
     if (alertEl) alertEl.innerHTML = '';

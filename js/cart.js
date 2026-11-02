@@ -419,9 +419,14 @@
     isOpen ? closeCart() : openCart();
   }
 
-  // ── Checkout via WhatsApp (Padrão) ──
+  // ── Checkout Dinâmico (WhatsApp no expediente vs Online fora de expediente) ──
   function checkout() {
     if (cartItems.length === 0) return;
+    if (window.NTDynamicCheckout && typeof window.NTDynamicCheckout.checkout === 'function') {
+      window.NTDynamicCheckout.checkout(cartItems, formatCurrency(getTotal()));
+      closeCart();
+      return;
+    }
     const total = formatCurrency(getTotal());
     window.ntWpp?.checkout(cartItems, total);
     closeCart();
