@@ -134,8 +134,10 @@
     const isWpp = isWhatsAppActive();
 
     // 1. Botão de Checkout no Carrinho Lateral (#cart-checkout-btn)
+    // Se a interface já possui o botão duplo (#cart-checkout-online-btn), preserva o layout oficial dual
+    const onlineBtn = document.getElementById('cart-checkout-online-btn');
     const cartBtn = document.getElementById('cart-checkout-btn');
-    if (cartBtn) {
+    if (cartBtn && !onlineBtn) {
       if (isWpp) {
         cartBtn.className = 'btn btn-whatsapp';
         cartBtn.innerHTML = `${WPP_ICON_SVG}<span>${currentSettings.wppButtonText || 'Finalizar pedido no WhatsApp'}</span>`;
@@ -222,6 +224,13 @@
 
   // Intercepta e aprimora a função de checkout do carrinho
   function hookCart() {
+    const onlineBtn = document.getElementById('cart-checkout-online-btn');
+    if (onlineBtn) {
+      // Quando ambos os botões estão presentes no carrinho (layout dual oficial):
+      // #cart-checkout-btn chama checkoutWhatsApp e #cart-checkout-online-btn chama checkoutOnline
+      return;
+    }
+
     if (window.ntCart && !window.ntCart.__dynamicHooked) {
       const originalCheckout = window.ntCart.checkout;
       window.ntCart.checkout = function () {
