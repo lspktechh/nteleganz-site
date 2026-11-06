@@ -744,18 +744,14 @@
   }
 
   function goToStep(targetStep, skipValidation = false) {
-    if (targetStep < 1 || targetStep > 5) return;
+    if (targetStep < 1 || targetStep > 3) return;
 
     if (!skipValidation && targetStep > currentStep) {
       if (currentStep === 1 && !validateStep1()) return;
-      if (currentStep === 2 && !validateStep2()) return;
-      if (currentStep === 3 && !validateStep3()) return;
-      if (currentStep === 4 && !validateStep4()) return;
+      if (currentStep === 2 && (!validateStep2() || !validateStep3())) return;
 
       if (targetStep >= 2 && !validateStep1()) return;
-      if (targetStep >= 3 && !validateStep2()) return;
-      if (targetStep >= 4 && !validateStep3()) return;
-      if (targetStep === 5 && !validateStep4()) return;
+      if (targetStep >= 3 && (!validateStep2() || !validateStep3())) return;
     }
 
     currentStep = targetStep;
@@ -763,58 +759,48 @@
       maxVisitedStep = currentStep;
     }
 
-    const card1 = document.getElementById('card-identificacao');
-    const card2 = document.getElementById('card-endereco');
-    const card3 = document.getElementById('card-frete');
-    const card4 = document.getElementById('card-pagamento');
-    const card5 = document.getElementById('card-revisao');
+    const stage1 = document.getElementById('stage-identificacao');
+    const stage2 = document.getElementById('stage-frete');
+    const stage3 = document.getElementById('stage-pagamento');
 
-    if (card1) card1.style.display = (currentStep === 1) ? 'block' : 'none';
-    if (card2) card2.style.display = (currentStep === 2) ? 'block' : 'none';
-    if (card3) card3.style.display = (currentStep === 3) ? 'block' : 'none';
-    if (card4) card4.style.display = (currentStep === 4) ? 'block' : 'none';
-    if (card5) card5.style.display = (currentStep === 5) ? 'block' : 'none';
+    if (stage1) stage1.style.display = (currentStep === 1) ? 'block' : 'none';
+    if (stage2) stage2.style.display = (currentStep === 2) ? 'block' : 'none';
+    if (stage3) stage3.style.display = (currentStep === 3) ? 'block' : 'none';
 
-    // Gerenciamento Inteligente da Coluna Lateral (Carrinho) e Centralização
+    // Garante que os cards internos fiquem visíveis dentro de seus respectivos stages
+    const cardEnd = document.getElementById('card-endereco');
+    const cardFrete = document.getElementById('card-frete');
+    const cardRev = document.getElementById('card-revisao');
+    const cardPag = document.getElementById('card-pagamento');
+
+    if (cardEnd) cardEnd.style.display = 'block';
+    if (cardFrete) cardFrete.style.display = 'block';
+    if (cardRev) cardRev.style.display = 'block';
+    if (cardPag) cardPag.style.display = 'block';
+
+    // Gerenciamento da largura e centralização do layout
     const gridEl = document.getElementById('chk-layout-grid') || document.querySelector('.chk-layout-grid');
-    const summaryCol = document.querySelector('.chk-summary-column');
-
-    if (currentStep <= 3) {
-      if (summaryCol) summaryCol.style.setProperty('display', 'none', 'important');
-      if (gridEl) {
-        gridEl.classList.add('chk-single-col');
-        gridEl.classList.remove('chk-review-col');
-      }
-    } else if (currentStep === 4) {
-      if (summaryCol) summaryCol.style.removeProperty('display');
-      if (gridEl) {
-        gridEl.classList.remove('chk-single-col');
-        gridEl.classList.remove('chk-review-col');
-      }
-    } else if (currentStep === 5) {
-      if (summaryCol) summaryCol.style.setProperty('display', 'none', 'important');
-      if (gridEl) {
-        gridEl.classList.remove('chk-single-col');
-        gridEl.classList.add('chk-review-col');
-      }
-      populateReviewCard();
+    if (gridEl) {
+      gridEl.classList.remove('chk-step-1-active', 'chk-step-2-active', 'chk-step-3-active', 'chk-single-col', 'chk-review-col');
+      gridEl.classList.add(`chk-step-${currentStep}-active`);
     }
+
+    // Coluna lateral desabilitada: tudo fica centralizado e focado
+    const summaryCol = document.querySelector('.chk-summary-column');
+    if (summaryCol) summaryCol.style.setProperty('display', 'none', 'important');
 
     if (currentStep === 2) {
       const cepVal = getVal('chk-cep').replace(/\D/g, '');
       if (cepVal.length === 8 && !getVal('chk-street')) {
         handleCepLookup(cepVal);
       }
-    }
-
-    if (currentStep === 3) {
-      const cepVal = getVal('chk-cep').replace(/\D/g, '');
       if (cepVal.length === 8 && (!shippingMethods || shippingMethods.length === 0)) {
         loadShippingMethods(cepVal);
       }
     }
 
-    if (currentStep === 4) {
+    if (currentStep === 3) {
+      populateReviewCard();
       updateInstallmentsSimulation();
     }
 
@@ -832,9 +818,7 @@
     const nodes = [
       document.getElementById('step-node-1'),
       document.getElementById('step-node-2'),
-      document.getElementById('step-node-3'),
-      document.getElementById('step-node-4'),
-      document.getElementById('step-node-5')
+      document.getElementById('step-node-3')
     ];
     nodes.forEach((node, idx) => {
       if (!node) return;
@@ -845,41 +829,37 @@
 
     const fillEl = document.getElementById('chk-progress-fill');
     if (fillEl) {
-      const percents = { 1: 20, 2: 40, 3: 60, 4: 80, 5: 100 };
-      fillEl.style.width = `${percents[currentStep] || 20}%`;
+      const percents = { 1: 33.3, 2: 66.6, 3: 100 };
+      fillEl.style.width = `${percents[currentStep] || 33.3}%`;
     }
   }
 
   function updatePaymentButtonText() {
     const total = getFinalTotalNumber();
-    const btn = document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
-    const mainTxt = document.getElementById('chk-main-btn-text');
-    const subTxt = document.getElementById('chk-main-btn-sub');
+    const formattedTotal = fmtMoney(total);
 
     const cardBtnPix = document.getElementById('chk-card-pix-btn-text');
     const cardBtnCard = document.getElementById('chk-card-card-btn-text');
     const cardBtnApplePay = document.getElementById('chk-card-applepay-btn-text');
-    if (cardBtnPix) cardBtnPix.textContent = 'CONTINUAR PARA REVISÃO DO PEDIDO';
-    if (cardBtnCard) cardBtnCard.textContent = 'CONTINUAR PARA REVISÃO DO PEDIDO';
-    if (cardBtnApplePay) cardBtnApplePay.textContent = 'CONTINUAR PARA REVISÃO DO PEDIDO';
+    if (cardBtnPix) cardBtnPix.textContent = `PAGAR COM PIX AGORA (${formattedTotal})`;
+    if (cardBtnCard) cardBtnCard.textContent = `PAGAR COM CARTÃO (${formattedTotal})`;
+    if (cardBtnApplePay) cardBtnApplePay.textContent = `PAGAR COM APPLE PAY (${formattedTotal})`;
+
+    const btn = document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
+    const mainTxt = document.getElementById('chk-main-btn-text');
+    const subTxt = document.getElementById('chk-main-btn-sub');
 
     if (!btn) return;
 
     if (currentStep === 1) {
-      if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA ENDEREÇO →';
-      if (subTxt) subTxt.textContent = 'Etapa 1 de 5 • Dados de identificação';
+      if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA FRETE & ENDEREÇO →';
+      if (subTxt) subTxt.textContent = 'Etapa 1 de 3 • Dados de identificação';
     } else if (currentStep === 2) {
-      if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA FRETE →';
-      if (subTxt) subTxt.textContent = 'Etapa 2 de 5 • Endereço de entrega';
+      if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA RESUMO & PAGAMENTO →';
+      if (subTxt) subTxt.textContent = 'Etapa 2 de 3 • Endereço e opções de entrega';
     } else if (currentStep === 3) {
-      if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA PAGAMENTO →';
-      if (subTxt) subTxt.textContent = 'Etapa 3 de 5 • Modalidade de entrega';
-    } else if (currentStep === 4) {
-      if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA REVISÃO DO PEDIDO →';
-      if (subTxt) subTxt.textContent = 'Etapa 4 de 5 • Forma de pagamento escolhida';
-    } else if (currentStep === 5) {
-      if (mainTxt) mainTxt.textContent = `FINALIZAR COMPRA (${fmtMoney(total)})`;
-      if (subTxt) subTxt.textContent = 'Etapa 5 de 5 • Revisão final dos dados';
+      if (mainTxt) mainTxt.textContent = `FINALIZAR PEDIDO (${formattedTotal})`;
+      if (subTxt) subTxt.textContent = 'Etapa 3 de 3 • Revisão e pagamento';
     }
   }
 
@@ -1817,7 +1797,7 @@
       if (el) el.addEventListener('input', updateProgress);
     });
 
-    // ── Botões de Navegação dos Cards de Cada Etapa ──
+    // ── Botões de Navegação dos Cards de Cada Etapa (Checkout em 3 Etapas) ──
     const btnStep1 = document.getElementById('chk-btn-step-1');
     if (btnStep1) btnStep1.addEventListener('click', () => goToStep(2));
 
@@ -1830,26 +1810,34 @@
     const btnBack2 = document.getElementById('chk-btn-back-2');
     if (btnBack2) btnBack2.addEventListener('click', () => goToStep(2, true));
 
-    const btnStep3 = document.getElementById('chk-btn-step-3');
-    if (btnStep3) btnStep3.addEventListener('click', () => goToStep(4));
-
-    const btnBack3 = document.getElementById('chk-btn-back-3');
-    if (btnBack3) btnBack3.addEventListener('click', () => goToStep(3, true));
-
-    const btnBack4 = document.getElementById('chk-btn-back-4');
-    if (btnBack4) btnBack4.addEventListener('click', () => goToStep(4, true));
-
-    // Botões de Ação no Card 4 (Pix e Cartão avançam para a Revisão)
+    // Botões de Pagamento Direto na Etapa 3
     const btnCardPix = document.getElementById('chk-card-btn-pix');
-    if (btnCardPix) btnCardPix.addEventListener('click', () => goToStep(5));
+    if (btnCardPix) {
+      btnCardPix.addEventListener('click', () => {
+        selectedPaymentMethod = 'pix';
+        submitPixPayment();
+      });
+    }
 
     const btnCardCard = document.getElementById('chk-card-btn-card');
-    if (btnCardCard) btnCardCard.addEventListener('click', () => goToStep(5));
+    if (btnCardCard) {
+      btnCardCard.addEventListener('click', () => {
+        selectedPaymentMethod = 'card';
+        if (validateStep4()) {
+          submitCardPayment();
+        }
+      });
+    }
 
     const btnCardApplePay = document.getElementById('chk-card-btn-applepay');
-    if (btnCardApplePay) btnCardApplePay.addEventListener('click', () => goToStep(5));
+    if (btnCardApplePay) {
+      btnCardApplePay.addEventListener('click', () => {
+        selectedPaymentMethod = 'apple_pay';
+        submitTransparentPayment();
+      });
+    }
 
-    // Botões de Alteração dentro da Etapa 5 (Revisão)
+    // Botões de Alteração dentro da Revisão (Etapa 3)
     const editStep1 = document.getElementById('chk-edit-step-1');
     if (editStep1) editStep1.addEventListener('click', () => goToStep(1, true));
 
@@ -1857,22 +1845,32 @@
     if (editStep2) editStep2.addEventListener('click', () => goToStep(2, true));
 
     const editStep3 = document.getElementById('chk-edit-step-3');
-    if (editStep3) editStep3.addEventListener('click', () => goToStep(3, true));
+    if (editStep3) editStep3.addEventListener('click', () => goToStep(2, true));
 
-    const editStep4 = document.getElementById('chk-edit-step-4');
-    if (editStep4) editStep4.addEventListener('click', () => goToStep(4, true));
-
-    // Botão Final de Finalizar Compra na Etapa 5
+    // Botão Final de Finalizar Compra
     const btnFinishOrder = document.getElementById('chk-btn-finish-order');
     if (btnFinishOrder) {
-      btnFinishOrder.addEventListener('click', submitTransparentPayment);
+      btnFinishOrder.addEventListener('click', () => {
+        if (selectedPaymentMethod === 'pix') {
+          submitPixPayment();
+        } else if (selectedPaymentMethod === 'card') {
+          if (validateStep4()) {
+            submitCardPayment();
+          } else {
+            const cardEl = document.getElementById('card-pagamento');
+            if (cardEl) cardEl.scrollIntoView({ behavior: 'smooth' });
+          }
+        } else {
+          submitTransparentPayment();
+        }
+      });
     }
 
     // Inicializa a Busca Nativa de CEP
     setupInlineCepSearch();
 
-    // Navegação por clique nos passos do topo (Steps Tracker - 5 Etapas)
-    [1, 2, 3, 4, 5].forEach(stepNum => {
+    // Navegação por clique nos passos do topo (Steps Tracker - 3 Etapas)
+    [1, 2, 3].forEach(stepNum => {
       const node = document.getElementById(`step-node-${stepNum}`);
       if (node) {
         node.addEventListener('click', () => {
@@ -1919,14 +1917,14 @@
         const pixCard = document.getElementById('chk-pix-active-card');
         if (pixCard) pixCard.style.display = 'none';
         if (layoutGrid) layoutGrid.style.display = 'grid';
-        goToStep(4, true);
+        goToStep(3, true);
         const submitBtn = document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
         if (submitBtn) submitBtn.disabled = false;
         updatePaymentButtonText();
       });
     }
 
-    // Botão unificado na coluna da direita (Carrinho de Compras)
+    // Botão unificado na coluna da direita (caso ainda referenciado)
     const btnSubmit = document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
     if (btnSubmit) {
       btnSubmit.addEventListener('click', () => {
@@ -1935,10 +1933,6 @@
         } else if (currentStep === 2) {
           goToStep(3);
         } else if (currentStep === 3) {
-          goToStep(4);
-        } else if (currentStep === 4) {
-          goToStep(5);
-        } else if (currentStep === 5) {
           submitTransparentPayment();
         }
       });

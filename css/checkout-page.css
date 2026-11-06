@@ -2438,3 +2438,91 @@ body.checkout-page-body {
   flex-wrap: wrap;
 }
 
+/* ════════════════════════════════════════════════════════════════
+   Checkout Simplificado em 3 Etapas (Identificação, Frete, Pagamento)
+   ════════════════════════════════════════════════════════════════ */
+/* Carrinho lateral permanente desabilitado: produtos e totais agora ficam na Etapa 3 */
+.chk-summary-column {
+  display: none !important;
+}
+
+.chk-layout-grid {
+  grid-template-columns: 1fr !important;
+  margin: 0 auto !important;
+  transition: max-width 0.3s ease;
+}
+
+.chk-layout-grid.chk-step-1-active {
+  max-width: 660px !important;
+}
+
+.chk-layout-grid.chk-step-2-active {
+  max-width: 1060px !important;
+}
+
+.chk-layout-grid.chk-step-3-active {
+  max-width: 800px !important;
+}
+
+/* Etapa 2: Grid de Frete (Endereço e Frete) */
+.chk-stage-grid-frete {
+  display: grid;
+  grid-template-columns: 1.12fr 0.88fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 899px) {
+  .chk-stage-grid-frete {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+
+/* Sub-card do frete na etapa 2 com altura e estilo refinados */
+#card-frete {
+  height: 100%;
+}
+
+#card-frete .chk-card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* Barra de Navegação da Etapa 2 */
+.chk-stage-footer-nav {
+  margin-top: 20px;
+  background: #ffffff;
+  border: 1px solid #e8e2d8;
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+@media (max-width: 600px) {
+  .chk-stage-footer-nav {
+    flex-direction: column-reverse;
+    padding: 14px 16px;
+  }
+  .chk-stage-footer-nav button {
+    width: 100% !important;
+    justify-content: center;
+  }
+}
+
+/* Revisão e Pagamento Empilhados (Etapa 3) */
+#stage-pagamento #card-revisao {
+  border-color: #d4af37;
+  box-shadow: 0 4px 18px rgba(212, 175, 55, 0.08);
+}
+
+#stage-pagamento #card-pagamento {
+  margin-top: 22px;
+}
+
+
