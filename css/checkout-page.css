@@ -706,8 +706,22 @@ body.checkout-page-body {
   position: absolute;
   right: 10px;
   display: flex;
+  align-items: center;
   gap: 4px;
   pointer-events: none;
+}
+
+.chk-c-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.12));
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.chk-c-badge svg {
+  border-radius: 3px;
+  display: block;
 }
 
 .chk-c-icon {
@@ -1382,6 +1396,137 @@ body.checkout-page-body {
   color: var(--chk-black);
 }
 
+/* ── Navegação de Etapas nos Cards (Multi-Step Wizard) ── */
+.chk-card-nav-back {
+  margin-bottom: 16px;
+}
+
+.chk-card-footer {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--chk-gray-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.chk-card-footer-between {
+  justify-content: space-between;
+}
+
+.chk-btn-next-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 12px 28px;
+  border-radius: 8px;
+  border: 0;
+  background: var(--chk-black);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+.chk-btn-next-step:hover {
+  background: #2b2824;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+}
+
+.chk-btn-prev-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: 1px solid #dcd7ce;
+  background: #ffffff;
+  color: #635e57;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chk-btn-prev-step:hover {
+  background: #f7f5f1;
+  color: #1a1918;
+  border-color: #beb8ac;
+}
+
+.chk-btn-link-prev {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 0;
+  padding: 6px 0;
+  color: #7a746b;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.chk-btn-link-prev:hover {
+  color: #1a1918;
+  text-decoration: underline;
+}
+
+.chk-btn-step-finish {
+  width: 100%;
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border-radius: 8px;
+  border: 1.5px solid #c9a84c;
+  background: linear-gradient(135deg, #11100e 0%, #241e15 50%, #11100e 100%);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 6px 20px rgba(201, 168, 76, 0.25);
+}
+
+.chk-btn-step-finish:hover {
+  background: linear-gradient(135deg, #1a1712 0%, #30281b 50%, #1a1712 100%);
+  border-color: #e5cb7a;
+  box-shadow: 0 8px 26px rgba(201, 168, 76, 0.38);
+  transform: translateY(-1px);
+}
+
+.chk-step-item {
+  cursor: pointer;
+}
+
+.chk-step-item:hover {
+  opacity: 0.85;
+}
+
 /* ── Responsividade Mobile Avançada & Prevenção de Overflow ── */
 @media (max-width: 640px) {
   html, body.checkout-page-body {
@@ -1547,6 +1692,26 @@ body.checkout-page-body {
     box-sizing: border-box;
     width: 100%;
   }
+  .chk-card-footer {
+    flex-direction: column-reverse;
+    gap: 10px;
+    margin-top: 18px;
+    padding-top: 16px;
+  }
+  .chk-btn-next-step {
+    width: 100%;
+    min-height: 52px;
+    font-size: 11.5px;
+  }
+  .chk-btn-prev-step {
+    width: 100%;
+    min-height: 46px;
+    font-size: 11px;
+  }
+  .chk-btn-step-finish {
+    min-height: 54px;
+    font-size: 11.5px;
+  }
 
   /* 5. Inputs */
   .chk-input-group {
@@ -1666,7 +1831,15 @@ body.checkout-page-body {
     font-size: 11px;
   }
   .chk-card-input-wrap input {
-    padding-right: 90px;
+    padding-right: 110px;
+  }
+  .chk-card-icons {
+    right: 8px;
+    gap: 3px;
+  }
+  .chk-c-badge svg {
+    width: 22px;
+    height: 14px;
   }
   .chk-c-icon {
     font-size: 7.5px;

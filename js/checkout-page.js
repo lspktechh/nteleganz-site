@@ -83,14 +83,23 @@
     return v;
   }
 
+  const BRAND_BADGES_HTML = {
+    visa: `<svg viewBox="0 0 32 20" width="22" height="14" style="vertical-align:middle;border-radius:2px;"><rect width="32" height="20" rx="2" fill="#fff"/><path d="M13 6l-2 8H9.3L7.7 8c-.1-.3-.2-.4-.4-.5-.6-.3-1.3-.5-1.9-.7l.1-.2h3c.4 0 .7.2.8.7l.7 4.1 1.9-4.8h2zm7.4 4.8c0-1.9-2.5-2-2.5-2.8 0-.2.2-.5.7-.6.3 0 1 .1 1.8.3l.3-1.5c-.4-.2-1-.3-1.7-.3-1.8 0-3 1-3 2.3 0 1 .8 1.6 1.5 1.9.7.3 1 .5 1 .9 0 .5-.6.7-1.1.7-.9 0-1.5-.2-1.9-.4l-.3 1.5c.4.2 1.2.3 2 .3 1.9 0 3.1-1 3.2-2.4zm4.7 2.3h1.9L25.6 6h-1.5c-.3 0-.6.2-.7.5L20.8 13h1.9l.4-1h2.3l.1 1.1zm-2-2.5l1-2.6.6 2.6h-1.6zm-7.6-4.6l-1.5 7.1H12.4L13.9 6h1.6z" fill="#1434cb"/></svg> <span>VISA</span>`,
+    master: `<svg viewBox="0 0 32 20" width="22" height="14" style="vertical-align:middle;border-radius:2px;"><rect width="32" height="20" rx="2" fill="#1a1a1a"/><circle cx="12" cy="10" r="6" fill="#eb001b"/><circle cx="20" cy="10" r="6" fill="#f79e1b"/><path d="M16 6a5.9 5.9 0 0 0-2.2 4 5.9 5.9 0 0 0 2.2 4 5.9 5.9 0 0 0 2.2-4A5.9 5.9 0 0 0 16 6z" fill="#ff5f00"/></svg> <span>MASTERCARD</span>`,
+    elo: `<svg viewBox="0 0 32 20" width="22" height="14" style="vertical-align:middle;border-radius:2px;"><rect width="32" height="20" rx="2" fill="#000"/><path d="M11 7c.4-.1.8-.2 1.2-.2 1.6 0 3 1.1 3.2 2.6l2.3-.4c-.5-2.5-2.8-4.4-5.5-4.4-.6 0-1.2.1-1.8.3l.6 2.1z" fill="#FFF100"/><path d="M8.3 14l1.5-1.7c-.7-.6-1.1-1.4-1.1-2.4s.4-1.8 1.1-2.4L8.3 5.8C7.1 6.8 6.4 8.3 6.4 10s.7 3.2 1.9 4z" fill="#00A3DF"/><path d="M15.4 10.5c-.3 1.5-1.6 2.6-3.2 2.6-.3 0-.7-.1-1-.2l-.7 2.1c.6.2 1.2.3 1.7.3 2.7 0 5-1.9 5.5-4.4l-2.3-.4z" fill="#EE4023"/><text x="21" y="12" fill="#fff" font-family="sans-serif" font-weight="900" font-size="6.5" text-anchor="middle">elo</text></svg> <span>ELO</span>`,
+    amex: `<svg viewBox="0 0 32 20" width="22" height="14" style="vertical-align:middle;border-radius:2px;"><rect width="32" height="20" rx="2" fill="#006fcf"/><path d="M6 12h1.6l.3-.7h1.8l.3.7h1.7L9.9 6.5H7.8L6 12zm2.5-2.1l.6-1.4.6 1.4H8.5zm5.4 2.1h1.6V8.2l1.4 3.8h1.1l1.4-3.8v3.8h1.6V6.5h-2.3l-1.3 3.4-1.3-3.4H13.9V12zm8.2 0H26v-1.3h-2.6v-.9h2.3v-1.3h-2.3V7.8H26V6.5h-3.9v5.5z" fill="#fff"/></svg> <span>AMEX</span>`,
+    hipercard: `<svg viewBox="0 0 32 20" width="22" height="14" style="vertical-align:middle;border-radius:2px;"><rect width="32" height="20" rx="2" fill="#b3131b"/><text x="16" y="13" fill="#fff" font-family="sans-serif" font-weight="800" font-style="italic" font-size="6" text-anchor="middle">HIPER</text></svg> <span>HIPERCARD</span>`,
+    default: `<span>Cartão de Crédito</span>`
+  };
+
   function detectCardBrand(num) {
-    const clean = num.replace(/\D/g, '');
-    if (/^4/.test(clean)) return { id: 'visa', name: 'VISA' };
-    if (/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[01]|2720)/.test(clean)) return { id: 'master', name: 'MASTERCARD' };
-    if (/^(4011|4389|4514|4576|5041|5066|5067|509|6277|6362|6363|650|6516|6550)/.test(clean)) return { id: 'elo', name: 'ELO' };
-    if (/^3[47]/.test(clean)) return { id: 'amex', name: 'AMEX' };
-    if (/^(606282|3841)/.test(clean)) return { id: 'hipercard', name: 'HIPERCARD' };
-    return { id: 'visa', name: 'CARTÃO' };
+    const clean = (num || '').replace(/\D/g, '');
+    if (/^4/.test(clean)) return { id: 'visa', name: 'VISA', badgeHtml: BRAND_BADGES_HTML.visa };
+    if (/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[01]|2720)/.test(clean)) return { id: 'master', name: 'MASTERCARD', badgeHtml: BRAND_BADGES_HTML.master };
+    if (/^(4011|4389|4514|4576|5041|5066|5067|509|6277|6362|6363|650|6516|6550)/.test(clean)) return { id: 'elo', name: 'ELO', badgeHtml: BRAND_BADGES_HTML.elo };
+    if (/^3[47]/.test(clean)) return { id: 'amex', name: 'AMEX', badgeHtml: BRAND_BADGES_HTML.amex };
+    if (/^(606282|3841)/.test(clean)) return { id: 'hipercard', name: 'HIPERCARD', badgeHtml: BRAND_BADGES_HTML.hipercard };
+    return { id: 'visa', name: 'CARTÃO', badgeHtml: BRAND_BADGES_HTML.default };
   }
 
   // ── IndexedDB para Hidratação de Imagens Salvas no Carrinho ──
@@ -329,7 +338,7 @@
     }
   }
 
-  // ── Simulação Dinâmica de Parcelamento (1x a 12x) ──
+  // ── Simulação Dinâmica de Parcelamento (1x a 12x com Cálculo de Juros Detalhado) ──
   async function updateInstallmentsSimulation() {
     const select = document.getElementById('chk-card-installments');
     if (!select) return;
@@ -349,7 +358,15 @@
       if (data && data.success && Array.isArray(data.payerCosts) && data.payerCosts.length > 0) {
         const curVal = select.value;
         select.innerHTML = data.payerCosts.slice(0, 12).map(c => {
-          return `<option value="${c.installments}">${escapeHtml(c.recommended_message)}</option>`;
+          const totalParcelado = Number(c.total_amount) || (c.installment_amount * c.installments);
+          const diffJuros = totalParcelado - total;
+          let msg;
+          if (c.installments === 1 || diffJuros <= 0.05) {
+            msg = `${c.installments}x de ${fmtMoney(c.installment_amount)} sem juros (Total: ${fmtMoney(totalParcelado)} à vista)`;
+          } else {
+            msg = `${c.installments}x de ${fmtMoney(c.installment_amount)} (+${fmtMoney(diffJuros)} de juros • Total: ${fmtMoney(totalParcelado)})`;
+          }
+          return `<option value="${c.installments}">${escapeHtml(msg)}</option>`;
         }).join('');
         if (curVal && select.querySelector(`option[value="${curVal}"]`)) {
           select.value = curVal;
@@ -358,14 +375,20 @@
       }
     } catch (_) {}
 
-    // Fallback padrão de cálculo local de 1x a 12x
+    // Fallback padrão com juros oficiais do Mercado Pago repassados ao comprador
     const rates = [0, 0, 5.41, 6.98, 8.56, 9.94, 11.39, 12.82, 14.28, 15.69, 17.15, 18.59, 20.00];
     const opts = [];
     for (let i = 1; i <= 12; i++) {
       const rate = rates[i] || 0;
       const totalComTaxa = total * (1 + (rate / 100));
       const parcela = totalComTaxa / i;
-      const msg = `${i}x de ${fmtMoney(parcela)} ${rate === 0 ? 'sem juros' : `(Total: ${fmtMoney(totalComTaxa)})`}`;
+      const diffJuros = totalComTaxa - total;
+      let msg;
+      if (i === 1 || diffJuros <= 0.05) {
+        msg = `${i}x de ${fmtMoney(parcela)} sem juros (Total: ${fmtMoney(totalComTaxa)} à vista)`;
+      } else {
+        msg = `${i}x de ${fmtMoney(parcela)} (+${fmtMoney(diffJuros)} de juros • Total: ${fmtMoney(totalComTaxa)})`;
+      }
       opts.push(`<option value="${i}">${msg}</option>`);
     }
     select.innerHTML = opts.join('');
@@ -440,60 +463,185 @@
     }
   }
 
-  // ── Barra de Progresso & Indicadores das Etapas ──
-  function updateProgress() {
-    const nameVal = getVal('chk-name');
-    const emailVal = getVal('chk-email');
-    const phoneVal = getVal('chk-phone').replace(/\D/g, '');
-    const cpfVal = getVal('chk-cpf').replace(/\D/g, '');
-    const cepVal = getVal('chk-cep').replace(/\D/g, '');
-    const streetVal = getVal('chk-street');
-    const numberVal = getVal('chk-number');
+  // ── Navegação & Validação Multi-Etapas (Step-by-Step Wizard) ──
+  let currentStep = 1;
+  let maxVisitedStep = 1;
 
-    const step1Ok = nameVal.length >= 3 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal) && phoneVal.length >= 10 && cpfVal.length === 11;
-    const step2Ok = cepVal.length === 8 && streetVal.length >= 2 && numberVal.length >= 1;
-    const step3Ok = Boolean(selectedShipping);
+  function validateStep1() {
+    const name = getVal('chk-name');
+    const email = getVal('chk-email');
+    const phone = getVal('chk-phone').replace(/\D/g, '');
+    const cpf = getVal('chk-cpf').replace(/\D/g, '');
 
-    let step4Ok = false;
-    if (selectedPaymentMethod === 'pix') {
-      step4Ok = true;
-    } else {
-      const cardNum = getVal('chk-card-number').replace(/\D/g, '');
-      const cardName = getVal('chk-card-name');
-      const cardExp = getVal('chk-card-expiry');
-      const cardCvv = getVal('chk-card-cvv');
-      step4Ok = cardNum.length >= 15 && cardName.length >= 3 && cardExp.length === 5 && cardCvv.length >= 3;
+    if (name.length < 3) {
+      alert('Por favor, informe seu Nome Completo.');
+      document.getElementById('chk-name')?.focus();
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      alert('Por favor, informe um endereço de E-mail válido.');
+      document.getElementById('chk-email')?.focus();
+      return false;
+    }
+    if (phone.length < 10) {
+      alert('Por favor, informe seu WhatsApp / Celular completo com DDD.');
+      document.getElementById('chk-phone')?.focus();
+      return false;
+    }
+    if (cpf.length !== 11) {
+      alert('Por favor, informe um CPF válido (11 dígitos) para a nota fiscal e seguro do frete.');
+      document.getElementById('chk-cpf')?.focus();
+      return false;
+    }
+    return true;
+  }
+
+  function validateStep2() {
+    const cep = getVal('chk-cep').replace(/\D/g, '');
+    const street = getVal('chk-street');
+    const number = getVal('chk-number');
+    const neighborhood = getVal('chk-neighborhood');
+    const city = getVal('chk-city');
+    const state = getVal('chk-state');
+
+    if (cep.length !== 8) {
+      alert('Por favor, informe um CEP válido com 8 dígitos.');
+      document.getElementById('chk-cep')?.focus();
+      return false;
+    }
+    if (!street || !number) {
+      alert('Por favor, preencha a Rua/Logradouro e o Número para a entrega.');
+      document.getElementById('chk-number')?.focus();
+      return false;
+    }
+    if (!neighborhood || !city || !state) {
+      alert('Por favor, confirme Bairro, Cidade e Estado para a entrega.');
+      return false;
+    }
+    return true;
+  }
+
+  function validateStep3() {
+    if (!selectedShipping) {
+      alert('Por favor, selecione uma modalidade de frete.');
+      return false;
+    }
+    return true;
+  }
+
+  function goToStep(targetStep, skipValidation = false) {
+    if (targetStep < 1 || targetStep > 4) return;
+
+    if (!skipValidation && targetStep > currentStep) {
+      if (currentStep === 1 && !validateStep1()) return;
+      if (currentStep === 2 && !validateStep2()) return;
+      if (currentStep === 3 && !validateStep3()) return;
+
+      if (targetStep >= 2 && !validateStep1()) return;
+      if (targetStep >= 3 && !validateStep2()) return;
+      if (targetStep === 4 && !validateStep3()) return;
     }
 
-    const stepNode1 = document.getElementById('step-node-1');
-    const stepNode2 = document.getElementById('step-node-2');
-    const stepNode3 = document.getElementById('step-node-3');
-    const stepNode4 = document.getElementById('step-node-4');
+    currentStep = targetStep;
+    if (currentStep > maxVisitedStep) {
+      maxVisitedStep = currentStep;
+    }
+
+    const card1 = document.getElementById('card-identificacao');
+    const card2 = document.getElementById('card-endereco');
+    const card3 = document.getElementById('card-frete');
+    const card4 = document.getElementById('card-pagamento');
+
+    if (card1) card1.style.display = (currentStep === 1) ? 'block' : 'none';
+    if (card2) card2.style.display = (currentStep === 2) ? 'block' : 'none';
+    if (card3) card3.style.display = (currentStep === 3) ? 'block' : 'none';
+    if (card4) card4.style.display = (currentStep === 4) ? 'block' : 'none';
+
+    if (currentStep === 2) {
+      const cepVal = getVal('chk-cep').replace(/\D/g, '');
+      if (cepVal.length === 8 && !getVal('chk-street')) {
+        handleCepLookup(cepVal);
+      }
+    }
+
+    if (currentStep === 3) {
+      const cepVal = getVal('chk-cep').replace(/\D/g, '');
+      if (cepVal.length === 8 && (!shippingMethods || shippingMethods.length === 0)) {
+        loadShippingMethods(cepVal);
+      }
+    }
+
+    if (currentStep === 4) {
+      updateInstallmentsSimulation();
+    }
+
+    updateStepTrackerUI();
+    updatePaymentButtonText();
+
+    const mainEl = document.querySelector('.chk-main-content') || document.getElementById('chk-layout-grid');
+    if (mainEl) {
+      const topOffset = mainEl.getBoundingClientRect().top + window.scrollY - 70;
+      window.scrollTo({ top: Math.max(0, topOffset), behavior: 'smooth' });
+    }
+  }
+
+  function updateStepTrackerUI() {
+    const nodes = [
+      document.getElementById('step-node-1'),
+      document.getElementById('step-node-2'),
+      document.getElementById('step-node-3'),
+      document.getElementById('step-node-4')
+    ];
+    nodes.forEach((node, idx) => {
+      if (!node) return;
+      const stepNum = idx + 1;
+      node.classList.toggle('active', stepNum === currentStep);
+      node.classList.toggle('completed', stepNum < currentStep);
+    });
+
     const fillEl = document.getElementById('chk-progress-fill');
+    if (fillEl) {
+      const percents = { 1: 25, 2: 50, 3: 75, 4: 100 };
+      fillEl.style.width = `${percents[currentStep] || 25}%`;
+    }
+  }
 
-    let percent = 20;
-    if (step1Ok) percent = 45;
-    if (step1Ok && step2Ok) percent = 70;
-    if (step1Ok && step2Ok && step3Ok) percent = 85;
-    if (step1Ok && step2Ok && step3Ok && step4Ok) percent = 100;
+  function updatePaymentButtonText() {
+    const total = getFinalTotalNumber();
+    const btn = document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
+    const mainTxt = document.getElementById('chk-main-btn-text');
+    const subTxt = document.getElementById('chk-main-btn-sub');
 
-    if (fillEl) fillEl.style.width = `${percent}%`;
+    const cardBtnPix = document.getElementById('chk-card-pix-btn-text');
+    const cardBtnCard = document.getElementById('chk-card-card-btn-text');
+    if (cardBtnPix) cardBtnPix.textContent = `GERAR PIX DIRETO NO CHECKOUT (${fmtMoney(total)})`;
+    if (cardBtnCard) cardBtnCard.textContent = `PAGAR COM CARTÃO (${fmtMoney(total)})`;
 
-    if (stepNode1) {
-      stepNode1.classList.toggle('completed', step1Ok);
-      stepNode1.classList.toggle('active', !step1Ok);
+    if (!btn) return;
+
+    if (currentStep === 1) {
+      if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA ENDEREÇO →';
+      if (subTxt) subTxt.textContent = 'Etapa 1 de 4 • Dados de identificação';
+    } else if (currentStep === 2) {
+      if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA FRETE →';
+      if (subTxt) subTxt.textContent = 'Etapa 2 de 4 • Endereço de entrega';
+    } else if (currentStep === 3) {
+      if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA PAGAMENTO →';
+      if (subTxt) subTxt.textContent = 'Etapa 3 de 4 • Modalidade de entrega';
+    } else if (currentStep === 4) {
+      if (selectedPaymentMethod === 'pix') {
+        if (mainTxt) mainTxt.textContent = `GERAR PIX NO CHECKOUT (${fmtMoney(total)})`;
+        if (subTxt) subTxt.textContent = 'QR Code e Copia e Cola na tela • Aprovação imediata';
+      } else {
+        if (mainTxt) mainTxt.textContent = `PAGAR COM CARTÃO (${fmtMoney(total)})`;
+        if (subTxt) subTxt.textContent = 'Até 12x • Processamento seguro Mercado Pago';
+      }
     }
-    if (stepNode2) {
-      stepNode2.classList.toggle('completed', step2Ok);
-      stepNode2.classList.toggle('active', step1Ok && !step2Ok);
-    }
-    if (stepNode3) {
-      stepNode3.classList.toggle('completed', step3Ok);
-      stepNode3.classList.toggle('active', step2Ok && !step3Ok);
-    }
-    if (stepNode4) {
-      stepNode4.classList.toggle('active', step1Ok && step2Ok && step3Ok);
-    }
+  }
+
+  function updateProgress() {
+    updateStepTrackerUI();
+    updatePaymentButtonText();
   }
 
   function getVal(id) {
@@ -1094,7 +1242,7 @@
         e.target.value = maskCardNumber(e.target.value);
         const brand = detectCardBrand(e.target.value);
         const badge = document.getElementById('chk-card-brand-badge');
-        if (badge) badge.textContent = brand.name;
+        if (badge) badge.innerHTML = brand.badgeHtml;
         if (e.target.value.replace(/\D/g, '').length >= 6) {
           updateInstallmentsSimulation();
         }
@@ -1121,6 +1269,46 @@
     ['chk-name', 'chk-email', 'chk-street', 'chk-number', 'chk-neighborhood', 'chk-city', 'chk-state', 'chk-card-name'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', updateProgress);
+    });
+
+    // ── Botões de Navegação dos Cards de Cada Etapa ──
+    const btnStep1 = document.getElementById('chk-btn-step-1');
+    if (btnStep1) btnStep1.addEventListener('click', () => goToStep(2));
+
+    const btnBack1 = document.getElementById('chk-btn-back-1');
+    if (btnBack1) btnBack1.addEventListener('click', () => goToStep(1, true));
+
+    const btnStep2 = document.getElementById('chk-btn-step-2');
+    if (btnStep2) btnStep2.addEventListener('click', () => goToStep(3));
+
+    const btnBack2 = document.getElementById('chk-btn-back-2');
+    if (btnBack2) btnBack2.addEventListener('click', () => goToStep(2, true));
+
+    const btnStep3 = document.getElementById('chk-btn-step-3');
+    if (btnStep3) btnStep3.addEventListener('click', () => goToStep(4));
+
+    const btnBack3 = document.getElementById('chk-btn-back-3');
+    if (btnBack3) btnBack3.addEventListener('click', () => goToStep(3, true));
+
+    // Botões de Ação Direta no Card 4 (Pix e Cartão)
+    const btnCardPix = document.getElementById('chk-card-btn-pix');
+    if (btnCardPix) btnCardPix.addEventListener('click', submitPixPayment);
+
+    const btnCardCard = document.getElementById('chk-card-btn-card');
+    if (btnCardCard) btnCardCard.addEventListener('click', submitCardPayment);
+
+    // Navegação por clique nos passos do topo (Steps Tracker)
+    [1, 2, 3, 4].forEach(stepNum => {
+      const node = document.getElementById(`step-node-${stepNum}`);
+      if (node) {
+        node.addEventListener('click', () => {
+          if (stepNum < currentStep || stepNum <= maxVisitedStep) {
+            goToStep(stepNum, true);
+          } else {
+            goToStep(stepNum);
+          }
+        });
+      }
     });
 
     // Botão de Copiar Código Pix
@@ -1157,21 +1345,31 @@
         const pixCard = document.getElementById('chk-pix-active-card');
         if (pixCard) pixCard.style.display = 'none';
         if (layoutGrid) layoutGrid.style.display = 'grid';
+        goToStep(4, true);
         const submitBtn = document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
         if (submitBtn) submitBtn.disabled = false;
         updatePaymentButtonText();
-        window.scrollTo({ top: 400, behavior: 'smooth' });
       });
     }
 
-    // Botões principais de submissão
+    // Botão unificado na coluna da direita (Carrinho de Compras)
     const btnSubmit = document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
-    if (btnSubmit) btnSubmit.addEventListener('click', submitTransparentPayment);
+    if (btnSubmit) {
+      btnSubmit.addEventListener('click', () => {
+        if (currentStep === 1) {
+          goToStep(2);
+        } else if (currentStep === 2) {
+          goToStep(3);
+        } else if (currentStep === 3) {
+          goToStep(4);
+        } else if (currentStep === 4) {
+          submitTransparentPayment();
+        }
+      });
+    }
 
-    const btnWpp = document.getElementById('chk-submit-whatsapp');
-    if (btnWpp) btnWpp.addEventListener('click', submitWhatsApp);
-
-    updateProgress();
+    // Inicializa na Etapa 1
+    goToStep(1, true);
     updateInstallmentsSimulation();
   });
 
