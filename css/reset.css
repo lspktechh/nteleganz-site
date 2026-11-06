@@ -12,6 +12,11 @@ html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
   font-size: 16px;
+  touch-action: pan-y;
+  -webkit-user-select: manipulation;
+  user-select: manipulation;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 body {
@@ -23,6 +28,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  touch-action: pan-y;
 }
 
 img, video {
@@ -83,4 +91,11 @@ h1, h2, h3, h4, h5, h6 {
 ::selection {
   background: var(--gold-glow-strong);
   color: var(--gold-light);
+}
+
+/* ── Prevenção contra Auto-Zoom em Dispositivos Móveis (iOS Safari / Android) ── */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }

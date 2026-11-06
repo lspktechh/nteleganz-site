@@ -2049,3 +2049,392 @@ body.checkout-page-body {
     font-size: 18px;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   Layout Adaptativo por Etapa, Busca Interna de CEP e Revisão
+   ════════════════════════════════════════════════════════════════ */
+.chk-layout-grid.chk-single-col {
+  max-width: 680px !important;
+  margin: 0 auto !important;
+  grid-template-columns: 1fr !important;
+}
+.chk-layout-grid.chk-review-col {
+  max-width: 760px !important;
+  margin: 0 auto !important;
+  grid-template-columns: 1fr !important;
+}
+
+/* ── Busca de CEP Nativa no Checkout (Sem redirecionar) ── */
+.chk-btn-search-cep-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: #8c734b;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.2s;
+  display: inline-flex;
+  align-items: center;
+}
+.chk-btn-search-cep-toggle:hover {
+  color: #1a1a1a;
+}
+.chk-cep-search-box {
+  background: #fdfcf9;
+  border: 1px solid #e8e2d8;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+.chk-cep-search-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.chk-cep-search-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+.chk-btn-close-cep-search {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: #888;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.chk-btn-close-cep-search:hover {
+  color: #111;
+}
+.chk-cep-search-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
+}
+@media (max-width: 540px) {
+  .chk-cep-search-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.chk-btn-search-cep-action {
+  width: 100%;
+  height: 40px;
+  margin-top: 12px;
+  background: #1a1a1a;
+  color: #ffffff;
+  border: 1px solid #d4af37;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chk-btn-search-cep-action:hover {
+  background: #000000;
+  box-shadow: 0 2px 8px rgba(212,175,55,0.25);
+}
+.chk-cep-search-results {
+  max-height: 220px;
+  overflow-y: auto;
+  margin-top: 12px;
+  border: 1px solid #e0d7c7;
+  border-radius: 6px;
+  background: #ffffff;
+}
+.chk-cep-result-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.15s ease;
+}
+.chk-cep-result-item:last-child {
+  border-bottom: none;
+}
+.chk-cep-result-item:hover {
+  background: #fbf9f4;
+}
+.chk-cep-result-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+  padding-right: 10px;
+}
+.chk-cep-result-street {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chk-cep-result-district {
+  font-size: 11.5px;
+  color: #777;
+}
+.chk-cep-result-badge {
+  background: #1a1a1a;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* ── Estilos da Etapa 5: Revisão do Pedido ── */
+.chk-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+@media (max-width: 680px) {
+  .chk-review-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.chk-review-block {
+  background: #faf8f5;
+  border: 1px solid #ebe5dc;
+  border-radius: 8px;
+  padding: 14px 16px;
+  transition: border-color 0.2s ease;
+}
+.chk-review-block:hover {
+  border-color: #d4af37;
+}
+.chk-review-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #ebe2d3;
+}
+.chk-review-block-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #8c734b;
+}
+.chk-btn-edit-step {
+  background: transparent;
+  border: 1px solid #d4c5a9;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #5a472a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.chk-btn-edit-step:hover {
+  background: #5a472a;
+  color: #ffffff;
+  border-color: #5a472a;
+}
+.chk-rev-line-bold {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 2px;
+}
+.chk-rev-line {
+  font-size: 12.5px;
+  color: #4a4a4a;
+  line-height: 1.45;
+  margin-bottom: 2px;
+}
+.chk-rev-line-gold {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #8c734b;
+  margin-top: 4px;
+}
+.chk-review-section-title {
+  margin: 22px 0 10px;
+}
+.chk-review-section-title h4 {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #1a1a1a;
+}
+.chk-review-products-list {
+  border: 1px solid #ebe5dc;
+  border-radius: 8px;
+  background: #ffffff;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.chk-review-product-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f2ede5;
+}
+.chk-review-product-item:last-child {
+  border-bottom: none;
+}
+.chk-review-prod-img {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #f7f7f7;
+  border: 1px solid #eaeaea;
+  flex-shrink: 0;
+}
+.chk-review-prod-info {
+  flex: 1;
+  min-width: 0;
+}
+.chk-review-prod-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chk-review-prod-sub {
+  font-size: 11.5px;
+  color: #777;
+  margin-bottom: 2px;
+}
+.chk-review-prod-qty {
+  font-size: 11.5px;
+  color: #555;
+  font-weight: 500;
+}
+.chk-review-prod-price {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1a1a1a;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.chk-review-financial {
+  background: #faf8f5;
+  border: 1px solid #ebe5dc;
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+.chk-review-fin-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13.5px;
+  color: #555;
+  margin-bottom: 8px;
+}
+.chk-rev-val-bold {
+  font-weight: 700;
+  color: #1a1a1a;
+}
+.chk-review-fin-divider {
+  height: 1px;
+  background: #e5ded2;
+  margin: 12px 0;
+}
+.chk-review-fin-total {
+  margin-bottom: 0;
+  padding-top: 4px;
+}
+.chk-rev-fin-total-title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #1a1a1a;
+  display: block;
+}
+.chk-review-fin-total small {
+  font-size: 11px;
+  color: #777;
+}
+.chk-rev-fin-total-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1a1a1a;
+  font-family: 'Cinzel', serif, Georgia;
+}
+
+.chk-btn-finish-order {
+  width: 100%;
+  min-height: 58px;
+  padding: 14px 22px;
+  background: linear-gradient(135deg, #111111 0%, #202020 100%);
+  color: #ffffff;
+  border: 1.5px solid #d4af37;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+  transition: all 0.25s ease;
+  box-sizing: border-box;
+}
+.chk-btn-finish-order:hover {
+  background: #000000;
+  box-shadow: 0 6px 20px rgba(212,175,55,0.35);
+  transform: translateY(-2px);
+}
+.chk-btn-finish-texts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding: 0 10px;
+}
+.chk-btn-finish-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+}
+.chk-btn-finish-subtitle {
+  font-size: 11px;
+  color: #d4af37;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  margin-top: 2px;
+}
+.chk-review-trust-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  font-size: 11.5px;
+  color: #777;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+

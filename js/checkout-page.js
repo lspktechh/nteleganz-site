@@ -666,7 +666,7 @@
       return false;
     }
     if (cpf.length !== 11) {
-      alert('Por favor, informe um CPF válido (11 dígitos) para a nota fiscal e seguro do frete.');
+      alert('Por favor, informe um CPF válido (11 dígitos) para o seguro e envio do pedido.');
       document.getElementById('chk-cpf')?.focus();
       return false;
     }
@@ -706,17 +706,56 @@
     return true;
   }
 
+  function validateStep4() {
+    if (selectedPaymentMethod === 'card') {
+      const cardNum = getVal('chk-card-number').replace(/\D/g, '');
+      const cardName = getVal('chk-card-name');
+      const cardExp = getVal('chk-card-expiry');
+      const cardCvv = getVal('chk-card-cvv');
+      const cardCpf = (getVal('chk-card-cpf') || getVal('chk-cpf')).replace(/\D/g, '');
+
+      if (cardNum.length < 13) {
+        alert('Por favor, informe o número completo do cartão de crédito.');
+        document.getElementById('chk-card-number')?.focus();
+        return false;
+      }
+      if (cardName.length < 3) {
+        alert('Por favor, informe o nome do titular como impresso no cartão.');
+        document.getElementById('chk-card-name')?.focus();
+        return false;
+      }
+      if (cardExp.length !== 5 || !cardExp.includes('/')) {
+        alert('Por favor, informe a validade no formato MM/AA.');
+        document.getElementById('chk-card-expiry')?.focus();
+        return false;
+      }
+      if (cardCvv.length < 3) {
+        alert('Por favor, informe o código de segurança (CVV) do cartão.');
+        document.getElementById('chk-card-cvv')?.focus();
+        return false;
+      }
+      if (cardCpf.length !== 11) {
+        alert('Por favor, informe o CPF do titular do cartão.');
+        document.getElementById('chk-card-cpf')?.focus();
+        return false;
+      }
+    }
+    return true;
+  }
+
   function goToStep(targetStep, skipValidation = false) {
-    if (targetStep < 1 || targetStep > 4) return;
+    if (targetStep < 1 || targetStep > 5) return;
 
     if (!skipValidation && targetStep > currentStep) {
       if (currentStep === 1 && !validateStep1()) return;
       if (currentStep === 2 && !validateStep2()) return;
       if (currentStep === 3 && !validateStep3()) return;
+      if (currentStep === 4 && !validateStep4()) return;
 
       if (targetStep >= 2 && !validateStep1()) return;
       if (targetStep >= 3 && !validateStep2()) return;
-      if (targetStep === 4 && !validateStep3()) return;
+      if (targetStep >= 4 && !validateStep3()) return;
+      if (targetStep === 5 && !validateStep4()) return;
     }
 
     currentStep = targetStep;
@@ -728,11 +767,38 @@
     const card2 = document.getElementById('card-endereco');
     const card3 = document.getElementById('card-frete');
     const card4 = document.getElementById('card-pagamento');
+    const card5 = document.getElementById('card-revisao');
 
     if (card1) card1.style.display = (currentStep === 1) ? 'block' : 'none';
     if (card2) card2.style.display = (currentStep === 2) ? 'block' : 'none';
     if (card3) card3.style.display = (currentStep === 3) ? 'block' : 'none';
     if (card4) card4.style.display = (currentStep === 4) ? 'block' : 'none';
+    if (card5) card5.style.display = (currentStep === 5) ? 'block' : 'none';
+
+    // Gerenciamento Inteligente da Coluna Lateral (Carrinho) e Centralização
+    const gridEl = document.getElementById('chk-layout-grid') || document.querySelector('.chk-layout-grid');
+    const summaryCol = document.querySelector('.chk-summary-column');
+
+    if (currentStep <= 3) {
+      if (summaryCol) summaryCol.style.setProperty('display', 'none', 'important');
+      if (gridEl) {
+        gridEl.classList.add('chk-single-col');
+        gridEl.classList.remove('chk-review-col');
+      }
+    } else if (currentStep === 4) {
+      if (summaryCol) summaryCol.style.removeProperty('display');
+      if (gridEl) {
+        gridEl.classList.remove('chk-single-col');
+        gridEl.classList.remove('chk-review-col');
+      }
+    } else if (currentStep === 5) {
+      if (summaryCol) summaryCol.style.setProperty('display', 'none', 'important');
+      if (gridEl) {
+        gridEl.classList.remove('chk-single-col');
+        gridEl.classList.add('chk-review-col');
+      }
+      populateReviewCard();
+    }
 
     if (currentStep === 2) {
       const cepVal = getVal('chk-cep').replace(/\D/g, '');
@@ -767,7 +833,8 @@
       document.getElementById('step-node-1'),
       document.getElementById('step-node-2'),
       document.getElementById('step-node-3'),
-      document.getElementById('step-node-4')
+      document.getElementById('step-node-4'),
+      document.getElementById('step-node-5')
     ];
     nodes.forEach((node, idx) => {
       if (!node) return;
@@ -778,8 +845,8 @@
 
     const fillEl = document.getElementById('chk-progress-fill');
     if (fillEl) {
-      const percents = { 1: 25, 2: 50, 3: 75, 4: 100 };
-      fillEl.style.width = `${percents[currentStep] || 25}%`;
+      const percents = { 1: 20, 2: 40, 3: 60, 4: 80, 5: 100 };
+      fillEl.style.width = `${percents[currentStep] || 20}%`;
     }
   }
 
@@ -792,32 +859,27 @@
     const cardBtnPix = document.getElementById('chk-card-pix-btn-text');
     const cardBtnCard = document.getElementById('chk-card-card-btn-text');
     const cardBtnApplePay = document.getElementById('chk-card-applepay-btn-text');
-    if (cardBtnPix) cardBtnPix.textContent = `GERAR PIX DIRETO NO CHECKOUT (${fmtMoney(total)})`;
-    if (cardBtnCard) cardBtnCard.textContent = `PAGAR COM CARTÃO (${fmtMoney(total)})`;
-    if (cardBtnApplePay) cardBtnApplePay.textContent = `PAGAR COM APPLE PAY (${fmtMoney(total)})`;
+    if (cardBtnPix) cardBtnPix.textContent = 'CONTINUAR PARA REVISÃO DO PEDIDO';
+    if (cardBtnCard) cardBtnCard.textContent = 'CONTINUAR PARA REVISÃO DO PEDIDO';
+    if (cardBtnApplePay) cardBtnApplePay.textContent = 'CONTINUAR PARA REVISÃO DO PEDIDO';
 
     if (!btn) return;
 
     if (currentStep === 1) {
       if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA ENDEREÇO →';
-      if (subTxt) subTxt.textContent = 'Etapa 1 de 4 • Dados de identificação';
+      if (subTxt) subTxt.textContent = 'Etapa 1 de 5 • Dados de identificação';
     } else if (currentStep === 2) {
       if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA FRETE →';
-      if (subTxt) subTxt.textContent = 'Etapa 2 de 4 • Endereço de entrega';
+      if (subTxt) subTxt.textContent = 'Etapa 2 de 5 • Endereço de entrega';
     } else if (currentStep === 3) {
       if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA PAGAMENTO →';
-      if (subTxt) subTxt.textContent = 'Etapa 3 de 4 • Modalidade de entrega';
+      if (subTxt) subTxt.textContent = 'Etapa 3 de 5 • Modalidade de entrega';
     } else if (currentStep === 4) {
-      if (selectedPaymentMethod === 'pix') {
-        if (mainTxt) mainTxt.textContent = `GERAR PIX NO CHECKOUT (${fmtMoney(total)})`;
-        if (subTxt) subTxt.textContent = 'QR Code e Copia e Cola na tela • Aprovação imediata';
-      } else if (selectedPaymentMethod === 'apple_pay') {
-        if (mainTxt) mainTxt.textContent = `PAGAR COM APPLE PAY (${fmtMoney(total)})`;
-        if (subTxt) subTxt.textContent = 'Touch ID / Face ID • 1 toque com Apple Pay';
-      } else {
-        if (mainTxt) mainTxt.textContent = `PAGAR COM CARTÃO (${fmtMoney(total)})`;
-        if (subTxt) subTxt.textContent = 'Até 12x • Processamento seguro Mercado Pago';
-      }
+      if (mainTxt) mainTxt.textContent = 'CONTINUAR PARA REVISÃO DO PEDIDO →';
+      if (subTxt) subTxt.textContent = 'Etapa 4 de 5 • Forma de pagamento escolhida';
+    } else if (currentStep === 5) {
+      if (mainTxt) mainTxt.textContent = `FINALIZAR COMPRA (${fmtMoney(total)})`;
+      if (subTxt) subTxt.textContent = 'Etapa 5 de 5 • Revisão final dos dados';
     }
   }
 
@@ -861,7 +923,7 @@
       return false;
     }
     if (cpf.length !== 11) {
-      alert('Por favor, informe um CPF válido (11 dígitos) para a nota fiscal e seguro do transporte.');
+      alert('Por favor, informe um CPF válido (11 dígitos) para o seguro e envio do transporte.');
       document.getElementById('chk-cpf')?.focus();
       return false;
     }
@@ -1369,6 +1431,306 @@
     } catch (e) {}
   }
 
+  // ── Busca de CEP Nativa Direto no Checkout (ViaCEP Rua/Cidade/UF) ──
+  function setupInlineCepSearch() {
+    const toggleBtn = document.getElementById('chk-btn-search-cep-toggle');
+    const searchBox = document.getElementById('chk-cep-search-box');
+    const closeBtn = document.getElementById('chk-btn-close-cep-search');
+    const actionBtn = document.getElementById('chk-btn-search-cep-action');
+    const resultsContainer = document.getElementById('chk-cep-search-results');
+
+    if (toggleBtn && searchBox) {
+      toggleBtn.addEventListener('click', () => {
+        const isHidden = (searchBox.style.display === 'none' || !searchBox.style.display);
+        searchBox.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) {
+          const curUf = getVal('chk-state').toUpperCase();
+          if (curUf) setVal('chk-search-uf', curUf);
+          const curCity = getVal('chk-city');
+          if (curCity) setVal('chk-search-cidade', curCity);
+        }
+      });
+    }
+
+    if (closeBtn && searchBox) {
+      closeBtn.addEventListener('click', () => {
+        searchBox.style.display = 'none';
+      });
+    }
+
+    if (actionBtn && resultsContainer) {
+      actionBtn.addEventListener('click', async () => {
+        const uf = getVal('chk-search-uf');
+        const cidade = getVal('chk-search-cidade');
+        const rua = getVal('chk-search-rua');
+
+        if (!uf) {
+          alert('Por favor, selecione o Estado (UF).');
+          document.getElementById('chk-search-uf')?.focus();
+          return;
+        }
+        if (cidade.length < 3) {
+          alert('Por favor, informe a Cidade (mínimo 3 letras).');
+          document.getElementById('chk-search-cidade')?.focus();
+          return;
+        }
+        if (rua.length < 3) {
+          alert('Por favor, informe a Rua / Logradouro (mínimo 3 letras).');
+          document.getElementById('chk-search-rua')?.focus();
+          return;
+        }
+
+        actionBtn.disabled = true;
+        actionBtn.innerHTML = '<span>LOCALIZANDO...</span>';
+        resultsContainer.style.display = 'block';
+        resultsContainer.innerHTML = '<div style="padding:14px; text-align:center; color:#777; font-size:12px;">Consultando base dos Correios via ViaCEP...</div>';
+
+        try {
+          const url = `https://viacep.com.br/ws/${encodeURIComponent(uf)}/${encodeURIComponent(cidade)}/${encodeURIComponent(rua)}/json/`;
+          const resp = await fetch(url);
+          const data = await resp.json();
+
+          if (!Array.isArray(data) || data.length === 0) {
+            resultsContainer.innerHTML = `
+              <div style="padding:14px; text-align:center; color:#888; font-size:12px;">
+                Nenhum CEP encontrado para "<strong>${rua}</strong>" em ${cidade}/${uf}. Verifique o nome da rua ou tente um termo mais amplo.
+              </div>
+            `;
+            return;
+          }
+
+          resultsContainer.innerHTML = data.slice(0, 15).map(item => {
+            const cepFmt = item.cep || '';
+            const logradouro = item.logradouro || '';
+            const bairro = item.bairro || '';
+            const loc = item.localidade || cidade;
+            const ufItem = item.uf || uf;
+
+            return `
+              <div class="chk-cep-result-item" data-cep="${cepFmt}" data-logradouro="${logradouro}" data-bairro="${bairro}" data-cidade="${loc}" data-uf="${ufItem}">
+                <div class="chk-cep-result-info">
+                  <div class="chk-cep-result-street">${logradouro || 'Logradouro'}</div>
+                  <div class="chk-cep-result-district">${bairro ? bairro + ' • ' : ''}${loc}/${ufItem}</div>
+                </div>
+                <span class="chk-cep-result-badge">${cepFmt}</span>
+              </div>
+            `;
+          }).join('');
+
+          // Evento de seleção de CEP
+          resultsContainer.querySelectorAll('.chk-cep-result-item').forEach(el => {
+            el.addEventListener('click', () => {
+              const cep = el.getAttribute('data-cep');
+              const logradouro = el.getAttribute('data-logradouro');
+              const bairro = el.getAttribute('data-bairro');
+              const cid = el.getAttribute('data-cidade');
+              const ufVal = el.getAttribute('data-uf');
+
+              if (cep) setVal('chk-cep', cep);
+              if (logradouro) setVal('chk-street', logradouro);
+              if (bairro) setVal('chk-neighborhood', bairro);
+              if (cid) setVal('chk-city', cid);
+              if (ufVal) setVal('chk-state', ufVal);
+
+              searchBox.style.display = 'none';
+
+              const cleanCep = (cep || '').replace(/\D/g, '');
+              if (cleanCep.length === 8) {
+                loadShippingMethods(cleanCep);
+              }
+
+              const numInput = document.getElementById('chk-number');
+              if (numInput) {
+                numInput.focus();
+                numInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            });
+          });
+
+        } catch (err) {
+          resultsContainer.innerHTML = '<div style="padding:14px; text-align:center; color:#c00; font-size:12px;">Falha ao consultar CEP. Tente novamente em instantes.</div>';
+        } finally {
+          actionBtn.disabled = false;
+          actionBtn.innerHTML = '<span>LOCALIZAR CEP</span>';
+        }
+      });
+    }
+  }
+
+  // ── Preenchimento Dinâmico da Etapa 5 (Revisão Completa do Pedido) ──
+  function populateReviewCard() {
+    // 1. Identificação
+    const nameEl = document.getElementById('chk-rev-name');
+    const emailEl = document.getElementById('chk-rev-email');
+    const phoneEl = document.getElementById('chk-rev-phone');
+    const cpfEl = document.getElementById('chk-rev-cpf');
+
+    if (nameEl) nameEl.textContent = getVal('chk-name') || 'Nome não informado';
+    if (emailEl) emailEl.textContent = getVal('chk-email') || 'E-mail não informado';
+    if (phoneEl) phoneEl.textContent = getVal('chk-phone') || 'WhatsApp não informado';
+    if (cpfEl) cpfEl.textContent = getVal('chk-cpf') || 'CPF não informado';
+
+    // 2. Endereço
+    const streetEl = document.getElementById('chk-rev-street');
+    const compEl = document.getElementById('chk-rev-complement');
+    const cityEl = document.getElementById('chk-rev-district-city');
+    const cepEl = document.getElementById('chk-rev-cep');
+
+    const num = getVal('chk-number');
+    const street = getVal('chk-street');
+    const comp = getVal('chk-complement');
+    const neigh = getVal('chk-neighborhood');
+    const city = getVal('chk-city');
+    const state = getVal('chk-state');
+
+    if (streetEl) streetEl.textContent = street ? `${street}, nº ${num || 'S/N'}` : 'Endereço não informado';
+    if (compEl) {
+      if (comp) {
+        compEl.textContent = `Complemento: ${comp}`;
+        compEl.style.display = 'block';
+      } else {
+        compEl.style.display = 'none';
+      }
+    }
+    if (cityEl) cityEl.textContent = `${neigh ? neigh + ' • ' : ''}${city || ''} - ${state || ''}`;
+    if (cepEl) cepEl.textContent = getVal('chk-cep') || '—';
+
+    // 3. Frete
+    const shipNameEl = document.getElementById('chk-rev-shipping-name');
+    const shipDeadEl = document.getElementById('chk-rev-shipping-deadline');
+    const shipPriceEl = document.getElementById('chk-rev-shipping-price');
+
+    if (selectedShipping) {
+      if (shipNameEl) shipNameEl.textContent = selectedShipping.name || 'Frete Selecionado';
+      if (shipDeadEl) shipDeadEl.textContent = selectedShipping.deadline || 'Prazo padrão dos Correios';
+      if (shipPriceEl) shipPriceEl.textContent = selectedShipping.price > 0 ? fmtMoney(selectedShipping.price) : 'Grátis';
+    } else {
+      if (shipNameEl) shipNameEl.textContent = 'Frete Padrão';
+      if (shipDeadEl) shipDeadEl.textContent = 'Calculado na entrega';
+      if (shipPriceEl) shipPriceEl.textContent = 'R$ 0,00';
+    }
+
+    // 4. Pagamento
+    const payTitleEl = document.getElementById('chk-rev-payment-title');
+    const paySubEl = document.getElementById('chk-rev-payment-sub');
+
+    if (selectedPaymentMethod === 'pix') {
+      if (payTitleEl) payTitleEl.innerHTML = '<span style="display:inline-flex; align-items:center; gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path fill="#32BCAD" d="M5.283 18.36a3.505 3.505 0 0 0 2.493-1.032l3.6-3.6a.684.684 0 0 1 .946 0l3.613 3.613a3.504 3.504 0 0 0 2.493 1.032h.71l-4.56 4.56a3.647 3.647 0 0 1-5.156 0L4.85 18.36ZM18.428 5.627a3.505 3.505 0 0 0-2.493 1.032l-3.613 3.614a.67.67 0 0 1-.946 0l-3.6-3.6A3.505 3.505 0 0 0 5.283 5.64h-.434l4.573-4.572a3.646 3.646 0 0 1 5.156 0l4.559 4.559ZM1.068 9.422 3.79 6.699h1.492a2.483 2.483 0 0 1 1.744.722l3.6 3.6a1.73 1.73 0 0 0 2.443 0l3.614-3.613a2.482 2.482 0 0 1 1.744-.723h1.767l2.737 2.737a3.646 3.646 0 0 1 0 5.156l-2.736 2.736h-1.768a2.482 2.482 0 0 1-1.744-.722l-3.613-3.613a1.77 1.77 0 0 0-2.444 0l-3.6 3.6a2.483 2.483 0 0 1-1.744.722H3.791l-2.723-2.723a3.646 3.646 0 0 1 0-5.156"/></svg> Pix Instantâneo (Aprovação Imediata)</span>';
+      if (paySubEl) paySubEl.textContent = 'O código Pix Copia e Cola e o QR Code serão exibidos ao clicar em Finalizar Compra.';
+    } else if (selectedPaymentMethod === 'apple_pay') {
+      if (payTitleEl) payTitleEl.textContent = 'Apple Pay';
+      if (paySubEl) paySubEl.textContent = 'Aprovação biométrica com 1 toque.';
+    } else {
+      const cardNum = getVal('chk-card-number').replace(/\D/g, '');
+      const last4 = cardNum.slice(-4) || '••••';
+      const brandData = detectCardBrand(cardNum);
+      const brandName = (brandData && brandData.brand !== 'unknown') ? brandData.brand.toUpperCase() : 'CRÉDITO';
+      const instSelect = document.getElementById('chk-card-installments');
+      const instCount = instSelect ? parseInt(instSelect.value, 10) || 1 : 1;
+      const baseTotal = subtotal + (selectedShipping ? (selectedShipping.price || 0) : 0);
+      const instList = calculateInstallments(baseTotal);
+      const instData = instList.find(i => i.installment === instCount) || { total: baseTotal, value: baseTotal, interestAmount: 0 };
+
+      if (payTitleEl) payTitleEl.textContent = `Cartão ${brandName} final •••• ${last4}`;
+      if (paySubEl) {
+        if (instCount === 1) {
+          paySubEl.textContent = `1x de ${fmtMoney(instData.value)} à vista (Sem juros)`;
+        } else {
+          paySubEl.textContent = `${instCount}x de ${fmtMoney(instData.value)} (${instData.interestAmount > 0 ? '+ juros' : 'sem juros'})`;
+        }
+      }
+    }
+
+    // 5. Itens do Pedido
+    const itemsCountEl = document.getElementById('chk-rev-items-count');
+    const itemsListEl = document.getElementById('chk-review-products-list');
+    const items = cartItems || [];
+
+    const totalItemsQty = items.reduce((acc, it) => acc + (Math.max(1, Number(it.qty) || Number(it.quantity) || 1)), 0);
+    if (itemsCountEl) itemsCountEl.textContent = `${totalItemsQty} ${totalItemsQty === 1 ? 'item' : 'itens'}`;
+
+    if (itemsListEl) {
+      if (items.length === 0) {
+        itemsListEl.innerHTML = '<div style="padding: 16px; text-align: center; color: #888; font-size: 13px;">Nenhum produto encontrado.</div>';
+      } else {
+        itemsListEl.innerHTML = items.map(it => {
+          const title = escapeHtml(it.name || it.title || 'Produto NT Eleganz');
+          const img = it.image || (Array.isArray(it.images) ? it.images[0] : '') || '/assets/images/placeholder-product.svg';
+          const price = parsePrice(it.price);
+          const qty = Math.max(1, Number(it.qty) || Number(it.quantity) || 1);
+          const variantText = [it.size ? `Tam: ${escapeHtml(it.size)}` : '', it.color ? `Cor: ${escapeHtml(it.color)}` : ''].filter(Boolean).join(' • ');
+
+          return `
+            <div class="chk-review-product-item">
+              <img src="${escapeHtml(img)}" alt="${title}" class="chk-review-prod-img" onerror="this.src='/assets/images/placeholder-product.svg'" />
+              <div class="chk-review-prod-info">
+                <div class="chk-review-prod-title">${title}</div>
+                ${variantText ? `<div class="chk-review-prod-sub">${variantText}</div>` : ''}
+                <div class="chk-review-prod-qty">Quantidade: <strong>${qty}</strong></div>
+              </div>
+              <div class="chk-review-prod-price">${fmtMoney(price * qty)}</div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // 6. Detalhamento Financeiro
+    const baseSubtotal = subtotal;
+    const shippingPrice = selectedShipping ? (selectedShipping.price || 0) : 0;
+    let finalOrderTotal = baseSubtotal + shippingPrice;
+    let interestAmount = 0;
+
+    if (selectedPaymentMethod === 'card') {
+      const instSelect = document.getElementById('chk-card-installments');
+      const instCount = instSelect ? parseInt(instSelect.value, 10) || 1 : 1;
+      const instList = calculateInstallments(baseSubtotal + shippingPrice);
+      const instData = instList.find(i => i.installment === instCount);
+      if (instData) {
+        finalOrderTotal = instData.total;
+        interestAmount = instData.interestAmount;
+      }
+    }
+
+    const finSubtotalEl = document.getElementById('chk-rev-fin-subtotal');
+    const finShippingLabel = document.getElementById('chk-rev-fin-shipping-name');
+    const finShippingVal = document.getElementById('chk-rev-fin-shipping-val');
+    const finInterestRow = document.getElementById('chk-rev-fin-interest-row');
+    const finInterestVal = document.getElementById('chk-rev-fin-interest');
+    const finTotalEl = document.getElementById('chk-rev-fin-total');
+    const finPayCond = document.getElementById('chk-rev-fin-pay-condition');
+    const btnFinishSub = document.getElementById('chk-btn-finish-subtitle');
+
+    if (finSubtotalEl) finSubtotalEl.textContent = fmtMoney(baseSubtotal);
+    if (finShippingLabel) finShippingLabel.textContent = `Frete (${selectedShipping ? selectedShipping.name : 'Padrão'})`;
+    if (finShippingVal) finShippingVal.textContent = shippingPrice > 0 ? fmtMoney(shippingPrice) : 'Grátis';
+
+    if (finInterestRow && finInterestVal) {
+      if (interestAmount > 0) {
+        finInterestRow.style.display = 'flex';
+        finInterestVal.textContent = `+ ${fmtMoney(interestAmount)}`;
+      } else {
+        finInterestRow.style.display = 'none';
+      }
+    }
+
+    if (finTotalEl) finTotalEl.textContent = fmtMoney(finalOrderTotal);
+
+    if (finPayCond) {
+      if (selectedPaymentMethod === 'pix') {
+        finPayCond.textContent = 'Pagamento instantâneo via Pix • Liberação imediata';
+      } else {
+        const instSelect = document.getElementById('chk-card-installments');
+        const instCount = instSelect ? parseInt(instSelect.value, 10) || 1 : 1;
+        finPayCond.textContent = `Em ${instCount}x de ${fmtMoney(finalOrderTotal / instCount)} no Cartão de Crédito`;
+      }
+    }
+
+    if (btnFinishSub) {
+      btnFinishSub.textContent = `Pagar ${fmtMoney(finalOrderTotal)} com segurança Mercado Pago`;
+    }
+  }
+
   // ── Inicialização ──
   document.addEventListener('DOMContentLoaded', async () => {
     const hasCart = await loadCart();
@@ -1474,15 +1836,43 @@
     const btnBack3 = document.getElementById('chk-btn-back-3');
     if (btnBack3) btnBack3.addEventListener('click', () => goToStep(3, true));
 
-    // Botões de Ação Direta no Card 4 (Pix e Cartão)
+    const btnBack4 = document.getElementById('chk-btn-back-4');
+    if (btnBack4) btnBack4.addEventListener('click', () => goToStep(4, true));
+
+    // Botões de Ação no Card 4 (Pix e Cartão avançam para a Revisão)
     const btnCardPix = document.getElementById('chk-card-btn-pix');
-    if (btnCardPix) btnCardPix.addEventListener('click', submitPixPayment);
+    if (btnCardPix) btnCardPix.addEventListener('click', () => goToStep(5));
 
     const btnCardCard = document.getElementById('chk-card-btn-card');
-    if (btnCardCard) btnCardCard.addEventListener('click', submitCardPayment);
+    if (btnCardCard) btnCardCard.addEventListener('click', () => goToStep(5));
 
-    // Navegação por clique nos passos do topo (Steps Tracker)
-    [1, 2, 3, 4].forEach(stepNum => {
+    const btnCardApplePay = document.getElementById('chk-card-btn-applepay');
+    if (btnCardApplePay) btnCardApplePay.addEventListener('click', () => goToStep(5));
+
+    // Botões de Alteração dentro da Etapa 5 (Revisão)
+    const editStep1 = document.getElementById('chk-edit-step-1');
+    if (editStep1) editStep1.addEventListener('click', () => goToStep(1, true));
+
+    const editStep2 = document.getElementById('chk-edit-step-2');
+    if (editStep2) editStep2.addEventListener('click', () => goToStep(2, true));
+
+    const editStep3 = document.getElementById('chk-edit-step-3');
+    if (editStep3) editStep3.addEventListener('click', () => goToStep(3, true));
+
+    const editStep4 = document.getElementById('chk-edit-step-4');
+    if (editStep4) editStep4.addEventListener('click', () => goToStep(4, true));
+
+    // Botão Final de Finalizar Compra na Etapa 5
+    const btnFinishOrder = document.getElementById('chk-btn-finish-order');
+    if (btnFinishOrder) {
+      btnFinishOrder.addEventListener('click', submitTransparentPayment);
+    }
+
+    // Inicializa a Busca Nativa de CEP
+    setupInlineCepSearch();
+
+    // Navegação por clique nos passos do topo (Steps Tracker - 5 Etapas)
+    [1, 2, 3, 4, 5].forEach(stepNum => {
       const node = document.getElementById(`step-node-${stepNum}`);
       if (node) {
         node.addEventListener('click', () => {
@@ -1547,6 +1937,8 @@
         } else if (currentStep === 3) {
           goToStep(4);
         } else if (currentStep === 4) {
+          goToStep(5);
+        } else if (currentStep === 5) {
           submitTransparentPayment();
         }
       });
@@ -1555,6 +1947,11 @@
     // Inicializa na Etapa 1
     goToStep(1, true);
     updateInstallmentsSimulation();
+  });
+
+  // Previne zoom por gesto em Safari iOS / Mobile para não quebrar a dimensão
+  document.addEventListener('gesturestart', function (e) {
+    e.preventDefault();
   });
 
 })();
