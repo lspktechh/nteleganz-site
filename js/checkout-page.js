@@ -1893,7 +1893,7 @@
           try {
             await navigator.clipboard.writeText(input.value);
             copyPixBtn.classList.add('copied');
-            if (textSpan) textSpan.textContent = '✓ Código Pix Copiado!';
+            if (textSpan) textSpan.textContent = 'Código Pix Copiado!';
             setTimeout(() => {
               copyPixBtn.classList.remove('copied');
               if (textSpan) textSpan.textContent = 'Copiar Código Pix';
@@ -1901,7 +1901,7 @@
           } catch (e) {
             input.select();
             document.execCommand('copy');
-            if (textSpan) textSpan.textContent = '✓ Copiado!';
+            if (textSpan) textSpan.textContent = 'Copiado com Sucesso!';
           }
         }
       });
