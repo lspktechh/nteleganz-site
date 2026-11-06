@@ -1502,14 +1502,15 @@ body.checkout-page-body {
   text-decoration: underline;
 }
 
-/* ── Box de Total a Pagar + Botão Finalizar Pedido Verde (Conforme Design Oficial) ── */
+/* ── Box de Total a Pagar + Botão Finalizar Pedido Verde (Sem fundo escuro, integrado e clean) ── */
 .chk-pay-action-card {
-  background: #303030;
-  border-radius: 12px;
-  padding: 18px 20px 20px;
-  margin-top: 22px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
-  border: 1px solid #3f3f3f;
+  background: transparent;
+  border-radius: 0;
+  padding: 16px 0 0;
+  margin-top: 20px;
+  box-shadow: none;
+  border: none;
+  border-top: 1px solid var(--chk-gray-border);
   box-sizing: border-box;
 }
 
@@ -1518,20 +1519,20 @@ body.checkout-page-body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
-  padding: 0 2px;
+  padding: 0;
 }
 
 .chk-pay-action-label {
   font-family: var(--chk-font-sans);
   font-size: 15px;
-  font-weight: 400;
-  color: #ededed;
+  font-weight: 600;
+  color: #111827;
   letter-spacing: -0.01em;
 }
 
 .chk-pay-action-total {
   font-family: var(--chk-font-sans);
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 700;
   color: #17a34a;
   letter-spacing: -0.01em;
