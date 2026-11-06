@@ -1039,30 +1039,30 @@ body.menu-open .menu-sphere-close {
 #cart-drawer .cart-total-label { font-size:10px; font-weight:600; color:#6d6861; letter-spacing:.16em; }
 #cart-drawer .cart-total-value { font-family:var(--font-sans); font-size:26px; font-weight:500; letter-spacing:-.04em; }
 
-/* Botão de Destaque: Checkout Seguro Mercado Pago (Hero Principal) */
+/* Botão de Destaque: Checkout Seguro no Site (Identidade Visual NT Eleganz) */
 #cart-drawer #cart-checkout-online-btn {
   width: 100%;
-  min-height: 64px;
+  min-height: 56px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   padding: 12px 18px;
-  border-radius: 12px;
-  border: 1.5px solid #d4af37;
-  background: linear-gradient(135deg, #11100e 0%, #241e15 50%, #11100e 100%);
-  color: #fff;
-  box-shadow: 0 10px 28px rgba(212, 175, 55, 0.28);
+  border-radius: 8px;
+  border: 1px solid #111827;
+  background: #111827;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s ease;
   text-decoration: none;
 }
 #cart-drawer #cart-checkout-online-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1f1a11 0%, #352b1b 50%, #1f1a11 100%);
-  border-color: #f3dc8e;
-  box-shadow: 0 14px 34px rgba(212, 175, 55, 0.42);
-  transform: translateY(-2px);
+  background: #1f2937;
+  border-color: #1f2937;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  transform: translateY(-1px);
 }
 #cart-drawer #cart-checkout-online-btn:disabled {
   opacity: 0.38;
@@ -1073,26 +1073,26 @@ body.menu-open .menu-sphere-close {
 #cart-drawer #cart-checkout-online-btn .cart-btn-title {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   font-family: var(--font-sans);
-  font-size: 12.5px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #ffffff;
 }
 #cart-drawer #cart-checkout-online-btn .cart-btn-title svg {
-  color: #d4af37;
-  width: 17px;
-  height: 17px;
+  color: #ffffff;
+  width: 15px;
+  height: 15px;
   flex-shrink: 0;
 }
 #cart-drawer #cart-checkout-online-btn .cart-btn-sub {
   font-family: var(--font-sans);
-  font-size: 10px;
-  font-weight: 600;
-  color: #e5cb7a;
-  letter-spacing: 0.04em;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #9ca3af;
+  letter-spacing: 0.02em;
 }
 
 /* Divisor discreto com "OU" */
@@ -1100,7 +1100,7 @@ body.menu-open .menu-sphere-close {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 2px 0;
+  margin: 4px 0;
   width: 100%;
 }
 .cart-checkout-divider::before,
@@ -1108,43 +1108,43 @@ body.menu-open .menu-sphere-close {
   content: '';
   flex: 1;
   height: 1px;
-  background: #e6e2dc;
+  background: #e2e8f0;
 }
 .cart-checkout-divider span {
   font-family: var(--font-sans);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.16em;
-  color: #918b84;
+  color: #9ca3af;
   text-transform: uppercase;
 }
 
-/* Opção Secundária: WhatsApp (Mais discreto e proporcional) */
+/* Opção Secundária: WhatsApp (Outline Clean e Monocromático) */
 #cart-drawer #cart-checkout-btn {
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 8px 16px;
   border-radius: 8px;
-  border: 1px solid rgba(37, 211, 102, 0.4);
-  background: linear-gradient(135deg, #0d2e23 0%, #154536 100%);
-  box-shadow: 0 4px 12px rgba(13, 46, 35, 0.14);
-  color: #d8f5e7;
-  font-size: 10.5px;
+  border: 1px solid #111827;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  color: #111827;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 #cart-drawer #cart-checkout-btn:hover:not(:disabled) {
-  filter: none;
-  background: linear-gradient(135deg, #113c2e 0%, #1b5644 100%);
-  border-color: rgba(37, 211, 102, 0.7);
-  box-shadow: 0 6px 16px rgba(13, 46, 35, 0.22);
+  background: #f8fafc;
+  color: #000000;
+  border-color: #000000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transform: translateY(-1px);
 }
 #cart-drawer #cart-checkout-btn:disabled {
@@ -1153,9 +1153,10 @@ body.menu-open .menu-sphere-close {
   cursor: not-allowed;
 }
 #cart-drawer #cart-checkout-btn svg {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
+  color: #111827;
 }
 #cart-drawer .drawer-footer > p { margin:0; font-family:var(--font-sans); font-size:10px!important; line-height:1.5; color:#918b84!important; letter-spacing:.015em!important; }
 .cart-item { grid-template-columns:76px 1fr auto; gap:14px; padding:16px 0; }
@@ -1176,8 +1177,8 @@ body.menu-open .menu-sphere-close {
   #cart-drawer .cart-empty { min-height: 280px; padding: 40px 0; }
   #cart-drawer .cart-empty .btn { min-height: 44px; padding: 0 24px; font-size: 11px; }
   #cart-drawer .drawer-footer { padding: 18px 20px 14px; }
-  #cart-drawer #cart-checkout-online-btn { min-height: 64px; }
-  #cart-drawer #cart-checkout-btn { min-height: 42px; font-size: 10px; }
+  #cart-drawer #cart-checkout-online-btn { min-height: 56px; }
+  #cart-drawer #cart-checkout-btn { min-height: 44px; font-size: 11px; }
   .cart-item { grid-template-columns: 64px 1fr auto; gap: 10px; padding: 12px 0; }
   .cart-item__img { width: 64px; height: 78px; }
   .cart-item__name { font-size: 12px; }
