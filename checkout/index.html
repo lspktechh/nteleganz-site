@@ -19,7 +19,7 @@
   <!-- CSS -->
   <link rel="stylesheet" href="/css/variables.css" />
   <link rel="stylesheet" href="/css/reset.css" />
-  <link rel="stylesheet" href="/css/checkout-page.css?v=20261007" />
+  <link rel="stylesheet" href="/css/checkout-page.css?v=20261106-responsive" />
 </head>
 <body class="checkout-page-body">
 
@@ -103,6 +103,95 @@
         <a href="/collections/" class="chk-btn-primary" style="display: inline-flex; width: auto; padding: 14px 36px; text-decoration: none; margin-top: 12px;">
           Explorar Coleções
         </a>
+      </div>
+
+      <!-- Tela de Sucesso Instantânea (Pagamento Aprovado) -->
+      <div class="chk-success-screen" id="chk-success-screen" style="display: none;">
+        <div class="chk-success-card">
+          <div class="chk-success-icon-wrap">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#25d366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+          <span class="chk-success-tag">PAGAMENTO APROVADO • MERCADO PAGO</span>
+          <h2>Obrigado por sua compra!</h2>
+          <p class="chk-success-code-label">CÓDIGO DO PEDIDO</p>
+          <div class="chk-success-code" id="chk-success-order-code">#NTE-0000</div>
+          <p class="chk-success-desc">
+            Recebemos seu pagamento com sucesso. Seu pedido já está sendo preparado com embalagem exclusiva e seguro total de envio.
+          </p>
+
+          <div class="chk-success-details-box">
+            <div class="chk-succ-row">
+              <span>Status</span>
+              <strong style="color: #2e7d32;">Pago & Confirmado</strong>
+            </div>
+            <div class="chk-succ-row">
+              <span>Valor Pago</span>
+              <strong id="chk-success-total">R$ 0,00</strong>
+            </div>
+            <div class="chk-succ-row">
+              <span>Comprovante</span>
+              <span id="chk-success-email">Enviado para seu e-mail</span>
+            </div>
+          </div>
+
+          <div class="chk-success-actions">
+            <a href="/" class="chk-btn-primary" style="text-decoration: none;">
+              <span>Voltar à Página Inicial</span>
+            </a>
+            <a id="chk-success-wpp-link" href="https://wa.me/5575999283496" target="_blank" class="chk-btn-secondary" style="text-decoration: none;">
+              <span>Falar com o Concierge no WhatsApp</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Container do Pix Gerado Diretamente no Checkout -->
+      <div class="chk-pix-active-card" id="chk-pix-active-card" style="display: none;">
+        <div class="chk-pix-active-inner">
+          <div class="chk-pix-header">
+            <div class="chk-pix-status-badge">
+              <span class="chk-pulse-dot"></span>
+              <span>Aguardando Pagamento Pix</span>
+            </div>
+            <h3>Pague via Pix para Concluir</h3>
+            <p>Abra o app do seu banco, escolha <strong>Pix</strong> e escaneie o QR Code ou use o código Copia e Cola abaixo.</p>
+          </div>
+
+          <!-- QR Code Imagem Base64 gerado pelo Mercado Pago -->
+          <div class="chk-pix-qr-wrap">
+            <img id="chk-pix-qr-img" class="chk-pix-qr-img" src="" alt="QR Code Pix Mercado Pago" />
+            <div class="chk-pix-timer-row">
+              <span>Expira em:</span>
+              <strong id="chk-pix-timer">15:00</strong>
+            </div>
+          </div>
+
+          <!-- Código Copia e Cola -->
+          <div class="chk-pix-copy-wrap">
+            <label for="chk-pix-code-input">Código Pix Copia e Cola:</label>
+            <div class="chk-pix-input-row">
+              <input type="text" id="chk-pix-code-input" readonly />
+              <button type="button" id="chk-pix-copy-btn" class="chk-btn-copy">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span id="chk-pix-copy-text">Copiar Código Pix</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Feedback animado de detecção -->
+          <div class="chk-pix-polling-box">
+            <div class="chk-spinner-sm"></div>
+            <span>Identificando pagamento em tempo real...</span>
+          </div>
+
+          <div style="margin-top: 14px;">
+            <button type="button" id="chk-pix-cancel-btn" class="chk-link-muted" style="background: none; border: 0; cursor: pointer;">
+              ← Voltar e escolher outro método de pagamento
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Layout Oficial do Checkout (2 Colunas) -->
@@ -220,6 +309,141 @@
             </div>
           </div>
 
+          <!-- Card 4: Forma de Pagamento no Checkout -->
+          <div class="chk-card" id="card-pagamento">
+            <div class="chk-card-header">
+              <div class="chk-card-title-wrap">
+                <span class="chk-card-num">04</span>
+                <h3>Forma de Pagamento</h3>
+              </div>
+              <span class="chk-card-sub">Ambiente Criptografado Mercado Pago • Sem redirecionamento</span>
+            </div>
+            <div class="chk-card-body">
+              <!-- Seletor de Método de Pagamento (Tabs Luxury) -->
+              <div class="chk-pay-methods" id="chk-pay-methods">
+                <!-- Opção 1: PIX -->
+                <label class="chk-pay-method-tab active" data-method="pix" id="tab-method-pix">
+                  <input type="radio" name="payment_method" value="pix" checked />
+                  <div class="chk-pay-tab-content">
+                    <div class="chk-pay-tab-title">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 10l8-8 8 8-8 8-8-8z"></path>
+                        <path d="M12 2v20"></path>
+                      </svg>
+                      <span>Pix Instantâneo</span>
+                    </div>
+                    <span class="chk-pay-badge">Aprovação Imediata</span>
+                  </div>
+                </label>
+
+                <!-- Opção 2: Cartão de Crédito -->
+                <label class="chk-pay-method-tab" data-method="card" id="tab-method-card">
+                  <input type="radio" name="payment_method" value="card" />
+                  <div class="chk-pay-tab-content">
+                    <div class="chk-pay-tab-title">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                        <line x1="2" y1="10" x2="22" y2="10"></line>
+                      </svg>
+                      <span>Cartão de Crédito</span>
+                    </div>
+                    <span class="chk-pay-badge-gold">Até 12x</span>
+                  </div>
+                </label>
+              </div>
+
+              <!-- Painel 1: PIX -->
+              <div class="chk-pay-panel active" id="panel-pix">
+                <div class="chk-pix-intro-box">
+                  <div class="chk-pix-intro-header">
+                    <div class="chk-pix-icon-wrap">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                      </svg>
+                    </div>
+                    <div class="chk-pix-intro-texts">
+                      <h4>Pagamento Direto por Pix</h4>
+                      <p>O QR Code e o código Copia e Cola serão exibidos diretamente aqui na tela. Pague no app do seu banco e a aprovação ocorre em segundos.</p>
+                    </div>
+                  </div>
+                  <div class="chk-pix-highlights">
+                    <div class="chk-pix-hl-item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      <span>Liberação rápida com seguro de frete</span>
+                    </div>
+                    <div class="chk-pix-hl-item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      <span>Sem taxas adicionais</span>
+                    </div>
+                    <div class="chk-pix-hl-item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      <span>Processado com segurança pelo Mercado Pago</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Painel 2: Cartão de Crédito -->
+              <div class="chk-pay-panel" id="panel-card" style="display: none;">
+                <div class="chk-card-form">
+                  <!-- Número do Cartão -->
+                  <div class="chk-input-group">
+                    <div class="chk-label-with-brand">
+                      <label for="chk-card-number">Número do Cartão <span class="req">*</span></label>
+                      <span class="chk-card-brand-badge" id="chk-card-brand-badge">Cartão</span>
+                    </div>
+                    <div class="chk-card-input-wrap">
+                      <input type="tel" id="chk-card-number" placeholder="0000 0000 0000 0000" maxlength="19" autocomplete="cc-number" />
+                      <div class="chk-card-icons">
+                        <span class="chk-c-icon">VISA</span>
+                        <span class="chk-c-icon">MC</span>
+                        <span class="chk-c-icon">ELO</span>
+                        <span class="chk-c-icon">AMEX</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Nome no Cartão -->
+                  <div class="chk-input-group">
+                    <label for="chk-card-name">Nome Impresso no Cartão <span class="req">*</span></label>
+                    <input type="text" id="chk-card-name" placeholder="Como impresso no cartão" autocomplete="cc-name" style="text-transform: uppercase;" />
+                  </div>
+
+                  <!-- Validade & CVV -->
+                  <div class="chk-grid-2">
+                    <div class="chk-input-group">
+                      <label for="chk-card-expiry">Validade (MM/AA) <span class="req">*</span></label>
+                      <input type="tel" id="chk-card-expiry" placeholder="MM/AA" maxlength="5" autocomplete="cc-exp" />
+                    </div>
+                    <div class="chk-input-group">
+                      <label for="chk-card-cvv">Código CVV <span class="req">*</span></label>
+                      <input type="tel" id="chk-card-cvv" placeholder="3 ou 4 dígitos" maxlength="4" autocomplete="cc-csc" />
+                    </div>
+                  </div>
+
+                  <!-- CPF do Titular -->
+                  <div class="chk-input-group">
+                    <label for="chk-card-cpf">CPF do Titular do Cartão <span class="req">*</span></label>
+                    <input type="tel" id="chk-card-cpf" placeholder="000.000.000-00" maxlength="14" autocomplete="off" />
+                    <span class="chk-input-hint">Necessário para autenticação antifraude da operadora.</span>
+                  </div>
+
+                  <!-- Parcelamento (1x até 12x com simulação dos valores!) -->
+                  <div class="chk-input-group">
+                    <label for="chk-card-installments">Parcelamento <span class="req">*</span></label>
+                    <div class="chk-select-wrap">
+                      <select id="chk-card-installments">
+                        <option value="1">1x de R$ 0,00 à vista</option>
+                      </select>
+                    </div>
+                    <span class="chk-input-hint">Valores exatos calculados em tempo real de 1x a 12x.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- ── Coluna Direita: Resumo da Mala de Compras (Sticky) ── -->
@@ -318,7 +542,8 @@
   </footer>
 
   <!-- Scripts -->
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
   <script src="/js/tracking.js?v=20261008"></script>
-  <script src="/js/checkout-page.js?v=20261007b"></script>
+  <script src="/js/checkout-page.js?v=20261106-transparent"></script>
 </body>
 </html>

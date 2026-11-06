@@ -30,6 +30,9 @@ body.checkout-page-body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
 }
 
 .chk-container {
@@ -212,16 +215,23 @@ body.checkout-page-body {
 
 .chk-layout-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 32px;
+  width: 100%;
 }
 
 @media (min-width: 992px) {
   .chk-layout-grid {
-    grid-template-columns: 1.25fr 0.95fr;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.95fr);
     align-items: start;
     gap: 40px;
   }
+}
+
+.chk-form-column,
+.chk-summary-column {
+  min-width: 0;
+  width: 100%;
 }
 
 /* ── Form Cards ── */
@@ -518,6 +528,487 @@ body.checkout-page-body {
   letter-spacing: 0.05em;
 }
 
+/* ── Forma de Pagamento no Checkout (Card 04) ── */
+.chk-pay-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.chk-pay-method-tab {
+  position: relative;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chk-pay-method-tab input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chk-pay-method-tab:hover {
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+.chk-pay-method-tab.active {
+  border-color: var(--chk-black);
+  background: #faf8f5;
+  box-shadow: 0 0 0 1px var(--chk-black) inset, 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.chk-pay-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chk-pay-tab-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--chk-black);
+  letter-spacing: 0.02em;
+}
+
+.chk-pay-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.chk-pay-badge-gold {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #fff8e1;
+  color: #b78103;
+}
+
+/* Painel Pix Intro */
+.chk-pix-intro-box {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  padding: 18px 20px;
+}
+
+.chk-pix-intro-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.chk-pix-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #181613;
+  color: #c9a84c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chk-pix-intro-texts h4 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--chk-black);
+}
+
+.chk-pix-intro-texts p {
+  margin: 0;
+  font-size: 12px;
+  color: #6a6a6a;
+  line-height: 1.45;
+}
+
+.chk-pix-highlights {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+}
+
+.chk-pix-hl-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #4a4a4a;
+}
+
+.chk-pix-hl-item svg {
+  color: #2e7d32;
+  flex-shrink: 0;
+}
+
+/* Painel Cartão */
+.chk-label-with-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.chk-label-with-brand label {
+  margin-bottom: 0;
+}
+
+.chk-card-brand-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #181613;
+  color: #c9a84c;
+}
+
+.chk-card-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.chk-card-input-wrap input {
+  padding-right: 140px;
+}
+
+.chk-card-icons {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.chk-c-icon {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.06);
+  color: #444;
+}
+
+.chk-select-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.chk-select-wrap select {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 4px;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: var(--chk-black);
+  font-family: var(--chk-font-sans);
+  appearance: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.chk-select-wrap::after {
+  content: '▼';
+  font-size: 9px;
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #888;
+}
+
+/* Container do Pix Ativo Gerado Diretamente no Checkout */
+.chk-pix-active-card {
+  margin-bottom: 24px;
+  background: #ffffff;
+  border: 1.5px solid #c9a84c;
+  border-radius: 12px;
+  box-shadow: 0 10px 36px rgba(201, 168, 76, 0.16);
+  padding: 28px 24px;
+  text-align: center;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.chk-pix-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #b78103;
+  background: #fff8e1;
+  padding: 5px 14px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+}
+
+.chk-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  animation: pulseDot 1.8s infinite;
+}
+
+@keyframes pulseDot {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+.chk-pix-header h3 {
+  margin: 0 0 6px;
+  font-family: var(--chk-font-serif);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--chk-black);
+}
+
+.chk-pix-header p {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.45;
+}
+
+.chk-pix-qr-wrap {
+  margin: 20px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.chk-pix-qr-img {
+  width: 220px;
+  height: 220px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+  padding: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  object-fit: contain;
+}
+
+.chk-pix-timer-row {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #777;
+  display: flex;
+  gap: 6px;
+}
+
+.chk-pix-timer-row strong {
+  color: #c0392b;
+}
+
+.chk-pix-copy-wrap {
+  max-width: 520px;
+  margin: 0 auto 16px;
+  text-align: left;
+}
+
+.chk-pix-copy-wrap label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+.chk-pix-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.chk-pix-input-row input {
+  flex: 1;
+  background: #f5f3ef;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-family: monospace;
+  font-size: 11.5px;
+  color: #333;
+}
+
+.chk-btn-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--chk-black);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 18px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.chk-btn-copy:hover {
+  background: #252525;
+}
+
+.chk-btn-copy.copied {
+  background: #2e7d32;
+}
+
+.chk-pix-polling-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.chk-spinner-sm {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-top-color: var(--chk-black);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Tela de Sucesso Instantânea */
+.chk-success-screen {
+  max-width: 640px;
+  margin: 30px auto;
+  padding: 0 16px;
+}
+
+.chk-success-card {
+  background: #ffffff;
+  border: 1px solid var(--chk-gray-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+  padding: 40px 32px;
+  text-align: center;
+}
+
+.chk-success-icon-wrap {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #e8f5e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.chk-success-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #2e7d32;
+  text-transform: uppercase;
+}
+
+.chk-success-card h2 {
+  font-family: var(--chk-font-serif);
+  font-size: 30px;
+  margin: 8px 0 14px;
+  color: var(--chk-black);
+}
+
+.chk-success-code-label {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: #888;
+  margin: 0 0 4px;
+}
+
+.chk-success-code {
+  font-family: var(--chk-font-serif);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #c9a84c;
+  margin-bottom: 14px;
+}
+
+.chk-success-desc {
+  font-size: 13.5px;
+  color: #666;
+  line-height: 1.55;
+  margin: 0 0 24px;
+}
+
+.chk-success-details-box {
+  background: #faf8f5;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 26px;
+  text-align: left;
+}
+
+.chk-succ-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 6px 0;
+  color: #555;
+}
+
+.chk-succ-row:not(:last-child) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.chk-success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 /* ── Right Column: Sticky Summary ── */
 .chk-summary-column {
   position: relative;
@@ -586,9 +1077,9 @@ body.checkout-page-body {
 
 .chk-item-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
-  padding: 12px 0;
+  padding: 14px 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -625,14 +1116,17 @@ body.checkout-page-body {
   font-weight: 500;
   color: var(--chk-black);
   margin: 0 0 4px;
-  white-space: nowrap;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .chk-item-meta {
   font-size: 11px;
   color: #6a6a6a;
+  line-height: 1.3;
 }
 
 .chk-item-price {
@@ -640,6 +1134,8 @@ body.checkout-page-body {
   font-weight: 600;
   color: var(--chk-black);
   white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 /* ── Breakdown ── */
@@ -886,25 +1382,497 @@ body.checkout-page-body {
   color: var(--chk-black);
 }
 
-/* ── Responsividade Fina ── */
-@media (max-width: 600px) {
+/* ── Responsividade Mobile Avançada & Prevenção de Overflow ── */
+@media (max-width: 640px) {
+  html, body.checkout-page-body {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+
+  .chk-container {
+    padding: 0 14px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 1. Announcement Strip */
+  .chk-announcement {
+    font-size: 8.5px;
+    letter-spacing: 0.12em;
+    padding: 6px 8px;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  /* 2. Header: Linha única com Logo no centro e ícone de voltar */
+  .chk-header {
+    padding: 12px 0;
+  }
   .chk-header-inner {
-    flex-direction: column;
-    gap: 14px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
   }
   .chk-back-btn {
-    align-self: flex-start;
+    font-size: 11px;
+    gap: 4px;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 6px;
+    flex-shrink: 0;
   }
-  .chk-security-pill {
+  .chk-back-btn span {
     display: none;
   }
-  .chk-steps-tracker {
-    gap: 6px;
+  .chk-logo-wrap {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
   }
-  .chk-step-label {
+  .chk-logo {
+    font-size: 18px;
+    letter-spacing: 0.18em;
+    white-space: nowrap;
+  }
+  .chk-tagline {
+    font-size: 7px;
+    letter-spacing: 0.16em;
+    white-space: nowrap;
+  }
+  .chk-security-pill {
+    display: flex;
+    padding: 6px 8px;
+    gap: 4px;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 999px;
+  }
+  .chk-security-pill span {
+    display: none;
+  }
+  .chk-security-pill::after {
+    content: 'SSL Seguro';
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--chk-black);
+  }
+
+  /* 3. Steps Tracker: Sem overflow horizontal */
+  .chk-progress-section {
+    padding: 12px 0 10px;
+    overflow-x: hidden;
+  }
+  .chk-steps-tracker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .chk-step-item {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .chk-step-badge {
+    width: 20px;
+    height: 20px;
     font-size: 10px;
+  }
+  /* Oculta o label dos passos inativos no mobile e destaca apenas o passo ativo */
+  .chk-step-label {
+    display: none;
+  }
+  .chk-step-item.active .chk-step-label {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
   }
   .chk-step-divider {
     width: 14px;
+    min-width: 6px;
+    flex-shrink: 1;
+  }
+  .chk-progress-track {
+    max-width: 280px;
+  }
+
+  /* 4. Layout e Cards do Formulário */
+  .chk-main-content {
+    padding: 16px 0 36px;
+  }
+  .chk-layout-grid {
+    gap: 18px;
+    width: 100%;
+  }
+  .chk-card {
+    margin-bottom: 16px;
+    border-radius: 8px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .chk-card-header {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+  .chk-card-title-wrap {
+    gap: 8px;
+    width: 100%;
+  }
+  .chk-card-num {
+    font-size: 13px;
+  }
+  .chk-card-header h3 {
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+  .chk-card-sub {
+    font-size: 10.5px;
+    line-height: 1.3;
+    padding-left: 21px;
+  }
+  .chk-card-body {
+    padding: 14px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  /* 5. Inputs */
+  .chk-input-group {
+    margin-bottom: 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .chk-input-group label {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+  .chk-input-group input {
+    padding: 11px 12px;
+    font-size: 14px;
+    border-radius: 6px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .chk-input-hint {
+    font-size: 10.5px;
+    line-height: 1.35;
+    margin-top: 4px;
+  }
+
+  /* 6. Grids no Formulário */
+  .chk-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    width: 100%;
+  }
+  .chk-grid-3 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    width: 100%;
+  }
+  .chk-grid-cep {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    margin-bottom: 12px;
+    width: 100%;
+  }
+  .chk-cep-input-wrap {
+    width: 100%;
+  }
+  .chk-cep-link-wrap {
+    padding-bottom: 0;
+    text-align: right;
+  }
+  .chk-link-muted {
+    font-size: 11px;
+  }
+
+  /* 7. Modalidades de Entrega (Frete) */
+  .chk-shipping-list {
+    gap: 8px;
+    width: 100%;
+  }
+  .chk-shipping-item {
+    padding: 11px 12px;
+    gap: 8px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .chk-shipping-left {
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+  }
+  .chk-shipping-info h4 {
+    font-size: 12.5px;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+  .chk-shipping-info p {
+    font-size: 10.5px;
+    line-height: 1.3;
+  }
+  .chk-shipping-price {
+    font-size: 12.5px;
+    flex-shrink: 0;
+  }
+  .chk-shipping-free-tag {
+    font-size: 9.5px;
+    padding: 2px 6px;
+  }
+
+  /* 7.1 Forma de Pagamento no Checkout (Mobile) */
+  .chk-pay-methods {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .chk-pay-method-tab {
+    padding: 10px 10px;
+  }
+  .chk-pay-tab-title {
+    font-size: 11.5px;
+    gap: 6px;
+  }
+  .chk-pay-badge,
+  .chk-pay-badge-gold {
+    font-size: 8.5px;
+    padding: 2px 6px;
+  }
+  .chk-pix-intro-box {
+    padding: 14px;
+  }
+  .chk-pix-icon-wrap {
+    width: 36px;
+    height: 36px;
+  }
+  .chk-pix-intro-texts h4 {
+    font-size: 13.5px;
+  }
+  .chk-pix-intro-texts p {
+    font-size: 11px;
+  }
+  .chk-card-input-wrap input {
+    padding-right: 90px;
+  }
+  .chk-c-icon {
+    font-size: 7.5px;
+    padding: 1px 3px;
+  }
+  .chk-pix-active-card {
+    padding: 20px 14px;
+  }
+  .chk-pix-header h3 {
+    font-size: 20px;
+  }
+  .chk-pix-header p {
+    font-size: 12px;
+  }
+  .chk-pix-qr-img {
+    width: 190px;
+    height: 190px;
+  }
+  .chk-pix-input-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .chk-btn-copy {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 12.5px;
+  }
+  .chk-success-card {
+    padding: 28px 18px;
+  }
+  .chk-success-card h2 {
+    font-size: 24px;
+  }
+  .chk-success-code {
+    font-size: 22px;
+  }
+
+  /* 8. Resumo da Mala de Compras (Itens) */
+  .chk-summary-card {
+    padding: 16px 14px;
+    border-radius: 8px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .chk-summary-header {
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+  .chk-summary-header h3 {
+    font-size: 16px;
+    letter-spacing: 0.06em;
+  }
+  .chk-badge-count {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+  .chk-items-scroll {
+    max-height: 380px;
+    padding-right: 0;
+    margin-bottom: 16px;
+  }
+  .chk-item-row {
+    gap: 10px;
+    padding: 10px 0;
+    align-items: flex-start;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .chk-item-thumb {
+    width: 52px;
+    height: 66px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .chk-item-details {
+    flex: 1;
+    min-width: 0;
+  }
+  .chk-item-brand {
+    font-size: 8.5px;
+    letter-spacing: 0.1em;
+    margin-bottom: 2px;
+  }
+  .chk-item-name {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    margin-bottom: 3px;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
+  .chk-item-meta {
+    font-size: 10px;
+    line-height: 1.3;
+    color: #6a6a6a;
+  }
+  .chk-item-price {
+    font-size: 12.5px;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 1px;
+    white-space: nowrap;
+  }
+
+  /* 9. Breakdown & Total */
+  .chk-breakdown {
+    padding-top: 12px;
+    margin-bottom: 16px;
+  }
+  .chk-breakdown-row {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .chk-divider {
+    margin: 10px 0;
+  }
+  .chk-total-title span {
+    font-size: 15px;
+  }
+  .chk-total-title small {
+    font-size: 9.5px;
+  }
+  .chk-total-num {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  /* 10. Botões de Ação de Pagamento */
+  .chk-actions-wrap {
+    gap: 10px;
+    margin-bottom: 18px;
+    width: 100%;
+  }
+  .chk-btn-primary {
+    padding: 13px 12px;
+    border-radius: 6px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .chk-btn-main-text {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+    text-align: center;
+  }
+  .chk-btn-sub-text {
+    font-size: 8.5px;
+    line-height: 1.25;
+    text-align: center;
+    margin-top: 3px;
+  }
+  .chk-btn-secondary {
+    padding: 11px 12px;
+    font-size: 11px;
+    border-radius: 6px;
+    box-sizing: border-box;
+    width: 100%;
+    text-align: center;
+  }
+
+  /* 11. Selos de Confiança */
+  .chk-trust-badges {
+    padding-top: 14px;
+    gap: 8px;
+  }
+  .chk-trust-item {
+    font-size: 10.5px;
+    gap: 8px;
+  }
+  .chk-trust-item svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* 12. Footer */
+  .chk-footer {
+    padding: 20px 0;
+  }
+  .chk-footer-inner {
+    font-size: 10px;
+    gap: 8px;
+  }
+  .chk-footer-links {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+  }
+}
+
+/* Telas Ultra-Pequenas (< 360px - iPhone SE 1st gen / Galaxy Fold externo) */
+@media (max-width: 360px) {
+  .chk-container {
+    padding: 0 10px !important;
+  }
+  .chk-logo {
+    font-size: 16px;
+    letter-spacing: 0.12em;
+  }
+  .chk-btn-main-text {
+    font-size: 10px;
+  }
+  .chk-total-num {
+    font-size: 18px;
   }
 }
