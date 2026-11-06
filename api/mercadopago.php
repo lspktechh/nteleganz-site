@@ -27,6 +27,7 @@ function defaultMercadoPagoSettings(): array {
     return [
         'publicKey' => 'APP_USR-c8d843d2-e8c4-4509-93a5-6c7a38be819e',
         'accessToken' => 'APP_USR-4148777530483800-110522-7c2732adbccc669d7ba002abde4ccd4c-662355896',
+        'webhookSecret' => '74640e6bb99781ef1584a29001c59d60d7a785fed72f309a92005e5ca5f5df0d',
         'webhookUrl' => 'https://nteleganz.com.br/api/mercadopago_webhook.php',
         'statementDescriptor' => 'NT ELEGANZ',
         'autoReturn' => 'approved',
@@ -79,6 +80,7 @@ if ($method === 'GET') {
             'settings' => [
                 'publicKey' => $settings['publicKey'] ?? '',
                 'accessToken' => $settings['accessToken'] ?? '',
+                'webhookSecret' => $settings['webhookSecret'] ?? '',
                 'webhookUrl' => $settings['webhookUrl'] ?? 'https://nteleganz.com.br/api/mercadopago_webhook.php',
                 'statementDescriptor' => $settings['statementDescriptor'] ?? 'NT ELEGANZ',
                 'updatedAt' => $settings['updatedAt'] ?? null
@@ -120,6 +122,7 @@ if (isset($data['action']) && $data['action'] === 'save_settings') {
     $updated = array_merge($current, [
         'publicKey' => $pub,
         'accessToken' => $sec,
+        'webhookSecret' => trim((string)($data['webhookSecret'] ?? $current['webhookSecret'] ?? '')),
         'statementDescriptor' => !empty($desc) ? mb_substr($desc, 0, 16) : 'NT ELEGANZ',
         'updatedAt' => date('c')
     ]);

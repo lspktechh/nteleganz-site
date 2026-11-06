@@ -837,6 +837,17 @@
               </div>
 
               <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Assinatura Secreta do Webhook (Secret Signature)</label>
+                <div style="display:flex;gap:6px;">
+                  <input type="password" class="form-control" id="mp-webhook-secret" placeholder="Assinatura secreta..." value="74640e6bb99781ef1584a29001c59d60d7a785fed72f309a92005e5ca5f5df0d" />
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="togglePasswordVisibility('mp-webhook-secret', this)" style="padding:0 12px;font-size:12px;">Ver</button>
+                </div>
+                <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;">Chave HMAC para validação criptográfica de segurança</small>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px;">
+              <div class="form-group" style="margin-bottom:0;">
                 <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">URL do Webhook (Notificações em Tempo Real)</label>
                 <div style="display:flex;gap:6px;">
                   <input type="text" class="form-control" id="mp-webhook-url" readonly value="https://nteleganz.com.br/api/mercadopago_webhook.php" style="background:var(--bg-secondary);color:var(--text-muted);" />

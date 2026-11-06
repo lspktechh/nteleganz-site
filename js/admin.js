@@ -3332,6 +3332,7 @@
         const s = data.settings;
         setValue('mp-public-key', s.publicKey || '');
         setValue('mp-access-token', s.accessToken || '');
+        setValue('mp-webhook-secret', s.webhookSecret || '');
         setValue('mp-statement-descriptor', s.statementDescriptor || 'NT ELEGANZ');
         setValue('mp-webhook-url', s.webhookUrl || 'https://nteleganz.com.br/api/mercadopago_webhook.php');
 
@@ -3367,6 +3368,7 @@
       action: 'save_settings',
       publicKey: (document.getElementById('mp-public-key')?.value || '').trim(),
       accessToken: (document.getElementById('mp-access-token')?.value || '').trim(),
+      webhookSecret: (document.getElementById('mp-webhook-secret')?.value || '').trim(),
       statementDescriptor: (document.getElementById('mp-statement-descriptor')?.value || 'NT ELEGANZ').trim()
     };
 

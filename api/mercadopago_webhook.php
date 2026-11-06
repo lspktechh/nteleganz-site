@@ -22,6 +22,38 @@ function getMercadoPagoAccessToken(): string {
     return 'APP_USR-4148777530483800-110522-7c2732adbccc669d7ba002abde4ccd4c-662355896';
 }
 
+function getMercadoPagoWebhookSecret(): string {
+    $data = nte_live_read(MP_SETTINGS_FILE);
+    if (is_array($data) && !empty($data['webhookSecret'])) {
+        return (string)$data['webhookSecret'];
+    }
+    return '74640e6bb99781ef1584a29001c59d60d7a785fed72f309a92005e5ca5f5df0d';
+}
+
+function verifyMercadoPagoSignature(?string $dataId): bool {
+    $secret = getMercadoPagoWebhookSecret();
+    if (empty($secret)) return true;
+    $xSignature = $_SERVER['HTTP_X_SIGNATURE'] ?? '';
+    if (empty($xSignature)) return true;
+
+    $parts = explode(',', $xSignature);
+    $ts = null;
+    $v1 = null;
+    foreach ($parts as $p) {
+        $kv = explode('=', trim($p), 2);
+        if (count($kv) === 2) {
+            if ($kv[0] === 'ts') $ts = $kv[1];
+            if ($kv[0] === 'v1') $v1 = $kv[1];
+        }
+    }
+    if (!$ts || !$v1) return true;
+
+    $requestId = $_SERVER['HTTP_X_REQUEST_ID'] ?? '';
+    $manifest = 'id:' . ($dataId ?? '') . ';request-id:' . $requestId . ';ts:' . $ts . ';';
+    $calculated = hash_hmac('sha256', $manifest, $secret);
+    return hash_equals($calculated, $v1);
+}
+
 $rawPayload = file_get_contents('php://input');
 $payload = $rawPayload ? json_decode($rawPayload, true) : null;
 
