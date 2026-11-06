@@ -40,8 +40,9 @@
       </a>
 
       <div class="chk-logo-wrap">
-        <a href="/" class="chk-logo">NT ELEGANZ</a>
-        <span class="chk-tagline">HAUTE COUTURE & LUXE MASCULIN</span>
+        <a href="/" class="chk-logo-link" title="NT Eleganz — Início">
+          <img src="/assets/images/logo-nt-eleganz.webp" alt="NT Eleganz" class="chk-logo-img" width="220" height="88" onerror="this.src='/assets/images/logo-nt-eleganz.png'" />
+        </a>
       </div>
 
       <div class="chk-security-pill">
@@ -376,7 +377,7 @@
             </div>
 
             <!-- Botões de Navegação Etapa 2 -->
-            <div class="chk-card-footer chk-card-footer-between" style="margin-top: 18px; background: #ffffff; border: 1px solid #e8e2d8; border-radius: 8px; padding: 18px 22px;">
+            <div class="chk-card-footer chk-card-footer-between" style="margin-top: 18px; background: #ffffff; border: 1px solid var(--chk-gray-border); border-radius: 8px; padding: 18px 22px;">
               <button type="button" class="chk-btn-prev-step" id="chk-btn-back-1">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                 <span>Voltar para Identificação</span>
@@ -582,10 +583,13 @@
                     </div>
 
                     <!-- Botão de Ação do Pix no Card -->
-                    <div style="margin-top: 20px;">
+                    <div class="chk-pay-action-card">
+                      <div class="chk-pay-action-row">
+                        <span class="chk-pay-action-label">Total a pagar</span>
+                        <span class="chk-pay-action-total chk-action-total-val" id="chk-pix-action-total">R$ 0,00</span>
+                      </div>
                       <button type="button" class="chk-btn-step-finish" id="chk-card-btn-pix">
-                        <span id="chk-card-pix-btn-text">PAGAR COM PIX AGORA</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        <span id="chk-card-pix-btn-text">Finalizar pedido</span>
                       </button>
                     </div>
                   </div>
@@ -677,10 +681,13 @@
                     </div>
 
                     <!-- Botão de Ação do Cartão no Card -->
-                    <div style="margin-top: 20px;">
+                    <div class="chk-pay-action-card">
+                      <div class="chk-pay-action-row">
+                        <span class="chk-pay-action-label">Total a pagar</span>
+                        <span class="chk-pay-action-total chk-action-total-val" id="chk-card-action-total">R$ 0,00</span>
+                      </div>
                       <button type="button" class="chk-btn-step-finish" id="chk-card-btn-card">
-                        <span id="chk-card-card-btn-text">PAGAR COM CARTÃO DE CRÉDITO</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        <span id="chk-card-card-btn-text">Finalizar pedido</span>
                       </button>
                     </div>
                   </div>
@@ -721,7 +728,7 @@
                 </div>
 
                 <!-- Selos de Segurança e Garantia -->
-                <div class="chk-review-trust-row" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e8e2d8;">
+                <div class="chk-review-trust-row" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--chk-gray-border);">
                   <span class="chk-trust-item-pill">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     Pagamento Direto Criptografado

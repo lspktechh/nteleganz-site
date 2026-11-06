@@ -853,12 +853,16 @@
     const total = getFinalTotalNumber();
     const formattedTotal = fmtMoney(total);
 
+    document.querySelectorAll('.chk-action-total-val').forEach(el => {
+      el.textContent = formattedTotal;
+    });
+
     const cardBtnPix = document.getElementById('chk-card-pix-btn-text');
     const cardBtnCard = document.getElementById('chk-card-card-btn-text');
     const cardBtnApplePay = document.getElementById('chk-card-applepay-btn-text');
-    if (cardBtnPix) cardBtnPix.textContent = `PAGAR COM PIX AGORA (${formattedTotal})`;
-    if (cardBtnCard) cardBtnCard.textContent = `PAGAR COM CARTÃO (${formattedTotal})`;
-    if (cardBtnApplePay) cardBtnApplePay.textContent = `PAGAR COM APPLE PAY (${formattedTotal})`;
+    if (cardBtnPix) cardBtnPix.textContent = 'Finalizar pedido';
+    if (cardBtnCard) cardBtnCard.textContent = 'Finalizar pedido';
+    if (cardBtnApplePay) cardBtnApplePay.textContent = 'Finalizar pedido';
 
     const btn = document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
     const mainTxt = document.getElementById('chk-main-btn-text');
@@ -1710,6 +1714,9 @@
     }
 
     if (finTotalEl) finTotalEl.textContent = fmtMoney(finalOrderTotal);
+    document.querySelectorAll('.chk-action-total-val').forEach(el => {
+      el.textContent = fmtMoney(finalOrderTotal);
+    });
 
     if (finPayCond) {
       if (selectedPaymentMethod === 'pix') {
