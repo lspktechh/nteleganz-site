@@ -150,7 +150,7 @@
         // Subtítulo do carrinho
         const cartSub = cartBtn.nextElementSibling;
         if (cartSub && cartSub.tagName === 'P') {
-          cartSub.textContent = 'Ambiente 100% seguro • Pix ou Cartão em até 12x via InfinitePay';
+          cartSub.textContent = 'Ambiente 100% seguro • Pix ou Cartão em até 12x via Mercado Pago';
         }
       }
     }

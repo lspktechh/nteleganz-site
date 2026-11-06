@@ -2842,6 +2842,11 @@
     if (typeof window.loadDynamicCheckoutSettings === 'function') {
       window.loadDynamicCheckoutSettings();
     }
+
+    // Carrega configurações do Mercado Pago
+    if (typeof window.loadMercadoPagoSettings === 'function') {
+      window.loadMercadoPagoSettings();
+    }
   }
 
   window.selectDBMode = function (mode, el, updateDOM = true) {
@@ -3314,6 +3319,116 @@
       }
     }
   };
+
+  // ── Integração Oficial Mercado Pago ──
+  window.loadMercadoPagoSettings = async function () {
+    const alertEl = document.getElementById('mp-alert');
+    if (alertEl) alertEl.innerHTML = '';
+    try {
+      const res = await fetch('/api/mercadopago.php?admin=1', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.settings) {
+        const s = data.settings;
+        setValue('mp-public-key', s.publicKey || '');
+        setValue('mp-access-token', s.accessToken || '');
+        setValue('mp-statement-descriptor', s.statementDescriptor || 'NT ELEGANZ');
+        setValue('mp-webhook-url', s.webhookUrl || 'https://nteleganz.com.br/api/mercadopago_webhook.php');
+
+        const indicator = document.getElementById('mp-live-indicator');
+        if (indicator) {
+          if (s.accessToken && s.publicKey) {
+            indicator.textContent = '🟢 Conectado';
+            indicator.style.color = '#009EE3';
+            indicator.style.borderColor = 'rgba(0,158,227,0.3)';
+            indicator.style.background = 'rgba(0,158,227,0.15)';
+          } else {
+            indicator.textContent = '⚠️ Não Configurado';
+            indicator.style.color = '#eab308';
+            indicator.style.borderColor = 'rgba(234,179,8,0.3)';
+            indicator.style.background = 'rgba(234,179,8,0.15)';
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[MercadoPago] Falha ao carregar credenciais:', e);
+    }
+  };
+
+  window.saveMercadoPagoSettingsAdmin = async function () {
+    const alertEl = document.getElementById('mp-alert');
+    const saveBtn = document.getElementById('btn-save-mercadopago');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Salvando...';
+    }
+
+    const payload = {
+      action: 'save_settings',
+      publicKey: (document.getElementById('mp-public-key')?.value || '').trim(),
+      accessToken: (document.getElementById('mp-access-token')?.value || '').trim(),
+      statementDescriptor: (document.getElementById('mp-statement-descriptor')?.value || 'NT ELEGANZ').trim()
+    };
+
+    try {
+      const authHeader = (typeof getUploadAuthHeader === 'function') ? await getUploadAuthHeader() : {};
+      const res = await fetch('/api/mercadopago.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authHeader || {})
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Erro ao salvar credenciais do Mercado Pago');
+      }
+
+      if (alertEl) {
+        alertEl.innerHTML = '<div class="alert alert-success" style="margin-bottom:14px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:6px;"><polyline points="20 6 9 17 4 12"/></svg>Credenciais do Mercado Pago atualizadas com sucesso!</div>';
+        setTimeout(() => { if (alertEl) alertEl.innerHTML = ''; }, 4500);
+      }
+
+      showToast('check', 'Mercado Pago Conectado!', 'Credenciais salvas com sucesso');
+      loadMercadoPagoSettings();
+    } catch (err) {
+      if (alertEl) {
+        alertEl.innerHTML = `<div class="alert alert-danger" style="margin-bottom:14px;">${err.message}</div>`;
+      }
+      showToast('!', 'Erro Mercado Pago', err.message);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar Credenciais do Mercado Pago';
+      }
+    }
+  };
+
+  window.togglePasswordVisibility = function (inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (btn) btn.textContent = 'Ocultar';
+    } else {
+      input.type = 'password';
+      if (btn) btn.textContent = 'Ver';
+    }
+  };
+
+  window.copyWebhookUrl = function () {
+    const input = document.getElementById('mp-webhook-url');
+    if (!input) return;
+    navigator.clipboard?.writeText(input.value).then(() => {
+      showToast('check', 'Copiado!', 'URL do webhook copiada');
+    }).catch(() => {
+      input.select();
+      document.execCommand('copy');
+      showToast('check', 'Copiado!', 'URL do webhook copiada');
+    });
+  };
+
   window.loadTrackingSettings = async function () {
     const alertEl = document.getElementById('tracking-alert');
     if (alertEl) alertEl.innerHTML = '';

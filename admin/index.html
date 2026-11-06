@@ -789,6 +789,68 @@
             </div>
           </div>
 
+          <!-- Gateway de Pagamento Oficial — Mercado Pago -->
+          <div class="settings-card" style="grid-column: 1 / -1;" id="mercadopago-settings-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:12px;">
+              <div>
+                <div class="settings-card-title" style="margin-bottom:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:22px;height:22px;color:#009EE3;flex-shrink:0;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                  <span>Gateway de Pagamento — Mercado Pago</span>
+                  <span id="mp-live-indicator" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;background:rgba(0,158,227,0.15);color:#009EE3;border:1px solid rgba(0,158,227,0.3);">🟢 Conectado</span>
+                </div>
+                <div class="settings-card-desc" style="margin-bottom:0;max-width:850px;">
+                  Processamento oficial com recebimento direto na conta da loja. Permite <strong>Pix Imediato</strong> com QR Code e <strong>Cartão de Crédito em até 12x</strong>.
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:11px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  Ambiente Seguro SSL 256-bit
+                </span>
+              </div>
+            </div>
+
+            <div id="mp-alert"></div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px;margin-bottom:16px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Public Key (Chave Pública do Frontend)</label>
+                <input type="text" class="form-control" id="mp-public-key" placeholder="APP_USR-..." value="APP_USR-c8d843d2-e8c4-4509-93a5-6c7a38be819e" />
+                <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;">Começa com APP_USR-... (Produção) ou TEST-... (Testes)</small>
+              </div>
+
+              <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Access Token (Chave Privada do Backend)</label>
+                <div style="display:flex;gap:6px;">
+                  <input type="password" class="form-control" id="mp-access-token" placeholder="APP_USR-..." value="APP_USR-4148777530483800-110522-7c2732adbccc669d7ba002abde4ccd4c-662355896" />
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="togglePasswordVisibility('mp-access-token', this)" style="padding:0 12px;font-size:12px;">Ver</button>
+                </div>
+                <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;">Token secreto para processar pagamentos na API</small>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px;margin-bottom:16px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Nome na Fatura do Cartão (Statement Descriptor)</label>
+                <input type="text" class="form-control" id="mp-statement-descriptor" placeholder="NT ELEGANZ" value="NT ELEGANZ" maxlength="16" />
+                <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;">Aparece no extrato e fatura bancária do cliente (máx 16 letras)</small>
+              </div>
+
+              <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">URL do Webhook (Notificações em Tempo Real)</label>
+                <div style="display:flex;gap:6px;">
+                  <input type="text" class="form-control" id="mp-webhook-url" readonly value="https://nteleganz.com.br/api/mercadopago_webhook.php" style="background:var(--bg-secondary);color:var(--text-muted);" />
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="copyWebhookUrl()" style="padding:0 12px;font-size:12px;white-space:nowrap;">Copiar</button>
+                </div>
+                <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;">Cole nas configurações de Webhooks do painel do Mercado Pago</small>
+              </div>
+            </div>
+
+            <div style="margin-top:18px;display:flex;justify-content:flex-end;">
+              <button type="button" class="btn btn-primary" id="btn-save-mercadopago" onclick="saveMercadoPagoSettingsAdmin()">Salvar Credenciais do Mercado Pago</button>
+            </div>
+          </div>
+
           <!-- Banco de Dados -->
           <div class="settings-card" style="grid-column: 1 / -1;">
             <div class="settings-card-title">

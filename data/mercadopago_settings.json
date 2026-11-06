@@ -1,0 +1,9 @@
+{
+  "publicKey": "APP_USR-c8d843d2-e8c4-4509-93a5-6c7a38be819e",
+  "accessToken": "APP_USR-4148777530483800-110522-7c2732adbccc669d7ba002abde4ccd4c-662355896",
+  "webhookUrl": "https://nteleganz.com.br/api/mercadopago_webhook.php",
+  "statementDescriptor": "NT ELEGANZ",
+  "autoReturn": "approved",
+  "binaryMode": false,
+  "updatedAt": "2026-11-05T23:45:00-03:00"
+}

@@ -415,11 +415,11 @@
     };
   }
 
-  // ── Finalização Oficial via InfinitePay ──
+  // ── Finalização Oficial via Mercado Pago (PIX e Cartão até 12x) ──
   async function submitInfinitePay() {
     if (!validateCheckoutForm()) return;
 
-    const btn = document.getElementById('chk-submit-infinitepay');
+    const btn = document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
     const originalContent = btn ? btn.innerHTML : '';
 
     if (btn) {
@@ -427,7 +427,7 @@
       btn.innerHTML = `
         <span class="chk-btn-main-text" style="display:flex;align-items:center;gap:8px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 0.8s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
-          Gerando Sessão Segura InfinitePay...
+          Gerando Sessão Segura Mercado Pago...
         </span>
       `;
     }
@@ -449,7 +449,7 @@
     };
 
     try {
-      const res = await fetch('/api/infinitepay.php', {
+      const res = await fetch('/api/mercadopago.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -457,7 +457,7 @@
       const data = await res.json();
 
       if (!res.ok || !data.checkoutUrl) {
-        throw new Error(data.error || data.details || 'Falha ao comunicar com o gateway InfinitePay.');
+        throw new Error(data.error || data.details || 'Falha ao comunicar com o gateway do Mercado Pago.');
       }
 
       // Salva dados do cliente para preenchimento futuro
@@ -470,7 +470,7 @@
         localStorage.removeItem(CART_STORAGE_KEY);
       } catch (e) {}
 
-      // Redireciona imediatamente para o checkout pré-preenchido da InfinitePay
+      // Redireciona imediatamente para o checkout pré-preenchido do Mercado Pago
       window.location.href = data.checkoutUrl;
 
     } catch (err) {

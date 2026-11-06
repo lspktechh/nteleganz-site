@@ -204,9 +204,35 @@ switch ($method) {
 
     case 'PUT':
         $id = $orderId !== '' ? $orderId : ($input['id'] ?? '');
+        $code = $orderCode !== '' ? $orderCode : ($input['code'] ?? '');
+
+        if ($id === '' && $code !== '') {
+            $searchCode = strtoupper(ltrim($code, '#'));
+            $local = readLocalOrders();
+            foreach ($local as $item) {
+                $c = strtoupper(ltrim((string)($item['code'] ?? ''), '#'));
+                if ($c === $searchCode) {
+                    $id = (string)($item['id'] ?? '');
+                    break;
+                }
+            }
+            if ($id === '') {
+                $vps = callVpsOrders('GET', VPS_API_ORDERS);
+                if ($vps !== null && isset($vps['orders']) && is_array($vps['orders'])) {
+                    foreach ($vps['orders'] as $item) {
+                        $c = strtoupper(ltrim((string)($item['code'] ?? ''), '#'));
+                        if ($c === $searchCode) {
+                            $id = (string)($item['id'] ?? '');
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         if ($id === '') {
             http_response_code(400);
-            echo json_encode(['error' => 'Informe o ID do pedido']);
+            echo json_encode(['error' => 'Informe o ID ou código do pedido']);
             exit;
         }
 
