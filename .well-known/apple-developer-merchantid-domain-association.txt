@@ -1,0 +1,4 @@
+# Apple Developer Domain Association File
+# Quando você criar o Merchant ID no portal da Apple Developer (https://developer.apple.com/account/)
+# e clicar para verificar o domínio "nteleganz.com.br", a Apple fornecerá o download deste arquivo.
+# Substitua o conteúdo deste arquivo pelo arquivo baixado da Apple e clique em "Verify" no portal.

@@ -6,5 +6,12 @@
   "statementDescriptor": "NT ELEGANZ",
   "autoReturn": "approved",
   "binaryMode": false,
-  "updatedAt": "2026-11-05T23:58:00-03:00"
+  "applePay": {
+    "enabled": false,
+    "merchantIdentifier": "merchant.com.nteleganz",
+    "certificatePublicHash": "",
+    "domainName": "nteleganz.com.br",
+    "displayName": "NT Eleganz"
+  },
+  "updatedAt": "2026-11-06T11:00:00-03:00"
 }

@@ -388,6 +388,20 @@
                     <span class="chk-pay-badge-gold">Até 12x</span>
                   </div>
                 </label>
+
+                <!-- Opção 3: Apple Pay (Dispositivos Apple / Safari) -->
+                <label class="chk-pay-method-tab" data-method="apple_pay" id="tab-method-applepay" style="display: none;">
+                  <input type="radio" name="payment_method" value="apple_pay" />
+                  <div class="chk-pay-tab-content">
+                    <div class="chk-pay-tab-title">
+                      <svg width="18" height="18" viewBox="0 0 170 170" fill="currentColor">
+                        <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.6-7.7-11.71-13.98-5.87-8.91-10.45-18.9-13.74-29.98-3.29-11.08-4.94-21.72-4.94-31.91 0-14.12 3.59-26.04 10.77-35.75 7.18-9.71 16.32-14.66 27.42-14.85 4.89 0 10.15 1.25 15.78 3.75 5.63 2.5 9.4 3.81 11.31 3.93 1.52-.12 5.51-1.5 11.97-4.14 6.46-2.64 12.01-3.85 16.65-3.64 12.61.65 22.75 5.14 30.43 13.48-11.08 6.74-16.52 16.03-16.33 27.87.19 9.35 3.79 17.27 10.8 23.76 7.01 6.49 15.35 10.18 25.02 11.07-2.18 6.52-4.8 12.83-7.86 18.93zM119.22 33.15c0-7.39 2.66-14.41 7.98-21.06 5.32-6.65 11.89-10.88 19.71-12.09.22 1.52.33 2.83.33 3.92 0 7.39-2.77 14.47-8.31 21.23-5.54 6.76-12.21 11-20.02 11.71-.22-1.3-.33-2.54-.33-3.71z"/>
+                      </svg>
+                      <span>Apple Pay</span>
+                    </div>
+                    <span class="chk-pay-badge-gold" style="background:#111; color:#fff; border-color:#333;">1 Toque</span>
+                  </div>
+                </label>
               </div>
 
               <!-- Painel 1: PIX -->
@@ -521,6 +535,61 @@
                     <button type="button" class="chk-btn-step-finish" id="chk-card-btn-card">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
                       <span id="chk-card-card-btn-text">PAGAR COM CARTÃO DE CRÉDITO</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Painel 3: Apple Pay -->
+              <div class="chk-pay-panel" id="panel-applepay" style="display: none;">
+                <div class="chk-pix-intro-box" style="border-color: #333;">
+                  <div class="chk-pix-intro-header">
+                    <div class="chk-pix-icon-wrap" style="background: #000; border-color: #444; color: #fff;">
+                      <svg width="24" height="24" viewBox="0 0 170 170" fill="currentColor">
+                        <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.6-7.7-11.71-13.98-5.87-8.91-10.45-18.9-13.74-29.98-3.29-11.08-4.94-21.72-4.94-31.91 0-14.12 3.59-26.04 10.77-35.75 7.18-9.71 16.32-14.66 27.42-14.85 4.89 0 10.15 1.25 15.78 3.75 5.63 2.5 9.4 3.81 11.31 3.93 1.52-.12 5.51-1.5 11.97-4.14 6.46-2.64 12.01-3.85 16.65-3.64 12.61.65 22.75 5.14 30.43 13.48-11.08 6.74-16.52 16.03-16.33 27.87.19 9.35 3.79 17.27 10.8 23.76 7.01 6.49 15.35 10.18 25.02 11.07-2.18 6.52-4.8 12.83-7.86 18.93zM119.22 33.15c0-7.39 2.66-14.41 7.98-21.06 5.32-6.65 11.89-10.88 19.71-12.09.22 1.52.33 2.83.33 3.92 0 7.39-2.77 14.47-8.31 21.23-5.54 6.76-12.21 11-20.02 11.71-.22-1.3-.33-2.54-.33-3.71z"/>
+                      </svg>
+                    </div>
+                    <div class="chk-pix-intro-texts">
+                      <h4>Apple Pay Integrado</h4>
+                      <p>Pague com 1 toque usando Touch ID ou Face ID. Seus dados de cartão ficam 100% protegidos com autenticação biométrica.</p>
+                    </div>
+                  </div>
+
+                  <div class="chk-pix-highlights">
+                    <div class="chk-pix-hl-item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      <span>Aprovação biométrica instantânea</span>
+                    </div>
+                    <div class="chk-pix-hl-item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      <span>Criptografia tokenizada pela Apple</span>
+                    </div>
+                    <div class="chk-pix-hl-item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      <span>Processado com segurança pelo Mercado Pago</span>
+                    </div>
+                  </div>
+
+                  <!-- Container oficial do botão Apple Pay injetado pelo SDK Mercado Pago -->
+                  <div id="payment-container-applepay" class="chk-applepay-button-container" style="margin-top: 18px; min-height: 48px;"></div>
+
+                  <!-- Notificação quando o certificado Apple Developer ainda não foi concluído -->
+                  <div id="applepay-pending-notice" style="display: none; padding: 14px 16px; border: 1.5px dashed #d4af37; border-radius: 8px; background: #fffcf5; margin-top: 14px;">
+                    <p style="margin: 0 0 6px; font-size: 13px; font-weight: 600; color: #1a1a1a;">
+                      Integração Apple Pay pronta no checkout!
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #666; line-height: 1.5;">
+                      Aguardando a conclusão da vinculação final da conta Apple Developer. Enquanto isso, utilize as opções <strong>Pix Instantâneo</strong> ou <strong>Cartão de Crédito</strong> acima para concluir seu pedido normalmente.
+                    </p>
+                  </div>
+
+                  <!-- Botão de Ação Apple Pay no Card -->
+                  <div id="chk-applepay-trigger-wrap" style="margin-top: 20px; display: none;">
+                    <button type="button" class="chk-btn-step-finish" id="chk-card-btn-applepay" style="background: #000; border-color: #000; color: #fff;">
+                      <svg width="18" height="18" viewBox="0 0 170 170" fill="currentColor">
+                        <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.6-7.7-11.71-13.98-5.87-8.91-10.45-18.9-13.74-29.98-3.29-11.08-4.94-21.72-4.94-31.91 0-14.12 3.59-26.04 10.77-35.75 7.18-9.71 16.32-14.66 27.42-14.85 4.89 0 10.15 1.25 15.78 3.75 5.63 2.5 9.4 3.81 11.31 3.93 1.52-.12 5.51-1.5 11.97-4.14 6.46-2.64 12.01-3.85 16.65-3.64 12.61.65 22.75 5.14 30.43 13.48-11.08 6.74-16.52 16.03-16.33 27.87.19 9.35 3.79 17.27 10.8 23.76 7.01 6.49 15.35 10.18 25.02 11.07-2.18 6.52-4.8 12.83-7.86 18.93zM119.22 33.15c0-7.39 2.66-14.41 7.98-21.06 5.32-6.65 11.89-10.88 19.71-12.09.22 1.52.33 2.83.33 3.92 0 7.39-2.77 14.47-8.31 21.23-5.54 6.76-12.21 11-20.02 11.71-.22-1.3-.33-2.54-.33-3.71z"/>
+                      </svg>
+                      <span id="chk-card-applepay-btn-text">PAGAR COM APPLE PAY</span>
                     </button>
                   </div>
                 </div>

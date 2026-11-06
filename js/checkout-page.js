@@ -394,25 +394,30 @@
     select.innerHTML = opts.join('');
   }
 
-  // ── Alternância de Método de Pagamento (Pix vs Cartão) ──
+  // ── Alternância de Método de Pagamento (Pix vs Cartão vs Apple Pay) ──
   function setupPaymentMethodTabs() {
     const tabPix = document.getElementById('tab-method-pix');
     const tabCard = document.getElementById('tab-method-card');
+    const tabApplePay = document.getElementById('tab-method-applepay');
     const panelPix = document.getElementById('panel-pix');
     const panelCard = document.getElementById('panel-card');
+    const panelApplePay = document.getElementById('panel-applepay');
 
     function selectMethod(method) {
       selectedPaymentMethod = method;
+      [tabPix, tabCard, tabApplePay].forEach(t => t && t.classList.remove('active'));
+      [panelPix, panelCard, panelApplePay].forEach(p => p && (p.style.display = 'none'));
+
       if (method === 'pix') {
         if (tabPix) tabPix.classList.add('active');
-        if (tabCard) tabCard.classList.remove('active');
         if (panelPix) panelPix.style.display = 'block';
-        if (panelCard) panelCard.style.display = 'none';
+      } else if (method === 'apple_pay') {
+        if (tabApplePay) tabApplePay.classList.add('active');
+        if (panelApplePay) panelApplePay.style.display = 'block';
+        initOrRenderApplePay();
       } else {
         if (tabCard) tabCard.classList.add('active');
-        if (tabPix) tabPix.classList.remove('active');
         if (panelCard) panelCard.style.display = 'block';
-        if (panelPix) panelPix.style.display = 'none';
         updateInstallmentsSimulation();
       }
       updatePaymentButtonText();
@@ -430,6 +435,178 @@
         e.preventDefault();
         selectMethod('card');
       });
+    }
+    if (tabApplePay) {
+      tabApplePay.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectMethod('apple_pay');
+      });
+    }
+
+    const cardAppleBtn = document.getElementById('chk-card-btn-applepay');
+    if (cardAppleBtn) {
+      cardAppleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        submitApplePayTrigger();
+      });
+    }
+
+    checkApplePaySupport();
+  }
+
+  let applePaySettings = null;
+  let applePayRendered = false;
+
+  async function checkApplePaySupport() {
+    const tabApplePay = document.getElementById('tab-method-applepay');
+    if (!tabApplePay) return;
+
+    try {
+      const res = await fetch('/api/mercadopago.php?action=settings', { cache: 'no-store' });
+      const data = await res.json();
+      if (data && data.applePay) {
+        applePaySettings = data.applePay;
+      }
+    } catch (_) {}
+
+    // Detecção se o navegador suporta Apple Pay (ou dispositivo Apple)
+    const hasApplePay = window.ApplePaySession && (
+      typeof ApplePaySession.canMakePayments === 'function' ? ApplePaySession.canMakePayments() : true
+    );
+    const isAppleDevice = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
+
+    if (hasApplePay || isAppleDevice) {
+      tabApplePay.style.display = 'inline-flex';
+    } else {
+      tabApplePay.style.display = 'none';
+    }
+  }
+
+  async function initOrRenderApplePay() {
+    const container = document.getElementById('payment-container-applepay');
+    const notice = document.getElementById('applepay-pending-notice');
+    const triggerWrap = document.getElementById('chk-applepay-trigger-wrap');
+    if (!container) return;
+
+    // Se o certificado da Apple ainda não foi vinculado ao Mercado Pago:
+    if (!applePaySettings || !applePaySettings.certificatePublicHash || !applePaySettings.enabled) {
+      if (notice) notice.style.display = 'block';
+      if (container) container.style.display = 'none';
+      if (triggerWrap) triggerWrap.style.display = 'none';
+      return;
+    }
+
+    if (applePayRendered) return;
+
+    if (notice) notice.style.display = 'none';
+    if (container) container.style.display = 'block';
+
+    const total = getFinalTotalNumber();
+
+    try {
+      if (!mpInstance && window.MercadoPago) {
+        mpInstance = new window.MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
+      }
+
+      if (mpInstance && typeof mpInstance.quickCheckout === 'function') {
+        const quickCheckoutBuilder = mpInstance.quickCheckout();
+        const settings = {
+          checkoutTypes: ['applePay'],
+          applePay: {
+            paymentRequest: {
+              countryCode: 'BR',
+              currencyCode: 'BRL',
+              merchantCapabilities: ['supports3DS'],
+              supportedNetworks: ['visa', 'masterCard'],
+              total: {
+                label: applePaySettings.displayName || 'NT Eleganz',
+                amount: total.toFixed(2)
+              }
+            },
+            sessionRequest: {
+              id: applePaySettings.certificatePublicHash,
+              merchantIdentifier: applePaySettings.merchantIdentifier || 'merchant.com.nteleganz',
+              domainName: applePaySettings.domainName || window.location.hostname,
+              displayName: applePaySettings.displayName || 'NT Eleganz',
+              initiative: 'web',
+              initiativeContext: applePaySettings.domainName || window.location.hostname
+            },
+            customization: {
+              buttonStyle: 'black',
+              buttonType: 'pay',
+              locale: 'pt-BR'
+            },
+            callbacks: {
+              onReady: () => {
+                console.log('Apple Pay Brick pronto');
+              },
+              onTokenGenerated: async (token, bin, paymentMethodId) => {
+                await processApplePayOrder(token, bin, paymentMethodId);
+              },
+              onCancel: () => {
+                console.log('Pagamento cancelado pelo comprador no Apple Pay.');
+              },
+              onError: (error) => {
+                console.error('Erro na tokenização Apple Pay:', error);
+                showToast('Falha no Apple Pay. Selecione Pix ou Cartão para concluir.');
+              }
+            }
+          }
+        };
+
+        window.applePayBrickController = await quickCheckoutBuilder.create('payment-container-applepay', settings);
+        applePayRendered = true;
+      }
+    } catch (err) {
+      console.warn('Erro ao inicializar Brick do Apple Pay:', err);
+      if (notice) notice.style.display = 'block';
+    }
+  }
+
+  async function submitApplePayTrigger() {
+    if (!applePaySettings || !applePaySettings.certificatePublicHash || !applePaySettings.enabled) {
+      showToast('Aguardando ativação do certificado Apple. Selecione Pix ou Cartão para pagar agora.');
+      return;
+    }
+    const container = document.getElementById('payment-container-applepay');
+    if (container && container.querySelector('button, iframe')) {
+      container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      showToast('Confirme o pagamento no botão do Apple Pay acima com Touch ID ou Face ID.');
+    }
+  }
+
+  async function processApplePayOrder(token, bin, paymentMethodId) {
+    const payload = buildOrderPayload();
+    if (!payload) return;
+
+    showLoading('Processando autorização Apple Pay...');
+    try {
+      const res = await fetch('/api/mercadopago.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'process_apple_pay',
+          token: token,
+          bin: bin,
+          paymentMethodId: paymentMethodId || 'visa',
+          customer: payload.customer,
+          address: payload.address,
+          shipping: payload.shipping,
+          items: payload.items
+        })
+      });
+      const data = await res.json();
+      hideLoading();
+
+      if (data && data.success) {
+        clearCart();
+        window.location.href = `/pedido/?code=${encodeURIComponent(data.orderCode)}&status=approved`;
+      } else {
+        showToast(data.message || data.error || 'Não foi possível aprovar a compra via Apple Pay.');
+      }
+    } catch (e) {
+      hideLoading();
+      showToast('Erro de comunicação ao processar o Apple Pay. Tente novamente.');
     }
   }
 
@@ -614,8 +791,10 @@
 
     const cardBtnPix = document.getElementById('chk-card-pix-btn-text');
     const cardBtnCard = document.getElementById('chk-card-card-btn-text');
+    const cardBtnApplePay = document.getElementById('chk-card-applepay-btn-text');
     if (cardBtnPix) cardBtnPix.textContent = `GERAR PIX DIRETO NO CHECKOUT (${fmtMoney(total)})`;
     if (cardBtnCard) cardBtnCard.textContent = `PAGAR COM CARTÃO (${fmtMoney(total)})`;
+    if (cardBtnApplePay) cardBtnApplePay.textContent = `PAGAR COM APPLE PAY (${fmtMoney(total)})`;
 
     if (!btn) return;
 
@@ -632,6 +811,9 @@
       if (selectedPaymentMethod === 'pix') {
         if (mainTxt) mainTxt.textContent = `GERAR PIX NO CHECKOUT (${fmtMoney(total)})`;
         if (subTxt) subTxt.textContent = 'QR Code e Copia e Cola na tela • Aprovação imediata';
+      } else if (selectedPaymentMethod === 'apple_pay') {
+        if (mainTxt) mainTxt.textContent = `PAGAR COM APPLE PAY (${fmtMoney(total)})`;
+        if (subTxt) subTxt.textContent = 'Touch ID / Face ID • 1 toque com Apple Pay';
       } else {
         if (mainTxt) mainTxt.textContent = `PAGAR COM CARTÃO (${fmtMoney(total)})`;
         if (subTxt) subTxt.textContent = 'Até 12x • Processamento seguro Mercado Pago';
@@ -759,6 +941,8 @@
 
     if (selectedPaymentMethod === 'pix') {
       await submitPixPayment();
+    } else if (selectedPaymentMethod === 'apple_pay') {
+      await submitApplePayTrigger();
     } else {
       await submitCardPayment();
     }

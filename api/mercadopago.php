@@ -35,6 +35,13 @@ function defaultMercadoPagoSettings(): array {
         'statementDescriptor' => 'NT ELEGANZ',
         'autoReturn' => 'approved',
         'binaryMode' => false,
+        'applePay' => [
+            'enabled' => false,
+            'merchantIdentifier' => 'merchant.com.nteleganz',
+            'certificatePublicHash' => '',
+            'domainName' => 'nteleganz.com.br',
+            'displayName' => 'NT Eleganz'
+        ],
         'updatedAt' => date('c')
     ];
 }
@@ -237,14 +244,29 @@ if ($method === 'GET') {
                 'webhookSecret' => $settings['webhookSecret'] ?? '',
                 'webhookUrl' => $settings['webhookUrl'] ?? 'https://nteleganz.com.br/api/mercadopago_webhook.php',
                 'statementDescriptor' => $settings['statementDescriptor'] ?? 'NT ELEGANZ',
+                'applePay' => $settings['applePay'] ?? [
+                    'enabled' => false,
+                    'merchantIdentifier' => 'merchant.com.nteleganz',
+                    'certificatePublicHash' => '',
+                    'domainName' => 'nteleganz.com.br',
+                    'displayName' => 'NT Eleganz'
+                ],
                 'updatedAt' => $settings['updatedAt'] ?? null
             ]
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     } else {
+        $apConfig = $settings['applePay'] ?? [];
         echo json_encode([
             'success' => true,
             'publicKey' => $settings['publicKey'] ?? '',
-            'webhookUrl' => $settings['webhookUrl'] ?? 'https://nteleganz.com.br/api/mercadopago_webhook.php'
+            'webhookUrl' => $settings['webhookUrl'] ?? 'https://nteleganz.com.br/api/mercadopago_webhook.php',
+            'applePay' => [
+                'enabled' => !empty($apConfig['enabled']) && !empty($apConfig['certificatePublicHash']),
+                'merchantIdentifier' => $apConfig['merchantIdentifier'] ?? 'merchant.com.nteleganz',
+                'certificatePublicHash' => $apConfig['certificatePublicHash'] ?? '',
+                'domainName' => $apConfig['domainName'] ?? 'nteleganz.com.br',
+                'displayName' => $apConfig['displayName'] ?? 'NT Eleganz'
+            ]
         ]);
     }
     exit;
@@ -281,12 +303,94 @@ if (isset($data['action']) && $data['action'] === 'save_settings') {
         'updatedAt' => date('c')
     ]);
 
+    if (isset($data['applePay']) && is_array($data['applePay'])) {
+        $updated['applePay'] = array_merge($current['applePay'] ?? [], $data['applePay']);
+    }
+
     if (saveMercadoPagoSettings($updated)) {
-        echo json_encode(['success' => true, 'message' => 'Credenciais do Mercado Pago salvas com sucesso.']);
+        echo json_encode(['success' => true, 'message' => 'Credenciais do Mercado Pago salvas com sucesso.', 'settings' => $updated]);
     } else {
         http_response_code(500);
         echo json_encode(['error' => 'Falha ao gravar configurações do Mercado Pago no servidor.']);
     }
+    exit;
+}
+
+// ── UTILITÁRIO 1: GERAR CSR APPLE PAY NO MERCADO PAGO ──
+if (isset($data['action']) && $data['action'] === 'apple_pay_csr_generate') {
+    $merchantId = trim((string)($data['merchantIdentifier'] ?? ($settings['applePay']['merchantIdentifier'] ?? 'merchant.com.nteleganz')));
+    $org = trim((string)($data['organization'] ?? 'NT Eleganz'));
+
+    $csrPayload = [
+        'type' => 'merchant',
+        'flow' => 'apple_pay',
+        'merchantIdentifier' => $merchantId,
+        'organization' => $org,
+        'country' => 'BR'
+    ];
+
+    $res = callMercadoPagoApi('https://api.mercadopago.com/certificates/csr/generate', 'POST', $csrPayload, $accessToken);
+    if ($res['httpCode'] >= 400 || empty($res['data'])) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Falha ao gerar CSR na API do Mercado Pago.',
+            'details' => $res['data'] ?? []
+        ]);
+        exit;
+    }
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'CSR gerado com sucesso pelo Mercado Pago. Salve o arquivo .pem e faça o upload no portal Apple Developer.',
+        'data' => $res['data']
+    ]);
+    exit;
+}
+
+// ── UTILITÁRIO 2: UPLOAD DO CERTIFICADO ASSINADO DA APPLE NO MERCADO PAGO ──
+if (isset($data['action']) && $data['action'] === 'apple_pay_cert_upload') {
+    $certificateBase64 = trim((string)($data['certificate'] ?? ''));
+    $certificateId = trim((string)($data['certificateId'] ?? ''));
+
+    if ($certificateBase64 === '') {
+        http_response_code(400);
+        echo json_encode(['error' => 'Certificado assinado (Base64) é obrigatório.']);
+        exit;
+    }
+
+    $uploadPayload = [
+        'certificate' => $certificateBase64
+    ];
+    if ($certificateId !== '') {
+        $uploadPayload['certificate_id'] = $certificateId;
+    }
+
+    $res = callMercadoPagoApi('https://api.mercadopago.com/certificates/certificate/upload', 'POST', $uploadPayload, $accessToken);
+    if ($res['httpCode'] >= 400 || empty($res['data'])) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Falha ao fazer upload do certificado assinado no Mercado Pago.',
+            'details' => $res['data'] ?? []
+        ]);
+        exit;
+    }
+
+    $publicHash = $res['data']['public_hash'] ?? $res['data']['id'] ?? '';
+    if (!empty($publicHash)) {
+        $settings['applePay']['certificatePublicHash'] = $publicHash;
+        $settings['applePay']['enabled'] = true;
+        $settings['updatedAt'] = date('c');
+        saveMercadoPagoSettings($settings);
+    }
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Certificado Apple Pay vinculado com sucesso no Mercado Pago!',
+        'publicHash' => $publicHash,
+        'data' => $res['data']
+    ]);
     exit;
 }
 
@@ -611,6 +715,138 @@ if ($action === 'process_card') {
         'status' => $status,
         'statusDetail' => $statusDetail,
         'message' => $userMsg,
+        'paymentId' => $paymentId,
+        'orderCode' => $orderCode,
+        'displayCode' => $displayCode,
+        'total' => $formattedTotal
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// ── FLUXO 4: PROCESSAR APPLE PAY TRANSPARENTE ──
+if ($action === 'process_apple_pay') {
+    $token = trim((string)($data['token'] ?? ''));
+    $paymentMethodId = strtolower(trim((string)($data['paymentMethodId'] ?? 'visa')));
+    if ($token === '') {
+        http_response_code(400);
+        echo json_encode(['error' => 'Token do Apple Pay é obrigatório.']);
+        exit;
+    }
+
+    // Tenta primeiro via Orders API (recomendada oficialmente pelo Mercado Pago para Apple Pay)
+    $ordersPayload = [
+        'type' => 'online',
+        'processing_mode' => 'automatic',
+        'total_amount' => number_format($totalAmount, 2, '.', ''),
+        'currency_id' => 'BRL',
+        'external_reference' => $orderCode,
+        'payer' => [
+            'email' => $payer['email'] ?? 'cliente@nteleganz.com.br',
+            'identification' => [
+                'type' => 'CPF',
+                'number' => preg_replace('/\D/', '', (string)($customer['cpf'] ?? '00000000000'))
+            ]
+        ],
+        'transactions' => [
+            'payments' => [
+                [
+                    'amount' => number_format($totalAmount, 2, '.', ''),
+                    'payment_method' => [
+                        'id' => $paymentMethodId,
+                        'type' => 'credit_card',
+                        'token' => $token,
+                        'installments' => 1
+                    ]
+                ]
+            ]
+        ]
+    ];
+
+    $idempotencyKey = 'applepay-' . $orderCode . '-' . time();
+    $res = callMercadoPagoApi('https://api.mercadopago.com/v1/orders', 'POST', $ordersPayload, $accessToken, $idempotencyKey);
+    $payData = $res['data'] ?? [];
+
+    // Fallback para Payments API caso necessário
+    if ($res['httpCode'] >= 400 || empty($payData['id'])) {
+        $paymentsPayload = [
+            'transaction_amount' => $totalAmount,
+            'token' => $token,
+            'description' => "Pedido NT Eleganz {$displayCode} (Apple Pay)",
+            'installments' => 1,
+            'payment_method_id' => $paymentMethodId,
+            'payer' => $payer,
+            'external_reference' => $orderCode,
+            'notification_url' => $webhookUrl,
+            'statement_descriptor' => !empty($settings['statementDescriptor']) ? $settings['statementDescriptor'] : 'NT ELEGANZ'
+        ];
+        $res = callMercadoPagoApi(MP_PAYMENTS_URL, 'POST', $paymentsPayload, $accessToken, $idempotencyKey . '-fb');
+        $payData = $res['data'] ?? [];
+    }
+
+    if ($res['httpCode'] >= 400 || empty($payData['id'])) {
+        $errMsg = $payData['message'] ?? 'Falha ao processar pagamento com Apple Pay.';
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $errMsg,
+            'details' => $payData
+        ]);
+        exit;
+    }
+
+    $paymentId = (string)$payData['id'];
+    $status = strtolower((string)($payData['status'] ?? 'pending'));
+    $statusDetail = (string)($payData['status_detail'] ?? '');
+    $isApproved = ($status === 'approved' || $status === 'authorized');
+
+    // Registra pedido
+    $orderRecord = [
+        'id' => 'ord_' . time() . '_' . substr(md5($orderCode), 0, 5),
+        'code' => $displayCode,
+        'status' => $isApproved ? 'pago' : 'novo',
+        'value' => $formattedTotal,
+        'clientName' => $customer['name'] ?? '',
+        'clientEmail' => $customer['email'] ?? '',
+        'clientPhone' => $customer['phone'] ?? '',
+        'clientCpf' => $customer['cpf'] ?? '',
+        'shippingAddress' => $address,
+        'shippingMethod' => $shipping['name'] ?? 'Frete Especial',
+        'shippingCost' => number_format($effectiveShipping, 2, ',', '.'),
+        'paymentMethod' => 'apple_pay',
+        'paymentStatus' => $status,
+        'paymentDetails' => [
+            'provider' => 'mercadopago',
+            'method' => 'apple_pay',
+            'cardBrand' => $paymentMethodId,
+            'paymentId' => $paymentId,
+            'statusDetail' => $statusDetail,
+            'installments' => 1
+        ],
+        'items' => $items,
+        'createdAt' => date('c'),
+        'paidAt' => $isApproved ? date('c') : null,
+        'mercadopagoPaymentId' => $paymentId
+    ];
+
+    saveOrderToDatabase($orderRecord);
+
+    if ($isApproved) {
+        try {
+            require_once __DIR__ . '/send_order_email.php';
+            sendOrderConfirmationEmail($orderRecord);
+        } catch (\Throwable $e) {}
+
+        try {
+            require_once __DIR__ . '/tracking.php';
+            sendMetaConversionsApiPurchase($orderRecord);
+        } catch (\Throwable $e) {}
+    }
+
+    echo json_encode([
+        'success' => $isApproved,
+        'status' => $status,
+        'statusDetail' => $statusDetail,
+        'message' => $isApproved ? 'Pagamento Apple Pay aprovado com sucesso!' : 'Pagamento Apple Pay em análise.',
         'paymentId' => $paymentId,
         'orderCode' => $orderCode,
         'displayCode' => $displayCode,
