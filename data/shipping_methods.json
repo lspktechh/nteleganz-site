@@ -1,27 +1,27 @@
 [
   {
-    "id": "sedex",
-    "name": "Sedex Express (Seguro Especial Incluso)",
-    "price": 38.00,
-    "deadline": "2 a 4 dias úteis",
-    "freeAbove": 1000.00,
+    "id": "minipac",
+    "name": "Mini Pac",
+    "price": 30.00,
+    "deadline": "10 a 15 dias úteis",
+    "freeAbove": null,
     "active": true,
-    "singleItemOnly": false
+    "singleItemOnly": true
   },
   {
     "id": "pac",
-    "name": "Standard Nobre (PAC)",
-    "price": 22.00,
-    "deadline": "5 a 8 dias úteis",
-    "freeAbove": 600.00,
+    "name": "PAC",
+    "price": 60.00,
+    "deadline": "8 a 12 dias úteis",
+    "freeAbove": null,
     "active": true,
     "singleItemOnly": false
   },
   {
-    "id": "concierge",
-    "name": "Entrega Concierge / Agendamento VIP",
-    "price": 60.00,
-    "deadline": "Até 24h ou horário agendado",
+    "id": "sedex",
+    "name": "Sedex Express",
+    "price": 85.00,
+    "deadline": "2 a 6 dias úteis",
     "freeAbove": null,
     "active": true,
     "singleItemOnly": false

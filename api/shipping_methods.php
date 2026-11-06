@@ -73,6 +73,11 @@ function saveShippingMethods(array $methods): bool {
     );
 }
 
+function nte_strip_emojis(string $str): string {
+    $clean = preg_replace('/[\x{10000}-\x{10FFFF}\x{2600}-\x{27BF}\x{FE00}-\x{FE0F}]/u', '', $str);
+    return trim(preg_replace('/\s+/', ' ', (string)$clean));
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
@@ -81,6 +86,11 @@ if ($method === 'GET') {
     if (!$all) {
         $methods = array_values(array_filter($methods, fn($m) => !empty($m['active'])));
     }
+    foreach ($methods as &$m) {
+        if (isset($m['name'])) $m['name'] = nte_strip_emojis((string)$m['name']);
+        if (isset($m['deadline'])) $m['deadline'] = nte_strip_emojis((string)$m['deadline']);
+    }
+    unset($m);
     echo json_encode(['success' => true, 'methods' => $methods]);
     exit;
 }
@@ -100,9 +110,9 @@ if ($method === 'POST') {
     foreach ($methods as $idx => $m) {
         if (!is_array($m)) continue;
         $id = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($m['id'] ?? 'env_' . ($idx + 1)));
-        $name = trim((string)($m['name'] ?? 'Forma de Envio'));
+        $name = nte_strip_emojis(trim((string)($m['name'] ?? 'Forma de Envio')));
         $price = max(0, (float)($m['price'] ?? 0));
-        $deadline = trim((string)($m['deadline'] ?? '3 a 7 dias úteis'));
+        $deadline = nte_strip_emojis(trim((string)($m['deadline'] ?? '3 a 7 dias úteis')));
         $freeAbove = isset($m['freeAbove']) && is_numeric($m['freeAbove']) && (float)$m['freeAbove'] > 0
             ? (float)$m['freeAbove']
             : null;

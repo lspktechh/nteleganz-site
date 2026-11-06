@@ -46,6 +46,15 @@
     })[c]);
   }
 
+  // ── Sanitizador Global Anti-Emoji (Checkout 100% Livre de Emojis) ──
+  function stripEmojis(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str
+      .replace(/[\u{10000}-\u{10ffff}\u{2600}-\u{27bf}\u{fe00}-\u{fe0f}]/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   // ── Máscaras de Input ──
   function maskPhone(v) {
     v = v.replace(/\D/g, '');
@@ -217,7 +226,11 @@
           if (m.active === false) return false;
           if (m.singleItemOnly && totalQty > 1) return false;
           return true;
-        });
+        }).map(m => ({
+          ...m,
+          name: stripEmojis(m.name),
+          deadline: stripEmojis(m.deadline)
+        }));
       } else {
         // Fallback padrão
         shippingMethods = [
@@ -242,6 +255,8 @@
     }
 
     listEl.innerHTML = shippingMethods.map(m => {
+      const cleanName = stripEmojis(m.name);
+      const cleanDeadline = stripEmojis(m.deadline || 'Prazo rápido');
       const isFree = m.freeAbove && subtotal >= m.freeAbove;
       const effectivePrice = isFree ? 0 : Number(m.price || 0);
       const isSelected = selectedShipping && selectedShipping.id === m.id;
@@ -259,8 +274,8 @@
               <span class="chk-radio-dot"></span>
             </div>
             <div class="chk-shipping-info">
-              <h4>${escapeHtml(m.name)}${singleItemTag}</h4>
-              <p>${escapeHtml(m.deadline || 'Prazo rápido')}</p>
+              <h4>${escapeHtml(cleanName)}${singleItemTag}</h4>
+              <p>${escapeHtml(cleanDeadline)}</p>
             </div>
           </div>
           <div class="chk-shipping-price">${priceDisplay}</div>
@@ -1581,8 +1596,8 @@
     const shipPriceEl = document.getElementById('chk-rev-shipping-price');
 
     if (selectedShipping) {
-      if (shipNameEl) shipNameEl.textContent = selectedShipping.name || 'Frete Selecionado';
-      if (shipDeadEl) shipDeadEl.textContent = selectedShipping.deadline || 'Prazo padrão dos Correios';
+      if (shipNameEl) shipNameEl.textContent = stripEmojis(selectedShipping.name) || 'Frete Selecionado';
+      if (shipDeadEl) shipDeadEl.textContent = stripEmojis(selectedShipping.deadline) || 'Prazo padrão dos Correios';
       if (shipPriceEl) shipPriceEl.textContent = selectedShipping.price > 0 ? fmtMoney(selectedShipping.price) : 'Grátis';
     } else {
       if (shipNameEl) shipNameEl.textContent = 'Frete Padrão';
@@ -1634,7 +1649,7 @@
         itemsListEl.innerHTML = '<div style="padding: 16px; text-align: center; color: #888; font-size: 13px;">Nenhum produto encontrado.</div>';
       } else {
         itemsListEl.innerHTML = items.map(it => {
-          const title = escapeHtml(it.name || it.title || 'Produto NT Eleganz');
+          const title = escapeHtml(stripEmojis(it.name || it.title || 'Produto NT Eleganz'));
           const img = it.image || (Array.isArray(it.images) ? it.images[0] : '') || '/assets/images/placeholder-product.svg';
           const price = parsePrice(it.price);
           const qty = Math.max(1, Number(it.qty) || Number(it.quantity) || 1);

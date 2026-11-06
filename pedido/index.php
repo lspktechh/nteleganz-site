@@ -995,7 +995,7 @@ if (strpos($firstItemImg, 'http') !== 0) {
       </div>
 
       <div class="footer-bottom">
-        <p class="footer-copyright">© 2025 NT Eleganz. Todos os direitos reservados.</p>
+        <p class="footer-copyright">© 2026 NT Eleganz. Todos os direitos reservados. CNPJ: 69.640.668/0001-08.</p>
         <div class="footer-dev">
           <span class="footer-dev-label">Desenvolvido por</span>
           <a href="https://www.instagram.com/lspktech" target="_blank" rel="noopener noreferrer" class="footer-dev-link" title="LSPK Technology no Instagram">
