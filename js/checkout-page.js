@@ -469,13 +469,13 @@
       }
     } catch (_) {}
 
-    // Detecção se o navegador suporta Apple Pay (ou dispositivo Apple)
+    // O Apple Pay só é exibido aos compradores quando a conta da Apple estiver homologada e ativa no backend
+    const isConfiguredAndEnabled = Boolean(applePaySettings && applePaySettings.enabled && applePaySettings.certificatePublicHash);
     const hasApplePay = window.ApplePaySession && (
-      typeof ApplePaySession.canMakePayments === 'function' ? ApplePaySession.canMakePayments() : true
+      typeof ApplePaySession.canMakePayments === 'function' && ApplePaySession.canMakePayments()
     );
-    const isAppleDevice = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
 
-    if (hasApplePay || isAppleDevice) {
+    if (isConfiguredAndEnabled && hasApplePay) {
       tabApplePay.style.display = 'inline-flex';
     } else {
       tabApplePay.style.display = 'none';
