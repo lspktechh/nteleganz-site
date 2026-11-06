@@ -356,10 +356,11 @@
     },
 
     // Compra Concluída (Página de Pedido / Thank You)
-    trackPurchase(order) {
+    trackPurchase(order, destination = 'checkout') {
       if (!order) return;
+      const dest = destination || (order && order.channel) || 'checkout';
       const code = String(order.code || order.id || '').replace('#', '').toUpperCase();
-      const storageLockKey = `nte_tracked_purchase_${code}`;
+      const storageLockKey = `nte_tracked_purchase_${code}_${dest}`;
 
       // Evita duplicação se o comprador atualizar (F5) a tela do pedido
       if (sessionStorage.getItem(storageLockKey)) {
@@ -370,7 +371,7 @@
       const total = typeof order.value === 'number' ? order.value : parseFloat(String(order.value || 0).replace(/[^\d,.]/g, '').replace(',', '.')) || 0;
       const items = Array.isArray(order.items) ? order.items : [];
       const contentIds = items.map(i => String(i.id || i.slug || 'prod'));
-      const eventId = `order_${code}`;
+      const eventId = `order_${dest}_${code}`;
 
       trackEvent('Purchase', 'purchase', {
         eventId: eventId,
@@ -383,12 +384,15 @@
           value: total,
           currency: 'BRL',
           order_id: code,
-          num_items: items.length || 1
+          num_items: items.length || 1,
+          destination: dest,
+          channel: dest
         },
         gaPayload: {
           transaction_id: code,
           value: total,
           currency: 'BRL',
+          destination: dest,
           items: items.map(i => ({
             item_id: String(i.id || ''),
             item_name: i.name || '',
@@ -397,6 +401,86 @@
           }))
         }
       });
+    },
+
+    /**
+     * Disparo oficial de Finalização de Compra (Checkout vs WhatsApp)
+     * Informa ao Meta Ads exatamente para onde o cliente foi:
+     * - destination: 'checkout' (Mercado Pago / Pix / Cartão no site)
+     * - destination: 'whatsapp' (Finalização do pedido pelo WhatsApp)
+     */
+    trackOrderDispatch(destination, orderData = {}) {
+      const dest = destination === 'whatsapp' ? 'whatsapp' : 'checkout';
+      const rawVal = orderData.value ?? orderData.total ?? 0;
+      const total = typeof rawVal === 'number'
+        ? rawVal
+        : parseFloat(String(rawVal || 0).replace(/[^\d,.]/g, '').replace(',', '.')) || 0;
+      const items = Array.isArray(orderData.items) ? orderData.items : [];
+      const contentIds = items.map(i => String(i.id || i.slug || 'prod'));
+      const code = String(orderData.code || orderData.orderCode || orderData.id || '').replace('#', '').toUpperCase();
+      const numItems = items.reduce((a, b) => a + (Number(b.qty) || 1), 0) || 1;
+      const eventId = code ? `dispatch_${dest}_${code}` : `dispatch_${dest}_${Date.now()}`;
+
+      const metaPayload = {
+        content_name: dest === 'whatsapp' ? 'Finalização via WhatsApp' : 'Finalização Checkout Site',
+        content_ids: contentIds,
+        content_type: 'product',
+        value: total,
+        currency: 'BRL',
+        order_id: code || undefined,
+        num_items: numItems,
+        destination: dest,
+        channel: dest
+      };
+
+      // Dispara Purchase com destination
+      trackEvent('Purchase', 'purchase', {
+        eventId: eventId,
+        isPurchase: true,
+        purchaseValue: total,
+        orderCode: code,
+        metaPayload: metaPayload,
+        gaPayload: {
+          transaction_id: code || undefined,
+          value: total,
+          currency: 'BRL',
+          destination: dest,
+          items: items.map(i => ({
+            item_id: String(i.id || ''),
+            item_name: i.name || '',
+            price: i.price,
+            quantity: i.qty || 1
+          }))
+        }
+      });
+
+      // Dispara eventos customizados para segmentação direta no Meta Ads
+      if (window.fbq) {
+        const targetPixelId = trackingConfig && (trackingConfig.meta_pixel_id || trackingConfig.meta_pageview_pixel_id);
+        const customData = {
+          destination: dest,
+          value: total,
+          currency: 'BRL',
+          order_code: code,
+          num_items: numItems
+        };
+
+        if (targetPixelId) {
+          window.fbq('trackSingleCustom', targetPixelId, 'OrderDispatch', customData);
+          window.fbq('trackSingleCustom', targetPixelId, dest === 'whatsapp' ? 'FinalizarWhatsApp' : 'FinalizarCheckout', customData);
+        } else {
+          window.fbq('trackCustom', 'OrderDispatch', customData);
+          window.fbq('trackCustom', dest === 'whatsapp' ? 'FinalizarWhatsApp' : 'FinalizarCheckout', customData);
+        }
+
+        if (dest === 'whatsapp') {
+          if (targetPixelId) {
+            window.fbq('trackSingle', targetPixelId, 'Contact', { destination: 'whatsapp', value: total, currency: 'BRL' });
+          } else {
+            window.fbq('track', 'Contact', { destination: 'whatsapp', value: total, currency: 'BRL' });
+          }
+        }
+      }
     },
 
     // Contato via WhatsApp — a conversão principal deste negócio ("a pessoa
@@ -418,19 +502,22 @@
           content_type: 'product',
           value: value,
           currency: 'BRL',
-          num_items: numItems
+          num_items: numItems,
+          destination: 'whatsapp',
+          channel: 'whatsapp'
         },
-        gaPayload: { currency: 'BRL', value: value }
+        gaPayload: { currency: 'BRL', value: value, destination: 'whatsapp' }
       });
 
       // Evento 'Contact' padrão da Meta — recomendado para campanhas de
       // mensagens/WhatsApp. Só dispara se o pixel estiver carregado.
       if (window.fbq) {
         const targetPixelId = trackingConfig && (trackingConfig.meta_pixel_id || trackingConfig.meta_pageview_pixel_id);
+        const contactData = { destination: 'whatsapp', value: value, currency: 'BRL' };
         if (targetPixelId) {
-          window.fbq('trackSingle', targetPixelId, 'Contact');
+          window.fbq('trackSingle', targetPixelId, 'Contact', contactData);
         } else {
-          window.fbq('track', 'Contact');
+          window.fbq('track', 'Contact', contactData);
         }
       }
     },

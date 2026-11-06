@@ -68,6 +68,8 @@ function registerLead(data) {
 function registerOrder(data) {
   const order = {
     source: 'site',
+    channel: 'whatsapp',
+    paymentMethod: 'whatsapp',
     status: 'novo',
     client: 'Cliente do site',
     phone: '',
@@ -618,7 +620,14 @@ function orderProductViaWhatsApp(product, size = null, color = null, qty = null)
       // Open WhatsApp directly on customer submit click (synchronous to click)
       window.open(generateWhatsAppUrl(message), '_blank');
 
-      // Conversão "foi pro WhatsApp" para Meta/Google (otimização do tráfego).
+      // Conversão oficial para Meta Ads dizendo que foi para o WhatsApp
+      if (window.nteTracking && typeof window.nteTracking.trackOrderDispatch === 'function') {
+        window.nteTracking.trackOrderDispatch('whatsapp', {
+          code: orderCode,
+          items: [{ id: product?.id || '', name: product?.name || '', price: product?.price || '', qty: quantity }],
+          value: product?.price || 0
+        });
+      }
       if (window.nteTracking && typeof window.nteTracking.trackWhatsAppContact === 'function') {
         window.nteTracking.trackWhatsAppContact({
           items: [{ id: product?.id || '', name: product?.name || '', price: product?.price || '', qty: quantity }],
@@ -736,7 +745,14 @@ function checkoutViaWhatsApp(cartItems, total) {
       // Open WhatsApp directly on customer submit click (synchronous to click)
       window.open(generateWhatsAppUrl(message), '_blank');
 
-      // Conversão "foi pro WhatsApp" para Meta/Google (otimização do tráfego).
+      // Conversão oficial para Meta Ads dizendo que foi para o WhatsApp
+      if (window.nteTracking && typeof window.nteTracking.trackOrderDispatch === 'function') {
+        window.nteTracking.trackOrderDispatch('whatsapp', {
+          code: orderCode,
+          items: formattedItems,
+          value: total
+        });
+      }
       if (window.nteTracking && typeof window.nteTracking.trackWhatsAppContact === 'function') {
         window.nteTracking.trackWhatsAppContact({
           items: formattedItems,

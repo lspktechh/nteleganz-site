@@ -171,6 +171,7 @@
     feedbacks: 'Feedbacks de Clientes',
     faq: 'Perguntas frequentes',
     pedidos: 'Pedidos',
+    'meio-caminho': 'Meio Caminho (Recuperação de Vendas)',
     clientes: 'Base de Clientes',
     leads: 'Leads do WhatsApp',
     marketing: 'Marketing, Pixels & Tráfego',
@@ -206,6 +207,7 @@
       if (panelId === 'faq') loadFaq();
 
       if (panelId === 'pedidos') refreshOrders();
+      if (panelId === 'meio-caminho') await loadMeioCaminho();
       if (panelId === 'clientes') renderCustomersTable();
       if (panelId === 'leads') {
         renderLeadsTable();
@@ -378,6 +380,7 @@
       allProducts = await window.ntDB?.products.reload() || [];
       allOrders = await window.ntDB?.orders.getAll() || [];
       await refreshLeads(false);
+      loadMeioCaminho().catch(e => console.warn('Falha ao inicializar Meio Caminho:', e));
       loadCategories().catch(e => console.warn('Falha ao inicializar categorias:', e));
       syncImagesInBackground();
 
@@ -1772,12 +1775,23 @@
 
   window.filterOrders = function () {
     const status = document.getElementById('order-filter-status')?.value || '';
-    const filtered = allOrders.filter(o => !status || o.status === status);
+    const channel = document.getElementById('order-filter-channel')?.value || '';
+    const list = window.allOrders || allOrders || [];
+
+    const filtered = list.filter(o => {
+      const matchStatus = !status || o.status === status;
+      const isWpp = (o.channel === 'whatsapp') || (o.paymentMethod === 'whatsapp') || (o.source === 'whatsapp') || (typeof o.notes === 'string' && o.notes.includes('WhatsApp'));
+      const oChannel = isWpp ? 'whatsapp' : 'checkout';
+      const matchChannel = !channel || oChannel === channel;
+      return matchStatus && matchChannel;
+    });
     renderOrdersTableData(filtered);
   };
 
+  window.renderOrdersTable = renderOrdersTable;
   function renderOrdersTable() {
-    renderOrdersTableData([...allOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+    const list = window.allOrders || allOrders || [];
+    renderOrdersTableData([...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
   }
 
   function renderOrdersTableData(orders) {
@@ -1785,7 +1799,7 @@
     if (!tbody) return;
 
     if (orders.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M14 2H6a2 2 0 0 0-2 2v16"/></svg><p>Nenhum pedido encontrado</p><small>Registre pedidos recebidos pelo WhatsApp</small></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M14 2H6a2 2 0 0 0-2 2v16"/></svg><p>Nenhum pedido encontrado</p><small>Os pedidos feitos no Checkout e via WhatsApp aparecerão aqui</small></div></td></tr>`;
       return;
     }
 
@@ -1793,6 +1807,12 @@
       const code = escHtml(o.code || ('#NTE-' + String(o.id).slice(-4).toUpperCase()));
       const thumb = getOrderThumbnail(o);
       const hasMultiple = Array.isArray(o.items) && o.items.length > 1;
+
+      const isWpp = (o.channel === 'whatsapp') || (o.paymentMethod === 'whatsapp') || (o.source === 'whatsapp') || (typeof o.notes === 'string' && o.notes.includes('WhatsApp'));
+      const channelBadge = isWpp
+        ? `<span class="badge" style="background:rgba(37,211,102,0.15); color:#22c55e; border:1px solid rgba(37,211,102,0.35); font-weight:700; font-size:10px; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg> WhatsApp</span>`
+        : `<span class="badge" style="background:rgba(59,130,246,0.12); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); font-weight:700; font-size:10px; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Checkout</span>`;
+
       const thumbHtml = thumb 
         ? `<div style="position:relative; width:44px; height:44px; flex-shrink:0;">
              <img src="${escHtml(thumb)}" alt="" style="width:44px; height:44px; border-radius:8px; object-fit:cover; border:1px solid rgba(201,168,76,0.3); background:#111; cursor:pointer;" onclick="window.open('${escHtml(thumb)}', '_blank')" onerror="this.onerror=null; this.src='../assets/images/logo.png'; this.style.opacity='0.4';" />
@@ -1811,15 +1831,19 @@
         productDetails += `<span style="color:var(--text-primary); font-weight:500;">${escHtml(o.productName || '—')}</span>`;
       }
 
+      const clientName = o.client && o.client !== 'Cliente do site' && o.client !== 'Cliente'
+        ? o.client
+        : (o.clientName || (o.customer && o.customer.name) || (o.raw_data && o.raw_data.client) || 'Cliente do site');
+
       return `
       <tr onclick="openOrderModal('${escHtml(o.id)}')" style="cursor:pointer;" title="Clique para ver os detalhes do pedido">
         <td>
           <span class="badge badge-gold" style="font-family:monospace; font-size:11px; font-weight:700; letter-spacing:0.05em;">${code}</span>
         </td>
+        <td>${channelBadge}</td>
         <td>${thumbHtml}</td>
         <td>
           <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
-            ${o.source === 'site' ? '<span class="badge badge-gold" title="Pedido feito pelo site" style="font-size:10px; padding:1px 6px;">Site</span>' : ''}
             ${(() => {
               const trk = o.tracking || (o.raw_data && o.raw_data.tracking) || null;
               if (!trk) return '';
@@ -1827,10 +1851,10 @@
               if (!src) return '';
               return `<span class="badge" style="background:rgba(201,168,76,0.12); color:var(--gold,#c9a84c); border:1px solid rgba(201,168,76,0.25); font-size:10px; padding:1px 6px;" title="Campanha / Origem: ${escHtml(src)}">🎯 ${escHtml(src)}</span>`;
             })()}
-            <span style="color:var(--text-primary); font-weight:600; font-size:13px;">${escHtml(o.client || 'Cliente')}</span>
+            <span style="color:var(--text-primary); font-weight:600; font-size:13px;">${escHtml(clientName)}</span>
           </div>
           ${(() => {
-            const rawPhone = o.phone || (o.raw_data && o.raw_data.phone) || '';
+            const rawPhone = o.phone || (o.raw_data && o.raw_data.phone) || (o.customer && o.customer.phone) || '';
             const digits = String(rawPhone).replace(/\D/g, '');
             if (!digits) return '<span style="font-size:11px; color:var(--text-muted); opacity:0.6;">Sem telefone</span>';
             return `
@@ -1846,7 +1870,7 @@
         <td style="color:var(--gold, #c9a84c); font-weight:600;">${escHtml(o.value || '—')}</td>
         <td>
           <select class="admin-select" style="font-size:11px; padding:4px 24px 4px 6px;" onclick="event.stopPropagation()" onchange="updateOrderStatus('${o.id}', this.value)">
-            ${['novo','confirmado','enviado','entregue','cancelado'].map(s =>
+            ${['novo','confirmado','pago','enviado','entregue','cancelado'].map(s =>
               `<option value="${s}" ${o.status === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`
             ).join('')}
           </select>
@@ -1867,6 +1891,226 @@
       </tr>
     `}).join('');
   }
+
+  // ══════════════════════════════════════════
+  //  MEIO CAMINHO (ABANDONO DE CHECKOUT)
+  // ══════════════════════════════════════════
+  let allMeioCaminho = [];
+  window.allMeioCaminho = allMeioCaminho;
+
+  window.loadMeioCaminho = async function (showToastFlag = false) {
+    try {
+      const res = await fetch('/api/abandoned_checkouts.php', { cache: 'no-store' });
+      const data = await res.json();
+      allMeioCaminho = window.allMeioCaminho = Array.isArray(data?.checkouts) ? data.checkouts : [];
+      updateMeioCaminhoKPIs();
+      renderMeioCaminhoTable();
+      if (showToastFlag) {
+        showToast('check', 'Meio Caminho atualizado', `${allMeioCaminho.length} registros sincronizados`);
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar Meio Caminho:', e);
+      if (showToastFlag) {
+        showToast('!', 'Erro ao atualizar', e.message);
+      }
+    }
+  };
+
+  window.updateMeioCaminhoKPIs = updateMeioCaminhoKPIs;
+  function updateMeioCaminhoKPIs() {
+    const list = window.allMeioCaminho || allMeioCaminho || [];
+    const pendentes = list.filter(c => (c.status || 'pendente') === 'pendente' && !c.recovered);
+    const step1 = pendentes.filter(c => Number(c.step) === 1);
+    const step2 = pendentes.filter(c => Number(c.step) === 2);
+
+    const totalVal = pendentes.reduce((sum, c) => {
+      const v = typeof c.total === 'number' ? c.total : parseFloat(String(c.total || 0).replace(/[^\d,.]/g, '').replace(',', '.')) || 0;
+      return sum + v;
+    }, 0);
+
+    setText('kpi-meio-total', pendentes.length);
+    setText('kpi-meio-step1', step1.length);
+    setText('kpi-meio-step2', step2.length);
+    setText('kpi-meio-valor', fmt.currency(totalVal));
+
+    // Atualiza badge de notificação no menu lateral
+    const badge = document.getElementById('meio-caminho-nav-badge');
+    if (badge) {
+      if (pendentes.length > 0) {
+        badge.textContent = pendentes.length;
+        badge.removeAttribute('hidden');
+      } else {
+        badge.setAttribute('hidden', '');
+      }
+    }
+  }
+
+  window.filterMeioCaminho = function () {
+    renderMeioCaminhoTable();
+  };
+
+  window.renderMeioCaminhoTable = renderMeioCaminhoTable;
+  function renderMeioCaminhoTable() {
+    const tbody = document.getElementById('meio-caminho-tbody');
+    if (!tbody) return;
+
+    const list = window.allMeioCaminho || allMeioCaminho || [];
+    const filterStatus = document.getElementById('meio-filter-status')?.value || '';
+    let filtered = list;
+    if (filterStatus === 'pendente') {
+      filtered = list.filter(c => (c.status || 'pendente') === 'pendente' && !c.recovered);
+    } else if (filterStatus === 'recuperado') {
+      filtered = list.filter(c => c.status === 'recuperado' || c.recovered);
+    }
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Nenhum cliente no meio caminho</p><small>Clientes que iniciarem preenchimento no checkout aparecerão aqui</small></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(c => {
+      const clientName = escHtml(c.name || 'Cliente sem nome');
+      const phoneDigits = String(c.phone || '').replace(/\D/g, '');
+      const rawPhone = escHtml(c.phone || '—');
+      const email = escHtml(c.email || '—');
+      const cpf = escHtml(c.cpf || '—');
+      const dateStr = fmt.date(c.updatedAt || c.createdAt);
+      const stepNum = Number(c.step || 1);
+      const isRecovered = (c.status === 'recuperado' || c.recovered);
+      const isContacted = (c.status === 'contatado');
+
+      // Badge da Etapa
+      let stepBadge = '';
+      if (stepNum === 1) {
+        stepBadge = `<span class="badge" style="background:rgba(234,179,8,0.12); color:#eab308; border:1px solid rgba(234,179,8,0.3); font-weight:700; font-size:11px; padding:3px 8px; border-radius:6px;">Etapa 1: Identificação</span>`;
+      } else if (stepNum === 2) {
+        stepBadge = `<span class="badge" style="background:rgba(59,130,246,0.12); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); font-weight:700; font-size:11px; padding:3px 8px; border-radius:6px;">Etapa 2: Endereço & Frete</span>`;
+      } else {
+        stepBadge = `<span class="badge" style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); font-weight:700; font-size:11px; padding:3px 8px; border-radius:6px;">Etapa 3: Pagamento</span>`;
+      }
+
+      // Detalhes dos Produtos
+      let productsHtml = '';
+      if (Array.isArray(c.items) && c.items.length > 0) {
+        productsHtml = c.items.map(it => `
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+            ${it.image ? `<img src="${escHtml(it.image)}" style="width:24px; height:24px; border-radius:4px; object-fit:cover;" onerror="this.style.display='none'">` : ''}
+            <span style="font-size:12px; font-weight:500;">${escHtml(it.name || 'Produto')} (${it.qty || 1}x)</span>
+            ${it.size ? `<span style="font-size:10px; color:var(--text-muted);">Tam: ${escHtml(it.size)}</span>` : ''}
+          </div>
+        `).join('');
+      } else {
+        productsHtml = '<span style="font-size:12px; color:var(--text-muted);">Itens não detalhados</span>';
+      }
+
+      // WhatsApp Action Button
+      let wppBtn = '';
+      if (phoneDigits.length >= 10) {
+        const prodSummary = Array.isArray(c.items) && c.items.length > 0
+          ? c.items.map(it => it.name).join(', ')
+          : 'seu pedido';
+        const greeting = `Olá ${c.name ? c.name.split(' ')[0] : ''}! Vi que você começou seu pedido da ${prodSummary} na NT Eleganz mas parou na etapa de pagamento. Posso te ajudar a concluir ou te enviar uma condição exclusiva?`;
+        const wppUrl = `https://wa.me/55${phoneDigits.startsWith('55') ? phoneDigits.slice(2) : phoneDigits}?text=${encodeURIComponent(greeting)}`;
+
+        wppBtn = `
+          <a href="${wppUrl}" target="_blank" onclick="markMeioCaminhoContacted('${escHtml(c.id)}')" class="btn btn-sm" style="background:rgba(37,211,102,0.15); color:#22c55e; border:1px solid rgba(37,211,102,0.35); font-weight:700; font-size:11px; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:5px; text-decoration:none;" title="Chamar no WhatsApp com mensagem de recuperação">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+            <span>${rawPhone}</span>
+          </a>
+        `;
+      } else {
+        wppBtn = `<span style="font-size:12px; color:var(--text-muted); opacity:0.6;">${rawPhone}</span>`;
+      }
+
+      // Status badge
+      let statusBadge = '';
+      if (isRecovered) {
+        statusBadge = `<span class="badge badge-success" style="font-size:10px;">✓ Recuperado</span>`;
+      } else if (isContacted) {
+        statusBadge = `<span class="badge" style="background:rgba(59,130,246,0.15); color:#60a5fa; font-size:10px;">Contatado</span>`;
+      } else {
+        statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.12); color:#ef4444; font-size:10px;">Pendente</span>`;
+      }
+
+      return `
+        <tr>
+          <td style="font-size:11px; white-space:nowrap;">${dateStr}</td>
+          <td>
+            <div style="font-weight:600; color:var(--text-primary); font-size:13px;">${clientName}</div>
+          </td>
+          <td>${wppBtn}</td>
+          <td style="font-size:12px;">
+            <div>${email}</div>
+            <small style="color:var(--text-muted); font-size:10px;">CPF: ${cpf}</small>
+          </td>
+          <td>${stepBadge}</td>
+          <td>${productsHtml}</td>
+          <td style="color:var(--gold,#c9a84c); font-weight:700; font-size:13px;">${escHtml(c.total || '—')}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <div style="display:flex; gap:6px; align-items:center;">
+              ${!isRecovered ? `
+                <button class="btn btn-secondary btn-sm" onclick="markMeioCaminhoRecovered('${escHtml(c.id)}')" title="Marcar como Venda Recuperada" style="padding:4px 8px; font-size:11px;">
+                  ✓ Recuperado
+                </button>
+              ` : ''}
+              <button class="btn btn-danger btn-sm" onclick="deleteMeioCaminho('${escHtml(c.id)}')" title="Excluir" style="padding:4px 8px; font-size:11px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  window.markMeioCaminhoContacted = async function (id) {
+    try {
+      await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'contatado' })
+      });
+      const it = allMeioCaminho.find(x => x.id === id);
+      if (it && it.status !== 'recuperado') it.status = 'contatado';
+      renderMeioCaminhoTable();
+    } catch (_) {}
+  };
+
+  window.markMeioCaminhoRecovered = async function (id) {
+    try {
+      await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'recuperado', recovered: true })
+      });
+      const it = allMeioCaminho.find(x => x.id === id);
+      if (it) {
+        it.status = 'recuperado';
+        it.recovered = true;
+      }
+      updateMeioCaminhoKPIs();
+      renderMeioCaminhoTable();
+      showToast('check', 'Venda Recuperada!', 'Registro atualizado com sucesso.');
+    } catch (e) {
+      showToast('!', 'Erro ao atualizar', e.message);
+    }
+  };
+
+  window.deleteMeioCaminho = async function (id) {
+    if (!confirm('Deseja realmente remover este registro de Meio Caminho?')) return;
+    try {
+      await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+      allMeioCaminho = allMeioCaminho.filter(x => x.id !== id);
+      updateMeioCaminhoKPIs();
+      renderMeioCaminhoTable();
+      showToast('check', 'Removido', 'Registro excluído do Meio Caminho.');
+    } catch (e) {
+      showToast('!', 'Erro ao excluir', e.message);
+    }
+  };
 
   window.updateOrderStatus = async function (id, status) {
     await window.ntDB.orders.update(id, { status });
@@ -1907,7 +2151,12 @@
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             ${code ? `<span class="badge badge-gold" style="font-family:monospace; font-size:12px; font-weight:700;">${escHtml(code)}</span>` : ''}
             <span style="font-size:12px; color:var(--text-muted);">${orderData.createdAt ? fmt.date(orderData.createdAt) : ''}</span>
-            ${orderData.source === 'site' ? '<span class="badge badge-gold" style="font-size:10px;">Site</span>' : ''}
+            ${(() => {
+              const isWpp = (orderData.channel === 'whatsapp') || (orderData.paymentMethod === 'whatsapp') || (orderData.source === 'whatsapp') || (typeof orderData.notes === 'string' && orderData.notes.includes('WhatsApp'));
+              return isWpp
+                ? '<span class="badge" style="background:rgba(37,211,102,0.15); color:#22c55e; border:1px solid rgba(37,211,102,0.35); font-weight:700; font-size:11px; padding:2px 8px; border-radius:6px;">Canal: WhatsApp</span>'
+                : '<span class="badge" style="background:rgba(59,130,246,0.12); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); font-weight:700; font-size:11px; padding:2px 8px; border-radius:6px;">Canal: Checkout (Site)</span>';
+            })()}
             ${orderData.code ? `<a href="/order/${encodeURIComponent(orderData.code.replace('#',''))}" target="_blank" class="badge" style="background:transparent; color:var(--text-primary); text-decoration:none; font-size:11px; padding:2px 8px; border:1px solid var(--border); border-radius:6px; display:inline-flex; align-items:center; gap:4px;" title="Abrir página detalhada do pedido"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> Ver no Site</a>` : ''}
           </div>
           <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-top:4px;">${escHtml(orderData.productName || 'Detalhes do Pedido')}</div>
@@ -2011,15 +2260,15 @@
         <div class="form-grid">
           <div class="form-group form-col-full">
             <label>Nome do Cliente *</label>
-            <input type="text" class="form-control" id="o-client" value="${escHtml(orderData.client || '')}" placeholder="João Silva" required>
+            <input type="text" class="form-control" id="o-client" value="${escHtml((orderData.client && orderData.client !== 'Cliente do site' && orderData.client !== 'Cliente') ? orderData.client : (orderData.clientName || (orderData.customer && orderData.customer.name) || (orderData.raw_data && orderData.raw_data.client) || ''))}" placeholder="João Silva" required>
           </div>
           <div class="form-group">
             <label>WhatsApp do Cliente</label>
-            <input type="text" class="form-control" id="o-phone" value="${escHtml(orderData.phone || '')}" placeholder="5511999999999">
+            <input type="text" class="form-control" id="o-phone" value="${escHtml(orderData.phone || (orderData.customer && orderData.customer.phone) || '')}" placeholder="5511999999999">
           </div>
           <div class="form-group">
             <label>E-mail do Cliente</label>
-            <input type="email" class="form-control" id="o-email" value="${escHtml(orderData.email || (orderData.raw_data && orderData.raw_data.email) || '')}" placeholder="cliente@email.com">
+            <input type="email" class="form-control" id="o-email" value="${escHtml(orderData.email || (orderData.customer && orderData.customer.email) || (orderData.raw_data && orderData.raw_data.email) || '')}" placeholder="cliente@email.com">
           </div>
           <div class="form-group form-col-full">
             <label>Produto *</label>
@@ -4597,6 +4846,9 @@ window.showConfirm = function (msg, callback) {
       }, 20000);
       window.setInterval(() => {
         if (!document.hidden && currentDBMode !== 'local') refreshOrders();
+      }, 25000);
+      window.setInterval(() => {
+        if (!document.hidden) loadMeioCaminho();
       }, 25000);
     }).catch(error => {
       console.error('Não foi possível iniciar a dashboard:', error);

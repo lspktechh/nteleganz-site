@@ -758,6 +758,81 @@
     return true;
   }
 
+  // ── Sincronização em Tempo Real com Meio Caminho (Carrinhos Abandonados) ──
+  let meioCaminhoSessionId = null;
+  try {
+    meioCaminhoSessionId = sessionStorage.getItem('nte_meio_caminho_session');
+    if (!meioCaminhoSessionId) {
+      meioCaminhoSessionId = 'mc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+      sessionStorage.setItem('nte_meio_caminho_session', meioCaminhoSessionId);
+    }
+  } catch (_) {
+    meioCaminhoSessionId = 'mc_' + Date.now();
+  }
+
+  async function syncMeioCaminho(step, finalizado = false, orderCode = '') {
+    try {
+      const name = getVal('chk-name');
+      const email = getVal('chk-email');
+      const phone = getVal('chk-phone');
+      const cpf = getVal('chk-cpf');
+
+      // Se não tiver pelo menos nome, telefone ou email, não há como recuperar
+      if (!name && !phone && !email) return;
+
+      const isFree = selectedShipping && selectedShipping.freeAbove && subtotal >= selectedShipping.freeAbove;
+      const effectiveShippingPrice = isFree ? 0 : Number((selectedShipping && selectedShipping.price) || 0);
+      const trackingData = window.nteTracking ? window.nteTracking.getTrackingData() : {};
+
+      const payload = {
+        sessionId: meioCaminhoSessionId,
+        name: name,
+        email: email,
+        phone: phone,
+        cpf: cpf,
+        step: step || currentStep,
+        address: {
+          cep: getVal('chk-cep'),
+          street: getVal('chk-street'),
+          number: getVal('chk-number'),
+          complement: getVal('chk-complement'),
+          neighborhood: getVal('chk-neighborhood'),
+          city: getVal('chk-city'),
+          state: getVal('chk-state')
+        },
+        shipping: selectedShipping ? {
+          name: selectedShipping.name,
+          price: effectiveShippingPrice,
+          deadline: selectedShipping.deadline
+        } : null,
+        items: cartItems.map(it => ({
+          id: it.id || '',
+          name: it.name || '',
+          brand: it.brand || '',
+          price: it.price || '',
+          qty: it.qty || 1,
+          size: it.size || '',
+          color: it.color || '',
+          image: it.image || ''
+        })),
+        subtotal: fmtMoney(subtotal),
+        total: fmtMoney(subtotal + effectiveShippingPrice),
+        tracking: trackingData,
+        status: finalizado ? 'recuperado' : 'pendente',
+        finalizado: !!finalizado,
+        orderCode: orderCode || ''
+      };
+
+      await fetch('/api/abandoned_checkouts.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      // Ignora falhas para não interferir na experiência do usuário
+    }
+  }
+
   function goToStep(targetStep, skipValidation = false) {
     if (targetStep < 1 || targetStep > 3) return;
 
@@ -773,6 +848,9 @@
     if (currentStep > maxVisitedStep) {
       maxVisitedStep = currentStep;
     }
+
+    // Registra imediatamente avanço no funil (Meio Caminho)
+    syncMeioCaminho(currentStep);
 
     const stage1 = document.getElementById('stage-identificacao');
     const stage2 = document.getElementById('stage-frete');
@@ -1066,12 +1144,61 @@
       }
 
       currentPaymentId = data.paymentId;
-      currentOrderCode = data.orderCode;
+      currentOrderCode = data.orderCode || currentOrderCode;
 
       // Salva dados do cliente no storage
       try {
         localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(payload.customer));
       } catch (e) {}
+
+      // Marca o carrinho como recuperado/concluído no Meio Caminho
+      syncMeioCaminho(3, true, currentOrderCode);
+
+      // Disparo oficial para Meta Ads (indicando destino Checkout)
+      if (window.nteTracking && typeof window.nteTracking.trackOrderDispatch === 'function') {
+        window.nteTracking.trackOrderDispatch('checkout', {
+          code: currentOrderCode,
+          items: cartItems,
+          value: getFinalTotalNumber()
+        });
+      }
+      if (window.nteTracking && typeof window.nteTracking.trackPurchase === 'function') {
+        window.nteTracking.trackPurchase({
+          code: currentOrderCode,
+          items: cartItems,
+          value: getFinalTotalNumber(),
+          channel: 'checkout'
+        }, 'checkout');
+      }
+
+      // Garantia de gravação no backend de pedidos do site
+      try {
+        await fetch('/api/orders.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: currentOrderCode,
+            channel: 'checkout',
+            paymentMethod: 'pix',
+            client: getVal('chk-name'),
+            clientName: getVal('chk-name'),
+            phone: getVal('chk-phone'),
+            email: getVal('chk-email'),
+            customer: getCustomerPayload(),
+            value: fmtMoney(getFinalTotalNumber()),
+            items: cartItems,
+            shipping: {
+              ...selectedShipping,
+              effectivePrice: effectiveShippingPrice
+            },
+            status: 'novo',
+            pixQrCode: data.qrCode,
+            pixQrCodeBase64: data.qrCodeBase64,
+            ticketUrl: data.ticketUrl,
+            tracking: trackingData
+          })
+        });
+      } catch (_) {}
 
       // Exibe container do Pix diretamente na tela
       displayPixScreen(data);
@@ -1281,8 +1408,56 @@
         throw new Error(data.message || data.error || 'Pagamento com cartão recusado pela operadora.');
       }
 
+      const finalCode = data.orderCode || currentOrderCode;
+
+      // Marca o carrinho como recuperado/concluído no Meio Caminho
+      syncMeioCaminho(3, true, finalCode);
+
+      // Disparo oficial para Meta Ads (indicando destino Checkout)
+      if (window.nteTracking && typeof window.nteTracking.trackOrderDispatch === 'function') {
+        window.nteTracking.trackOrderDispatch('checkout', {
+          code: finalCode,
+          items: cartItems,
+          value: getFinalTotalNumber()
+        });
+      }
+      if (window.nteTracking && typeof window.nteTracking.trackPurchase === 'function') {
+        window.nteTracking.trackPurchase({
+          code: finalCode,
+          items: cartItems,
+          value: getFinalTotalNumber(),
+          channel: 'checkout'
+        }, 'checkout');
+      }
+
+      // Garantia de gravação no backend de pedidos do site
+      try {
+        await fetch('/api/orders.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: finalCode,
+            channel: 'checkout',
+            paymentMethod: 'credit_card',
+            client: getVal('chk-name'),
+            clientName: getVal('chk-name'),
+            phone: getVal('chk-phone'),
+            email: getVal('chk-email'),
+            customer: getCustomerPayload(),
+            value: data.total || fmtMoney(getFinalTotalNumber()),
+            items: cartItems,
+            shipping: {
+              ...selectedShipping,
+              effectivePrice: effectiveShippingPrice
+            },
+            status: 'pago',
+            tracking: trackingData
+          })
+        });
+      } catch (_) {}
+
       // Sucesso na hora!
-      showSuccessScreen(data.orderCode || currentOrderCode, data.total || fmtMoney(getFinalTotalNumber()));
+      showSuccessScreen(finalCode, data.total || fmtMoney(getFinalTotalNumber()));
 
     } catch (err) {
       console.error('Erro ao processar cartão:', err);
@@ -1750,6 +1925,20 @@
         updateProgress();
       });
     }
+
+    // Captura inicial para o painel Meio Caminho caso o cliente preencha e hesite
+    ['chk-name', 'chk-email', 'chk-phone', 'chk-cpf'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('blur', () => {
+          const ph = getVal('chk-phone').replace(/\D/g, '');
+          const nm = getVal('chk-name');
+          if (nm.length >= 3 && ph.length >= 10) {
+            syncMeioCaminho(1);
+          }
+        });
+      }
+    });
 
     const cpfInput = document.getElementById('chk-cpf');
     if (cpfInput) {

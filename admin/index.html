@@ -74,6 +74,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         <span>Pedidos</span>
       </div>
+      <div class="nav-item" data-panel="meio-caminho" onclick="showPanel('meio-caminho', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Meio Caminho</span><b class="nav-notification" id="meio-caminho-nav-badge" hidden>0</b>
+      </div>
       <div class="nav-item" data-panel="clientes" onclick="showPanel('clientes', this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span>Clientes</span><b class="nav-notification" id="clientes-nav-badge" hidden>0</b>
@@ -527,10 +531,16 @@
           <div class="data-card-header">
             <div class="data-card-title">Gestão de Pedidos</div>
             <div class="data-card-actions">
+              <select class="admin-select" id="order-filter-channel" onchange="filterOrders()">
+                <option value="">Todos os canais</option>
+                <option value="checkout">Checkout (Site)</option>
+                <option value="whatsapp">WhatsApp</option>
+              </select>
               <select class="admin-select" id="order-filter-status" onchange="filterOrders()">
                 <option value="">Todos os status</option>
                 <option value="novo">Novo</option>
                 <option value="confirmado">Confirmado</option>
+                <option value="pago">Pago</option>
                 <option value="enviado">Enviado</option>
                 <option value="entregue">Entregue</option>
                 <option value="cancelado">Cancelado</option>
@@ -545,6 +555,7 @@
             <thead>
               <tr>
                 <th>Código</th>
+                <th>Canal</th>
                 <th>Foto</th>
                 <th>Cliente</th>
                 <th>Produto / Itens</th>
@@ -556,6 +567,72 @@
               </tr>
             </thead>
             <tbody id="orders-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════
+           PANEL: MEIO CAMINHO (ABANDONO DE CHECKOUT)
+      ══════════════════════════════════════════ -->
+      <div id="panel-meio-caminho" class="admin-panel">
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Parados no Meio Caminho</span></div>
+            <div class="kpi-value" id="kpi-meio-total">0</div>
+            <div class="kpi-sub">Checkouts iniciados sem pagar</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Pararam na Identificação</span></div>
+            <div class="kpi-value" id="kpi-meio-step1">0</div>
+            <div class="kpi-sub">Etapa 1 preenchida</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Pararam no Frete / Endereço</span></div>
+            <div class="kpi-value" id="kpi-meio-step2">0</div>
+            <div class="kpi-sub">Etapa 2 preenchida</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Valor a Recuperar</span></div>
+            <div class="kpi-value" id="kpi-meio-valor" style="color:var(--gold,#c9a84c);">R$ 0,00</div>
+            <div class="kpi-sub">Oportunidades ativas</div>
+          </div>
+        </div>
+
+        <div class="data-card">
+          <div class="data-card-header">
+            <div>
+              <div class="data-card-title">Clientes no Meio Caminho (Recuperação de Vendas)</div>
+              <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                Clientes que preencheram dados no checkout mas pararam antes de concluir o pagamento. Chame no WhatsApp com 1 clique para converter!
+              </div>
+            </div>
+            <div class="data-card-actions">
+              <select class="admin-select" id="meio-filter-status" onchange="filterMeioCaminho()">
+                <option value="pendente">Apenas Pendentes (Não Pagos)</option>
+                <option value="">Todos (Incluindo Recuperados)</option>
+                <option value="recuperado">Apenas Recuperados</option>
+              </select>
+              <button class="btn btn-secondary" onclick="loadMeioCaminho(true)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                Atualizar
+              </button>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data / Hora</th>
+                <th>Cliente</th>
+                <th>WhatsApp (Ação Rápida)</th>
+                <th>E-mail / CPF</th>
+                <th>Onde Parou</th>
+                <th>Produtos no Carrinho</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="meio-caminho-tbody"></tbody>
           </table>
         </div>
       </div>
@@ -1030,7 +1107,7 @@
               <!-- Controle do Evento PageView -->
               <div style="margin-top:12px; padding:12px 14px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
                 <div style="font-size:12px; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8 -4 8 -11 8 -11 -8z"/><circle cx="12" cy="12" r="3"/></svg>
                   Controle de Disparo do PageView
                 </div>
                 <div style="display:flex; flex-wrap:wrap; gap:18px;">

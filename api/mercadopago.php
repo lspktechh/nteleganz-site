@@ -116,31 +116,22 @@ function callMercadoPagoApi(string $url, string $method, ?array $body, string $a
     ];
 }
 
+require_once __DIR__ . '/orders_helper.php';
+
 function registerOrderInDatabase(array $orderRecord): void {
-    $chOrder = curl_init('https://nteleganz.com.br/api/orders.php');
-    curl_setopt_array($chOrder, [
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => json_encode($orderRecord, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 4,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json']
-    ]);
-    @curl_exec($chOrder);
-    @curl_close($chOrder);
+    try {
+        persistOrder($orderRecord);
+    } catch (\Throwable $e) {
+        error_log("Erro ao persistir pedido via registerOrderInDatabase: " . $e->getMessage());
+    }
 }
 
 function updateOrderStatusInDatabase(string $orderCode, array $updateData): void {
-    $cleanCode = strtoupper(ltrim($orderCode, '#'));
-    $chPut = curl_init("https://nteleganz.com.br/api/orders.php?code={$cleanCode}");
-    curl_setopt_array($chPut, [
-        CURLOPT_CUSTOMREQUEST => 'PUT',
-        CURLOPT_POSTFIELDS => json_encode($updateData, JSON_UNESCAPED_SLASHES),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 5,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json']
-    ]);
-    @curl_exec($chPut);
-    @curl_close($chPut);
+    try {
+        updateOrder($orderCode, $updateData);
+    } catch (\Throwable $e) {
+        error_log("Erro ao atualizar status do pedido via updateOrderStatusInDatabase: " . $e->getMessage());
+    }
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -572,11 +563,13 @@ if ($action === 'process_pix') {
         'status' => 'novo',
         'value' => $formattedTotal,
         'clientName' => $customer['name'] ?? '',
+        'client' => !empty($customer['name']) ? $customer['name'] : 'Cliente do site',
         'phone' => $customer['phone'] ?? '',
         'email' => $customer['email'] ?? '',
         'customer' => $customer,
         'items' => $items,
         'shipping' => $shipping,
+        'channel' => 'checkout',
         'paymentMethod' => 'pix',
         'paymentStatus' => $status,
         'mercadopagoPaymentId' => $paymentId,
@@ -679,11 +672,13 @@ if ($action === 'process_card') {
         'status' => $isApproved ? 'pago' : 'novo',
         'value' => $formattedTotal,
         'clientName' => $customer['name'] ?? '',
+        'client' => !empty($customer['name']) ? $customer['name'] : 'Cliente do site',
         'phone' => $customer['phone'] ?? '',
         'email' => $customer['email'] ?? '',
         'customer' => $customer,
         'items' => $items,
         'shipping' => $shipping,
+        'channel' => 'checkout',
         'paymentMethod' => 'credit_card',
         'paymentMethodDetail' => 'cartao_' . $paymentMethodId,
         'paymentStatus' => $status,
