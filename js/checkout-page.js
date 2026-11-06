@@ -1519,7 +1519,9 @@
     const orderRecord = {
       code: '#' + orderCode,
       status: 'novo',
+      channel: 'whatsapp',
       value: totalVal,
+      client: customer.name,
       clientName: customer.name,
       phone: customer.phone,
       email: customer.email,
@@ -1533,6 +1535,25 @@
       paymentStatus: 'pending',
       tracking: trackingData
     };
+
+    // Marca o carrinho como concluído/recuperado no Meio Caminho
+    syncMeioCaminho(3, true, orderCode);
+
+    // Disparo oficial para Meta Ads (indicando destino WhatsApp)
+    if (window.nteTracking && typeof window.nteTracking.trackOrderDispatch === 'function') {
+      window.nteTracking.trackOrderDispatch('whatsapp', {
+        code: orderCode,
+        items: cartItems,
+        value: subtotal + effectiveShippingPrice
+      });
+    }
+    if (window.nteTracking && typeof window.nteTracking.trackWhatsAppContact === 'function') {
+      window.nteTracking.trackWhatsAppContact({
+        items: cartItems,
+        value: subtotal + effectiveShippingPrice,
+        productName: 'Pedido Checkout WhatsApp'
+      });
+    }
 
     try {
       await fetch('/api/orders.php', {
