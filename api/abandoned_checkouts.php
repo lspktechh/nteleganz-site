@@ -18,6 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once __DIR__ . '/lib/admin_guard.php';
+
+// Listar, alterar e apagar registros (nome, telefone, e-mail, carrinho) é só do admin; o checkout do site só faz POST.
 const ABANDONED_FILE = __DIR__ . '/../data/abandoned_checkouts.json';
 
 function readAbandonedCheckouts(): array {
@@ -50,6 +53,7 @@ $statusFilter = isset($_GET['status']) ? trim((string)$_GET['status']) : '';
 
 switch ($method) {
     case 'GET':
+        nte_require_admin();
         $list = readAbandonedCheckouts();
 
         if ($idParam !== '') {
@@ -196,6 +200,7 @@ switch ($method) {
         exit;
 
     case 'PUT':
+        nte_require_admin();
         $targetId = $idParam !== '' ? $idParam : ($input['id'] ?? '');
         if ($targetId === '') {
             http_response_code(400);
@@ -229,6 +234,7 @@ switch ($method) {
         exit;
 
     case 'DELETE':
+        nte_require_admin();
         $targetId = $idParam !== '' ? $idParam : ($input['id'] ?? '');
         if ($targetId === '') {
             http_response_code(400);

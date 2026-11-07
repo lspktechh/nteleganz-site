@@ -170,30 +170,13 @@ if ($orderCode !== '' && $isApproved) {
         'mercadopagoPaymentId' => (string)$paymentId
     ];
 
-    // Atualiza status do pedido
-    $chPut = curl_init("https://nteleganz.com.br/api/orders.php?code={$cleanCode}");
-    curl_setopt_array($chPut, [
-        CURLOPT_CUSTOMREQUEST => 'PUT',
-        CURLOPT_POSTFIELDS => json_encode($updateData, JSON_UNESCAPED_SLASHES),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 5,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json']
-    ]);
-    @curl_exec($chPut);
-    @curl_close($chPut);
+    // Atualiza o pedido direto no armazenamento. Antes era um PUT HTTP sem login na API pública de pedidos,
+    // que agora só aceita admin.
+    require_once __DIR__ . '/orders_helper.php';
+    updateOrder($cleanCode, $updateData);
 
     // Busca dados completos do pedido para enviar e-mail e CAPI
-    $chGet = curl_init("https://nteleganz.com.br/api/orders.php?code={$cleanCode}");
-    curl_setopt_array($chGet, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 5,
-        CURLOPT_HTTPHEADER => ['Accept: application/json']
-    ]);
-    $resGet = @curl_exec($chGet);
-    @curl_close($chGet);
-
-    $orderObj = $resGet ? json_decode($resGet, true) : null;
-    $orderData = $orderObj['order'] ?? $orderObj ?? null;
+    $orderData = findOrderByCode($cleanCode);
 
     if (is_array($orderData)) {
         // Dispara e-mail de confirmação ao cliente

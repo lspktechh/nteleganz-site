@@ -913,7 +913,7 @@
               <div class="form-group" style="margin-bottom:0;">
                 <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Access Token (Chave Privada do Backend)</label>
                 <div style="display:flex;gap:6px;">
-                  <input type="password" class="form-control" id="mp-access-token" placeholder="APP_USR-..." value="APP_USR-4148777530483800-110522-7c2732adbccc669d7ba002abde4ccd4c-662355896" />
+                  <input type="password" class="form-control" id="mp-access-token" placeholder="APP_USR-..." value="" />
                   <button type="button" class="btn btn-secondary btn-sm" onclick="togglePasswordVisibility('mp-access-token', this)" style="padding:0 12px;font-size:12px;">Ver</button>
                 </div>
                 <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;">Token secreto para processar pagamentos na API</small>
@@ -930,7 +930,7 @@
               <div class="form-group" style="margin-bottom:0;">
                 <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Assinatura Secreta do Webhook (Secret Signature)</label>
                 <div style="display:flex;gap:6px;">
-                  <input type="password" class="form-control" id="mp-webhook-secret" placeholder="Assinatura secreta..." value="74640e6bb99781ef1584a29001c59d60d7a785fed72f309a92005e5ca5f5df0d" />
+                  <input type="password" class="form-control" id="mp-webhook-secret" placeholder="Assinatura secreta..." value="" />
                   <button type="button" class="btn btn-secondary btn-sm" onclick="togglePasswordVisibility('mp-webhook-secret', this)" style="padding:0 12px;font-size:12px;">Ver</button>
                 </div>
                 <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;">Chave HMAC para validação criptográfica de segurança</small>
@@ -1540,8 +1540,8 @@
 
 <!-- Scripts -->
 <script src="../js/auth.js?v=20261007c"></script>
-<script src="../js/db.js?v=20261007c"></script>
-<script src="../js/admin.js?v=20261106-fix"></script>
+<script src="../js/db.js?v=20261107a"></script>
+<script src="../js/admin.js?v=20261107a"></script>
 <script>
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
