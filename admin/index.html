@@ -575,11 +575,16 @@
            PANEL: MEIO CAMINHO (ABANDONO DE CHECKOUT)
       ══════════════════════════════════════════ -->
       <div id="panel-meio-caminho" class="admin-panel">
-        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 24px;">
           <div class="kpi-card">
-            <div class="kpi-header"><span class="kpi-title">Parados no Meio Caminho</span></div>
+            <div class="kpi-header"><span class="kpi-title">Histórico Permanente</span></div>
+            <div class="kpi-value" id="kpi-meio-historico">0</div>
+            <div class="kpi-sub">Total acumulado</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Pendentes Ativos</span></div>
             <div class="kpi-value" id="kpi-meio-total">0</div>
-            <div class="kpi-sub">Checkouts iniciados sem pagar</div>
+            <div class="kpi-sub">Parados sem concluir</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-header"><span class="kpi-title">Pararam na Identificação</span></div>
@@ -592,9 +597,9 @@
             <div class="kpi-sub">Etapa 2 preenchida</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-header"><span class="kpi-title">Valor a Recuperar</span></div>
+            <div class="kpi-header"><span class="kpi-title">Valor em Oportunidade</span></div>
             <div class="kpi-value" id="kpi-meio-valor" style="color:var(--gold,#c9a84c);">R$ 0,00</div>
-            <div class="kpi-sub">Oportunidades ativas</div>
+            <div class="kpi-sub">Carrinhos pendentes</div>
           </div>
         </div>
 
@@ -603,14 +608,15 @@
             <div>
               <div class="data-card-title">Clientes no Meio Caminho (Recuperação de Vendas)</div>
               <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
-                Clientes que preencheram dados no checkout mas pararam antes de concluir o pagamento. Chame no WhatsApp com 1 clique para converter!
+                Histórico permanente de clientes que preencheram o checkout. Registros são mantidos por tempo indeterminado com a hora exata.
               </div>
             </div>
             <div class="data-card-actions">
               <select class="admin-select" id="meio-filter-status" onchange="filterMeioCaminho()">
-                <option value="pendente">Apenas Pendentes (Não Pagos)</option>
-                <option value="">Todos (Incluindo Recuperados)</option>
-                <option value="recuperado">Apenas Recuperados</option>
+                <option value="" selected>Todos os Registros (Histórico Permanente)</option>
+                <option value="pendente">Apenas Pendentes (Não Concluídos)</option>
+                <option value="recuperado">Apenas Concluídos / Recuperados</option>
+                <option value="contatado">Apenas Contatados</option>
               </select>
               <button class="btn btn-secondary" onclick="loadMeioCaminho(true)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
@@ -621,7 +627,7 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Data / Hora</th>
+                <th style="min-width:130px;">Horário Exato</th>
                 <th>Cliente</th>
                 <th>WhatsApp (Ação Rápida)</th>
                 <th>E-mail / CPF</th>
@@ -1527,7 +1533,7 @@
 <!-- Scripts -->
 <script src="../js/auth.js?v=20261007c"></script>
 <script src="../js/db.js?v=20261007c"></script>
-<script src="../js/admin.js?v=20261030b"></script>
+<script src="../js/admin.js?v=20261106-meio-caminho"></script>
 <script>
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');

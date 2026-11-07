@@ -4,6 +4,8 @@
  * Garante salvamento atômico local em data/orders.json e sincronização com VPS PostgreSQL
  */
 
+date_default_timezone_set('America/Sao_Paulo');
+
 if (!defined('ORDERS_FILE')) {
     define('ORDERS_FILE', __DIR__ . '/../data/orders.json');
 }

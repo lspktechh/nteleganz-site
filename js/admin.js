@@ -1928,6 +1928,7 @@
       return sum + v;
     }, 0);
 
+    setText('kpi-meio-historico', list.length);
     setText('kpi-meio-total', pendentes.length);
     setText('kpi-meio-step1', step1.length);
     setText('kpi-meio-step2', step2.length);
@@ -1945,6 +1946,43 @@
     }
   }
 
+  function formatExactDateTime(iso, fallbackTime = '', fallbackDate = '') {
+    if (!iso && !fallbackTime) return { date: '—', time: '—', full: '—', relative: '' };
+    let d = iso ? new Date(iso) : null;
+    if (!d || isNaN(d.getTime())) {
+      return {
+        date: fallbackDate || '—',
+        time: fallbackTime || '—',
+        full: `${fallbackDate} ${fallbackTime}`.trim() || '—',
+        relative: ''
+      };
+    }
+
+    const date = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const diffMs = Date.now() - d.getTime();
+    const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHrs = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHrs / 24);
+
+    let relative = '';
+    if (diffSec < 60) {
+      relative = 'agora';
+    } else if (diffMin < 60) {
+      relative = `há ${diffMin} min`;
+    } else if (diffHrs < 24) {
+      relative = `há ${diffHrs}h`;
+    } else if (diffDays === 1) {
+      relative = 'ontem';
+    } else {
+      relative = `há ${diffDays}d`;
+    }
+
+    return { date, time, full: `${date} às ${time}`, relative };
+  }
+
   window.filterMeioCaminho = function () {
     renderMeioCaminhoTable();
   };
@@ -1956,15 +1994,24 @@
 
     const list = window.allMeioCaminho || allMeioCaminho || [];
     const filterStatus = document.getElementById('meio-filter-status')?.value || '';
-    let filtered = list;
+    let filtered = [...list];
     if (filterStatus === 'pendente') {
       filtered = list.filter(c => (c.status || 'pendente') === 'pendente' && !c.recovered);
     } else if (filterStatus === 'recuperado') {
-      filtered = list.filter(c => c.status === 'recuperado' || c.recovered);
+      filtered = list.filter(c => c.status === 'recuperado' || c.recovered || c.finalizado);
+    } else if (filterStatus === 'contatado') {
+      filtered = list.filter(c => c.status === 'contatado');
     }
 
+    // Ordena do mais recente para o mais antigo
+    filtered.sort((a, b) => {
+      const tA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+      const tB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+      return tB - tA;
+    });
+
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Nenhum cliente no meio caminho</p><small>Clientes que iniciarem preenchimento no checkout aparecerão aqui</small></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Nenhum cliente no meio caminho</p><small>Clientes que iniciarem preenchimento no checkout aparecerão aqui com hora exata e permanecerão salvos</small></div></td></tr>`;
       return;
     }
 
@@ -1974,9 +2021,9 @@
       const rawPhone = escHtml(c.phone || '—');
       const email = escHtml(c.email || '—');
       const cpf = escHtml(c.cpf || '—');
-      const dateStr = fmt.date(c.updatedAt || c.createdAt);
+      const dt = formatExactDateTime(c.createdAt || c.updatedAt, c.exactTime, c.exactDate);
       const stepNum = Number(c.step || 1);
-      const isRecovered = (c.status === 'recuperado' || c.recovered);
+      const isRecovered = (c.status === 'recuperado' || c.recovered || c.finalizado);
       const isContacted = (c.status === 'contatado');
 
       // Badge da Etapa
@@ -2025,16 +2072,22 @@
       // Status badge
       let statusBadge = '';
       if (isRecovered) {
-        statusBadge = `<span class="badge badge-success" style="font-size:10px;">✓ Recuperado</span>`;
+        statusBadge = `<span class="badge badge-success" style="font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Concluído ${c.orderCode ? `(${escHtml(c.orderCode)})` : ''}</span>`;
       } else if (isContacted) {
-        statusBadge = `<span class="badge" style="background:rgba(59,130,246,0.15); color:#60a5fa; font-size:10px;">Contatado</span>`;
+        statusBadge = `<span class="badge" style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px;">💬 Contatado</span>`;
       } else {
-        statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.12); color:#ef4444; font-size:10px;">Pendente</span>`;
+        statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px;">🔴 Pendente</span>`;
       }
 
       return `
         <tr>
-          <td style="font-size:11px; white-space:nowrap;">${dateStr}</td>
+          <td style="font-size:12px; white-space:nowrap;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-weight:700; color:var(--text-primary); font-size:13px; font-variant-numeric:tabular-nums;">${dt.time}</span>
+              ${dt.relative ? `<span class="badge" style="font-size:10px; padding:1px 6px; background:rgba(255,255,255,0.06); color:var(--text-muted); border-radius:4px; font-weight:500;">${dt.relative}</span>` : ''}
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${dt.date}</div>
+          </td>
           <td>
             <div style="font-weight:600; color:var(--text-primary); font-size:13px;">${clientName}</div>
           </td>
@@ -2050,11 +2103,11 @@
           <td>
             <div style="display:flex; gap:6px; align-items:center;">
               ${!isRecovered ? `
-                <button class="btn btn-secondary btn-sm" onclick="markMeioCaminhoRecovered('${escHtml(c.id)}')" title="Marcar como Venda Recuperada" style="padding:4px 8px; font-size:11px;">
-                  ✓ Recuperado
+                <button class="btn btn-secondary btn-sm" onclick="markMeioCaminhoRecovered('${escHtml(c.id)}')" title="Marcar como Venda Concluída / Recuperada" style="padding:4px 8px; font-size:11px;">
+                  ✓ Concluído
                 </button>
               ` : ''}
-              <button class="btn btn-danger btn-sm" onclick="deleteMeioCaminho('${escHtml(c.id)}')" title="Excluir" style="padding:4px 8px; font-size:11px;">
+              <button class="btn btn-danger btn-sm" onclick="deleteMeioCaminho('${escHtml(c.id)}')" title="Excluir do Histórico" style="padding:4px 8px; font-size:11px;">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
               </button>
             </div>

@@ -828,6 +828,15 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+
+      if (finalizado) {
+        // Rotaciona a sessão para que uma nova compra futura gere outro registro separado sem sobrescrever o histórico
+        try {
+          sessionStorage.removeItem('nte_meio_caminho_session');
+          meioCaminhoSessionId = 'mc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+          sessionStorage.setItem('nte_meio_caminho_session', meioCaminhoSessionId);
+        } catch (_) {}
+      }
     } catch (e) {
       // Ignora falhas para não interferir na experiência do usuário
     }

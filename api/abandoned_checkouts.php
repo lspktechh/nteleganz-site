@@ -1,8 +1,11 @@
 <?php
 /**
  * NT Eleganz - API de Meio Caminho (Recuperação de Checkout Abandonado)
- * Registra clientes que iniciam o preenchimento dos passos do checkout mas não concluem
+ * Registra clientes que iniciam o preenchimento dos passos do checkout mas não concluem.
+ * Histórico permanente por tempo indeterminado com hora e data exatas de Brasília.
  */
+
+date_default_timezone_set('America/Sao_Paulo');
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -109,27 +112,22 @@ switch ($method) {
 
         $list = readAbandonedCheckouts();
         $now = date('c');
+        $exactTime = date('H:i:s');
+        $exactDate = date('d/m/Y');
+        $fullDateTime = date('d/m/Y \à\s H:i:s');
 
-        // Procura por registro prévio deste cliente (por telefone, e-mail ou sessionId)
+        // Procura por registro prévio deste checkout APENAS na mesma sessão ativa
+        // e que ainda esteja em andamento (não sobrescreve pedidos já finalizados ou de outras sessões)
         $sessionId = trim((string)($input['sessionId'] ?? ''));
         $foundIdx = -1;
 
-        foreach ($list as $idx => $item) {
-            $itemPhone = preg_replace('/\D/', '', (string)($item['phone'] ?? ''));
-            $itemEmail = strtolower(trim((string)($item['email'] ?? '')));
-            $itemSession = trim((string)($item['sessionId'] ?? ''));
-
-            if ($sessionId !== '' && $itemSession === $sessionId) {
-                $foundIdx = $idx;
-                break;
-            }
-            if ($phone !== '' && strlen($phone) >= 8 && $itemPhone !== '' && strpos($itemPhone, substr($phone, -8)) !== false) {
-                $foundIdx = $idx;
-                break;
-            }
-            if ($email !== '' && $itemEmail === $email) {
-                $foundIdx = $idx;
-                break;
+        if ($sessionId !== '') {
+            foreach ($list as $idx => $item) {
+                $itemSession = trim((string)($item['sessionId'] ?? ''));
+                if ($itemSession === $sessionId) {
+                    $foundIdx = $idx;
+                    break;
+                }
             }
         }
 
@@ -142,21 +140,29 @@ switch ($method) {
         $stepName = $stepNames[$step] ?? "Etapa {$step}";
 
         if ($foundIdx >= 0) {
-            // Atualiza existente
+            // Atualiza existente na mesma sessão ativa
             $existing = $list[$foundIdx];
             $updated = array_merge($existing, $input, [
                 'updatedAt' => $now,
+                'lastTime' => $exactTime,
+                'lastDate' => $exactDate,
                 'step' => max(intval($existing['step'] ?? 1), $step),
                 'stepName' => $stepName,
             ]);
-            // Preserva data de criação
+            // Preserva data e hora de criação original intactas
             $updated['createdAt'] = $existing['createdAt'] ?? $now;
+            $updated['exactTime'] = $existing['exactTime'] ?? $exactTime;
+            $updated['exactDate'] = $existing['exactDate'] ?? $exactDate;
+            $updated['fullDateTime'] = $existing['fullDateTime'] ?? $fullDateTime;
 
             // Se for marcada como finalizada/recuperada
-            if (!empty($input['finalizado']) || ($input['status'] ?? '') === 'finalizado') {
+            if (!empty($input['finalizado']) || ($input['status'] ?? '') === 'finalizado' || ($input['status'] ?? '') === 'recuperado') {
                 $updated['status'] = 'recuperado';
                 $updated['recovered'] = true;
+                $updated['finalizado'] = true;
                 $updated['orderCode'] = $input['orderCode'] ?? ($updated['orderCode'] ?? '');
+                $updated['finalizedAt'] = $now;
+                $updated['finalizedTime'] = $exactTime;
             }
 
             $list[$foundIdx] = $updated;
@@ -166,7 +172,7 @@ switch ($method) {
             exit;
         }
 
-        // Novo registro
+        // Novo registro permanente no histórico
         $id = 'mc_' . time() . '_' . substr(md5(uniqid(mt_rand(), true)), 0, 5);
         $newRecord = array_merge($input, [
             'id' => $id,
@@ -174,9 +180,13 @@ switch ($method) {
             'step' => $step,
             'stepName' => $stepName,
             'status' => ($input['status'] ?? 'pendente'),
-            'recovered' => false,
+            'recovered' => !empty($input['finalizado']) || ($input['status'] ?? '') === 'recuperado',
+            'finalizado' => !empty($input['finalizado']),
             'createdAt' => $now,
-            'updatedAt' => $now
+            'updatedAt' => $now,
+            'exactTime' => $exactTime,
+            'exactDate' => $exactDate,
+            'fullDateTime' => $fullDateTime,
         ]);
 
         array_unshift($list, $newRecord);
