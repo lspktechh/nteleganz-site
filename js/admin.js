@@ -451,8 +451,17 @@
     ['leads-nav-badge', 'leads-topbar-badge'].forEach(id => {
       const badge = document.getElementById(id);
       if (!badge) return;
-      badge.hidden = count === 0;
-      badge.textContent = count > 99 ? '99+' : String(count);
+      if (count > 0) {
+        badge.hidden = false;
+        badge.removeAttribute('hidden');
+        badge.style.display = '';
+        badge.textContent = count > 99 ? '99+' : String(count);
+      } else {
+        badge.hidden = true;
+        badge.setAttribute('hidden', '');
+        badge.style.display = 'none';
+        badge.textContent = '';
+      }
     });
     document.getElementById('leads-topbar-button')?.classList.toggle('has-notifications', count > 0);
   }
@@ -589,6 +598,10 @@
     tbody.innerHTML = recent.map(o => {
       const code = escHtml(o.code || ('#NTE-' + String(o.id).slice(-4).toUpperCase()));
       const thumb = getOrderThumbnail(o);
+      const isWpp = (o.channel === 'whatsapp') || (o.paymentMethod === 'whatsapp') || (o.source === 'whatsapp') || (typeof o.notes === 'string' && o.notes.includes('WhatsApp'));
+      const displayClient = (o.client && o.client !== 'Cliente do site' && o.client !== 'Cliente')
+        ? o.client
+        : (o.clientName || (o.customer && o.customer.name) || (isWpp ? 'Cliente via WhatsApp' : 'Cliente do Checkout'));
       const thumbHtml = thumb
         ? `<img src="${escHtml(thumb)}" alt="" style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:1px solid rgba(201,168,76,0.3); background:#111; cursor:pointer;" onclick="window.open('${escHtml(thumb)}', '_blank')" onerror="this.onerror=null; this.src='../assets/images/logo.png'; this.style.opacity='0.4';" />`
         : `<div style="width:36px; height:36px; border-radius:6px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>`;
@@ -596,7 +609,7 @@
         <tr onclick="openOrderModal('${escHtml(o.id)}')" style="cursor:pointer;" title="Clique para ver os detalhes do pedido">
           <td><span class="badge badge-gold" style="font-family:monospace; font-size:11px; font-weight:700;">${code}</span></td>
           <td>${thumbHtml}</td>
-          <td style="color:var(--text-primary); font-weight:500;">${escHtml(o.client || '—')}</td>
+          <td style="color:var(--text-primary); font-weight:500;">${escHtml(displayClient)}</td>
           <td>${escHtml(o.productName || '—')}</td>
           <td style="color:var(--gold); font-weight:600;">${escHtml(o.value || '—')}</td>
           <td>${statusBadge(o.status)}</td>
@@ -1831,9 +1844,60 @@
         productDetails += `<span style="color:var(--text-primary); font-weight:500;">${escHtml(o.productName || '—')}</span>`;
       }
 
-      const clientName = o.client && o.client !== 'Cliente do site' && o.client !== 'Cliente'
+      const rawClient = (o.client && o.client !== 'Cliente do site' && o.client !== 'Cliente')
         ? o.client
-        : (o.clientName || (o.customer && o.customer.name) || (o.raw_data && o.raw_data.client) || 'Cliente do site');
+        : (o.clientName || (o.customer && o.customer.name) || (o.raw_data && o.raw_data.client) || '');
+
+      const isGenericClient = (!rawClient || rawClient === 'Cliente do site' || rawClient === 'Cliente');
+      const displayClient = isGenericClient
+        ? (isWpp ? 'Cliente via WhatsApp' : 'Cliente do Checkout')
+        : rawClient;
+
+      // Extrai origem de tráfego de forma unificada (UTMs do tracking ou texto das anotações)
+      let originSrc = '';
+      const trk = o.tracking || (o.raw_data && o.raw_data.tracking) || null;
+      if (trk) {
+        originSrc = trk.utm_campaign || trk.utm_source || (trk.fbclid ? 'Meta Ads' : (trk.gclid ? 'Google Ads' : (trk.ttclid ? 'TikTok Ads' : '')));
+      }
+      if (!originSrc) {
+        const notesStr = String(o.notes || '');
+        if (notesStr.includes('📍 origem:')) {
+          const match = notesStr.match(/📍\s*origem:\s*([^\n\r]+)/i);
+          if (match && match[1]) {
+            const raw = match[1].trim();
+            if (/facebook|meta/i.test(raw)) originSrc = 'Meta Ads';
+            else if (/instagram|stories|reels|ig/i.test(raw)) originSrc = 'Instagram';
+            else if (/google/i.test(raw)) originSrc = 'Google Ads';
+            else if (/tiktok/i.test(raw)) originSrc = 'TikTok Ads';
+            else originSrc = raw.split('·')[0].trim();
+          }
+        }
+      }
+
+      const originBadge = originSrc
+        ? `<span class="badge" style="background:rgba(201,168,76,0.12); color:var(--gold,#c9a84c); border:1px solid rgba(201,168,76,0.25); font-size:10px; padding:2px 6px; white-space:nowrap;" title="Origem: ${escHtml(originSrc)}">🎯 ${escHtml(originSrc)}</span>`
+        : '';
+
+      const rawPhone = o.phone || (o.raw_data && o.raw_data.phone) || (o.customer && o.customer.phone) || '';
+      const digits = String(rawPhone).replace(/\D/g, '');
+      let phoneHtml = '';
+      if (digits.length >= 8) {
+        phoneHtml = `
+          <button type="button" onclick="event.stopPropagation(); openWhatsAppModalForOrder('${escHtml(o.id)}')" style="background:rgba(37,211,102,0.12); color:#168a3f; border:1px solid rgba(37,211,102,0.3); font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:6px; cursor:pointer;" title="Opções de mensagem no WhatsApp">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+            <span>${escHtml(rawPhone)}</span>
+          </button>
+        `;
+      } else if (isWpp) {
+        phoneHtml = `
+          <span style="font-size:11px; color:#168a3f; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+            Atendimento WhatsApp
+          </span>
+        `;
+      } else {
+        phoneHtml = '<span style="font-size:11px; color:var(--text-muted); opacity:0.6;">Sem telefone</span>';
+      }
 
       return `
       <tr onclick="openOrderModal('${escHtml(o.id)}')" style="cursor:pointer;" title="Clique para ver os detalhes do pedido">
@@ -1843,27 +1907,11 @@
         <td>${channelBadge}</td>
         <td>${thumbHtml}</td>
         <td>
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
-            ${(() => {
-              const trk = o.tracking || (o.raw_data && o.raw_data.tracking) || null;
-              if (!trk) return '';
-              const src = trk.utm_campaign || trk.utm_source || (trk.fbclid ? 'Meta Ads' : (trk.gclid ? 'Google Ads' : (trk.ttclid ? 'TikTok' : '')));
-              if (!src) return '';
-              return `<span class="badge" style="background:rgba(201,168,76,0.12); color:var(--gold,#c9a84c); border:1px solid rgba(201,168,76,0.25); font-size:10px; padding:1px 6px;" title="Campanha / Origem: ${escHtml(src)}">🎯 ${escHtml(src)}</span>`;
-            })()}
-            <span style="color:var(--text-primary); font-weight:600; font-size:13px;">${escHtml(clientName)}</span>
+          <div style="font-weight:600; color:var(--text-primary); font-size:13px; line-height:1.3;">${escHtml(displayClient)}</div>
+          <div style="display:flex; align-items:center; gap:6px; margin-top:3px; flex-wrap:wrap;">
+            ${phoneHtml}
+            ${originBadge}
           </div>
-          ${(() => {
-            const rawPhone = o.phone || (o.raw_data && o.raw_data.phone) || (o.customer && o.customer.phone) || '';
-            const digits = String(rawPhone).replace(/\D/g, '');
-            if (!digits) return '<span style="font-size:11px; color:var(--text-muted); opacity:0.6;">Sem telefone</span>';
-            return `
-              <button type="button" onclick="event.stopPropagation(); openWhatsAppModalForOrder('${escHtml(o.id)}')" style="background:rgba(37,211,102,0.12); color:#168a3f; border:1px solid rgba(37,211,102,0.3); font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:6px; margin-top:2px; cursor:pointer;" title="Opções de mensagem no WhatsApp">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                <span>${escHtml(rawPhone)}</span>
-              </button>
-            `;
-          })()}
         </td>
         <td>${productDetails}</td>
         <td>${escHtml([o.size, o.color].filter(Boolean).join(' / ') || '—')}</td>
@@ -1939,9 +1987,14 @@
     if (badge) {
       if (pendentes.length > 0) {
         badge.textContent = pendentes.length;
+        badge.hidden = false;
         badge.removeAttribute('hidden');
+        badge.style.display = '';
       } else {
+        badge.textContent = '';
+        badge.hidden = true;
         badge.setAttribute('hidden', '');
+        badge.style.display = 'none';
       }
     }
   }
@@ -2753,8 +2806,17 @@
 
     const badge = document.getElementById('clientes-nav-badge');
     if (badge) {
-      badge.textContent = totalCount;
-      badge.hidden = totalCount === 0;
+      if (totalCount > 0) {
+        badge.textContent = totalCount;
+        badge.hidden = false;
+        badge.removeAttribute('hidden');
+        badge.style.display = '';
+      } else {
+        badge.textContent = '';
+        badge.hidden = true;
+        badge.setAttribute('hidden', '');
+        badge.style.display = 'none';
+      }
     }
   }
 

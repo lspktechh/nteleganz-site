@@ -8,7 +8,7 @@
   <link rel="icon" type="image/webp" href="../assets/images/logonz.webp?v=20260930" />
   <link rel="apple-touch-icon" href="../assets/images/logonz-400.webp" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="../css/admin.css?v=20261007b" />
+  <link rel="stylesheet" href="../css/admin.css?v=20261106-fix" />
 <script src="/js/image-compat.js" defer></script>
 <style>
 .admin-loader{position:fixed;inset:0;background:var(--bg-primary,#080808);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;opacity:1;transition:opacity .3s ease,visibility .3s ease;color:var(--text-primary,#f2efe9)}
@@ -253,22 +253,24 @@
             <div class="data-card-title">Pedidos Recentes</div>
             <button class="btn btn-secondary btn-sm" onclick="showPanel('pedidos', document.querySelector('[data-panel=pedidos]'))">Ver todos</button>
           </div>
-          <table class="data-table" id="recent-orders-table">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Foto</th>
-                <th>Cliente</th>
-                <th>Produto</th>
-                <th>Valor</th>
-                <th>Status</th>
-                <th>Data</th>
-              </tr>
-            </thead>
-            <tbody id="recent-orders-body">
-              <tr><td colspan="7"><div class="empty-state"><p>Nenhum pedido registrado</p></div></td></tr>
-            </tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="data-table" id="recent-orders-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Foto</th>
+                  <th>Cliente</th>
+                  <th>Produto</th>
+                  <th>Valor</th>
+                  <th>Status</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody id="recent-orders-body">
+                <tr><td colspan="7"><div class="empty-state"><p>Nenhum pedido registrado</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
       </div>
@@ -282,10 +284,12 @@
             <div><div class="data-card-title">Leads do WhatsApp</div><p class="admin-panel-note">Contatos iniciados pelo site aparecem aqui automaticamente.</p></div>
             <div style="display:flex; gap:10px; align-items:center;"><select id="lead-filter-status" class="admin-select" onchange="filterLeads()"><option value="">Todos os status</option><option value="novo">Novo</option><option value="em_atendimento">Em atendimento</option><option value="convertido">Convertido</option><option value="arquivado">Arquivado</option></select><button class="btn btn-secondary btn-sm" onclick="refreshLeads(true)">Atualizar</button></div>
           </div>
-          <table class="data-table">
-            <thead><tr><th>Contato</th><th>Interesse</th><th>Origem</th><th>Status</th><th>Recebido em</th></tr></thead>
-            <tbody id="leads-tbody"><tr><td colspan="5"><div class="empty-state"><p>Nenhum lead registrado</p><small>Os novos contatos pelo WhatsApp aparecerão aqui.</small></div></td></tr></tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead><tr><th>Contato</th><th>Interesse</th><th>Origem</th><th>Status</th><th>Recebido em</th></tr></thead>
+              <tbody id="leads-tbody"><tr><td colspan="5"><div class="empty-state"><p>Nenhum lead registrado</p><small>Os novos contatos pelo WhatsApp aparecerão aqui.</small></div></td></tr></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -551,23 +555,25 @@
               </button>
             </div>
           </div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Canal</th>
-                <th>Foto</th>
-                <th>Cliente</th>
-                <th>Produto / Itens</th>
-                <th>Tam / Cor</th>
-                <th>Valor</th>
-                <th>Status</th>
-                <th>Data</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="orders-tbody"></tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Canal</th>
+                  <th>Foto</th>
+                  <th>Cliente</th>
+                  <th>Produto / Itens</th>
+                  <th>Tam / Cor</th>
+                  <th>Valor</th>
+                  <th>Status</th>
+                  <th>Data</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="orders-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -624,22 +630,24 @@
               </button>
             </div>
           </div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="min-width:130px;">Horário Exato</th>
-                <th>Cliente</th>
-                <th>WhatsApp (Ação Rápida)</th>
-                <th>E-mail / CPF</th>
-                <th>Onde Parou</th>
-                <th>Produtos no Carrinho</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="meio-caminho-tbody"></tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="min-width:130px;">Horário Exato</th>
+                  <th>Cliente</th>
+                  <th>WhatsApp (Ação Rápida)</th>
+                  <th>E-mail / CPF</th>
+                  <th>Onde Parou</th>
+                  <th>Produtos no Carrinho</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="meio-caminho-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -1533,7 +1541,7 @@
 <!-- Scripts -->
 <script src="../js/auth.js?v=20261007c"></script>
 <script src="../js/db.js?v=20261007c"></script>
-<script src="../js/admin.js?v=20261106-meio-caminho"></script>
+<script src="../js/admin.js?v=20261106-fix"></script>
 <script>
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
