@@ -95,6 +95,15 @@ function extractAdminToken(): string {
         }
     }
     if (preg_match('/Bearer\s+(\S+)/i', $authHeader, $m)) return trim($m[1]);
+    // O painel manda o mesmo token tambem em X-Upload-Token (o api/products.php aceita os dois): cobre
+    // o host que remove o header Authorization antes de chegar no PHP.
+    $uploadToken = (string)($_SERVER['HTTP_X_UPLOAD_TOKEN'] ?? '');
+    if ($uploadToken === '' && function_exists('apache_request_headers')) {
+        foreach (apache_request_headers() as $key => $value) {
+            if (strcasecmp($key, 'X-Upload-Token') === 0) { $uploadToken = (string)$value; break; }
+        }
+    }
+    if (trim($uploadToken) !== '') return trim($uploadToken);
     if (!empty($_GET['token'])) return trim((string)$_GET['token']);
     return '';
 }

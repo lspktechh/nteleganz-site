@@ -2,12 +2,20 @@
 /**
  * NT Eleganz - API Gateway de Pedidos
  * Conecta o Storefront e o Painel Admin com armazenamento atômico e VPS PostgreSQL
+ *
+ * Quem pode o quê:
+ *  - Admin (token do painel): tudo, com o pedido completo.
+ *  - Público (cliente no navegador): criar pedido (POST) e consultar o próprio pedido por código, telefone
+ *    ou e-mail (GET), sempre na visão reduzida de publicOrderView(). Em pedido que já existe, o POST
+ *    público só acrescenta o rastreamento de campanha: não altera status, valor, telefone etc.
+ *  - Listar todos os pedidos, alterar (PUT) e apagar (DELETE): somente admin. Os webhooks de pagamento
+ *    não passam por aqui: chamam updateOrder() direto (orders_helper.php).
  */
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Upload-Token, X-Requested-With');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -16,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/orders_helper.php';
+require_once __DIR__ . '/lib/admin_guard.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $orderId = isset($_GET['id']) ? trim((string)$_GET['id']) : '';
@@ -26,6 +35,11 @@ $channelFilter = isset($_GET['channel']) ? strtolower(trim((string)$_GET['channe
 
 $rawBody = file_get_contents('php://input');
 $input = $rawBody ? json_decode($rawBody, true) : null;
+
+$isAdmin = nte_is_admin();
+$view = static function (array $order) use ($isAdmin): array {
+    return $isAdmin ? $order : publicOrderView($order);
+};
 
 switch ($method) {
     case 'GET':
@@ -45,7 +59,7 @@ switch ($method) {
                 $matchEmail = ($cleanEmail !== '' && $oEmail === $cleanEmail);
 
                 if ($matchPhone || $matchEmail) {
-                    $matches[] = $o;
+                    $matches[] = $view($o);
                 }
             }
 
@@ -70,12 +84,17 @@ switch ($method) {
             }
 
             if ($found) {
-                echo json_encode(['success' => true, 'order' => $found]);
+                echo json_encode(['success' => true, 'order' => $view($found)]);
             } else {
                 http_response_code(404);
                 echo json_encode(['error' => 'Pedido não encontrado', 'code' => $orderCode ?: $orderId]);
             }
             exit;
+        }
+
+        // Lista completa de pedidos (com dados pessoais): somente admin
+        if (!$isAdmin) {
+            nte_deny_admin();
         }
 
         // Retorna todos os pedidos mesclados (com filtro opcional de canal)
@@ -96,12 +115,26 @@ switch ($method) {
             exit;
         }
 
-        $created = persistOrder($input);
+        if ($isAdmin) {
+            $created = persistOrder($input);
+            $out = $created;
+        } else {
+            // Navegador do cliente: pedido novo nasce "novo" (pagamento só é confirmado pelos webhooks) e,
+            // se o pedido já existe, só o rastreamento de campanha é aceito.
+            $input['status'] = 'novo';
+            unset($input['paymentStatus'], $input['paidAt'], $input['mercadopagoPaymentId']);
+            $created = persistOrder($input, ['tracking']);
+            $out = array_intersect_key($created, array_flip(['id', 'code', 'status', 'createdAt']));
+        }
         http_response_code(201);
-        echo json_encode(['success' => true, 'order' => $created]);
+        echo json_encode(['success' => true, 'order' => $out]);
         exit;
 
     case 'PUT':
+        if (!$isAdmin) {
+            nte_deny_admin();
+        }
+
         $target = $orderCode !== '' ? $orderCode : ($orderId !== '' ? $orderId : ($input['id'] ?? ($input['code'] ?? '')));
         if ($target === '') {
             http_response_code(400);
@@ -120,6 +153,10 @@ switch ($method) {
         exit;
 
     case 'DELETE':
+        if (!$isAdmin) {
+            nte_deny_admin();
+        }
+
         $id = $orderId !== '' ? $orderId : ($orderCode !== '' ? $orderCode : ($input['id'] ?? ''));
         if ($id === '') {
             http_response_code(400);

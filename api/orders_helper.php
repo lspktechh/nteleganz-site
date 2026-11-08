@@ -145,9 +145,39 @@ function getMergedOrders(): array {
 }
 
 /**
- * Salva ou cria um novo pedido de forma atômica no arquivo local e na VPS
+ * Campos do pedido que as páginas públicas (pedido/ e "meus pedidos") de fato usam. Quem não é admin
+ * recebe só isto: sem telefone, e-mail, endereço, CPF, IP, user agent nem dados de rastreamento.
  */
-function persistOrder(array $input): array {
+const NTE_PUBLIC_ORDER_FIELDS = [
+    'id', 'code', 'status', 'value', 'items', 'createdAt', 'created_at', 'updatedAt',
+    'productId', 'productName', 'productBrand', 'size', 'color', 'quantity', 'imageUrl',
+    'channel', 'paymentMethod', 'paymentStatus',
+];
+
+function publicOrderView(array $order): array {
+    return array_intersect_key($order, array_flip(NTE_PUBLIC_ORDER_FIELDS));
+}
+
+/** Pedido pelo código (#NTE-1234 ou NTE-1234) na lista local + VPS; null se não existir. */
+function findOrderByCode(string $code): ?array {
+    $search = strtoupper(ltrim(trim($code), '#'));
+    if ($search === '') return null;
+    foreach (getMergedOrders() as $order) {
+        if (strtoupper(ltrim((string)($order['code'] ?? ''), '#')) === $search) {
+            return $order;
+        }
+    }
+    return null;
+}
+
+/**
+ * Salva ou cria um novo pedido de forma atômica no arquivo local e na VPS.
+ *
+ * $existingMergeKeys: para chamadas não confiáveis (navegador do cliente). Se o pedido já existir, só
+ * estes campos são aplicados, e o restante (status, valor, telefone, id...) é ignorado. null = tudo
+ * (uso do servidor e do admin).
+ */
+function persistOrder(array $input, ?array $existingMergeKeys = null): array {
     if (empty($input['code'])) {
         $input['code'] = '#NTE-' . rand(1000, 9999);
     } else if (substr($input['code'], 0, 1) !== '#') {
@@ -180,6 +210,10 @@ function persistOrder(array $input): array {
     }
 
     if ($foundIdx >= 0) {
+        if ($existingMergeKeys !== null) {
+            $input = array_intersect_key($input, array_flip($existingMergeKeys));
+            $input['updatedAt'] = $now;
+        }
         $local[$foundIdx] = array_merge($local[$foundIdx], $input);
         $finalRecord = $local[$foundIdx];
     } else {

@@ -641,10 +641,17 @@
       return qs ? `${base}?${qs}` : base;
     }
 
+    // A API de pedidos só entrega a lista completa e só aceita alterar/apagar com o admin logado. No painel
+    // vai a sessão; na loja (sem sessão de admin) não vai header nenhum e as chamadas públicas seguem iguais.
+    async function ordersAuthHeaders() {
+      const token = await adminAccessToken();
+      return token ? { Authorization: `Bearer ${token}`, 'X-Upload-Token': token } : {};
+    }
+
   const hostingerDB = {
     async getAll(collection, options = {}) {
       if (collection === 'orders') {
-        const response = await fetch(ordersUrl(), { cache: 'no-store' });
+        const response = await fetch(ordersUrl(), { cache: 'no-store', headers: await ordersAuthHeaders() });
         const payload = await parseResponse(response);
         return Array.isArray(payload?.orders) ? payload.orders.map(normalizeRecord) : [];
       }
@@ -698,7 +705,7 @@
       if (collection === 'orders') {
         const response = await fetch(ordersUrl(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await ordersAuthHeaders()) },
           body: JSON.stringify(item),
         });
         const payload = await parseResponse(response);
@@ -730,7 +737,7 @@
       if (collection === 'orders') {
         const response = await fetch(ordersUrl({ id }), {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await ordersAuthHeaders()) },
           body: JSON.stringify({ ...updates, id }),
         });
         const payload = await parseResponse(response);
@@ -755,6 +762,7 @@
       if (collection === 'orders') {
         const response = await fetch(ordersUrl({ id }), {
           method: 'DELETE',
+          headers: await ordersAuthHeaders(),
         });
         await parseResponse(response);
         return true;
