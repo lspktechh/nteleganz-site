@@ -605,6 +605,7 @@
       const thumbHtml = thumb
         ? `<img src="${escHtml(thumb)}" alt="" style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:1px solid rgba(201,168,76,0.3); background:#111; cursor:pointer;" onclick="window.open('${escHtml(thumb)}', '_blank')" onerror="this.onerror=null; this.src='../assets/images/logo.png'; this.style.opacity='0.4';" />`
         : `<div style="width:36px; height:36px; border-radius:6px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>`;
+      const dtRecent = formatExactDateTime(o.createdAt || o.created_at);
       return `
         <tr onclick="openOrderModal('${escHtml(o.id)}')" style="cursor:pointer;" title="Clique para ver os detalhes do pedido">
           <td><span class="badge badge-gold" style="font-family:monospace; font-size:11px; font-weight:700;">${code}</span></td>
@@ -613,7 +614,10 @@
           <td>${escHtml(o.productName || '—')}</td>
           <td style="color:var(--gold); font-weight:600;">${escHtml(o.value || '—')}</td>
           <td>${statusBadge(o.status)}</td>
-          <td>${fmt.date(o.createdAt)}</td>
+          <td style="font-size:12px; white-space:nowrap;">
+            <span style="font-weight:600; color:var(--text-primary); font-variant-numeric:tabular-nums;">${dtRecent.time}</span>
+            <div style="font-size:10px; color:var(--text-muted);">${dtRecent.date}</div>
+          </td>
         </tr>
       `;
     }).join('');
@@ -1880,8 +1884,10 @@
       }
 
       const originBadge = originSrc
-        ? `<span class="badge" style="background:rgba(201,168,76,0.12); color:var(--gold,#c9a84c); border:1px solid rgba(201,168,76,0.25); font-size:10px; padding:2px 6px; white-space:nowrap;" title="Origem: ${escHtml(originSrc)}">🎯 ${escHtml(originSrc)}</span>`
+        ? `<span class="badge" style="background:rgba(201,168,76,0.12); color:var(--gold,#c9a84c); border:1px solid rgba(201,168,76,0.25); font-size:10px; font-weight:600; padding:2px 7px; border-radius:4px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Origem: ${escHtml(originSrc)}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> ${escHtml(originSrc)}</span>`
         : '';
+
+      const dt = formatExactDateTime(o.createdAt || o.created_at || (o.raw_data && o.raw_data.createdAt));
 
       const rawPhone = o.phone || (o.raw_data && o.raw_data.phone) || (o.customer && o.customer.phone) || '';
       const digits = String(rawPhone).replace(/\D/g, '');
@@ -1928,7 +1934,13 @@
             ).join('')}
           </select>
         </td>
-        <td style="font-size:11px;">${fmt.date(o.createdAt)}</td>
+        <td style="font-size:12px; white-space:nowrap;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-weight:700; color:var(--text-primary); font-size:13px; font-variant-numeric:tabular-nums;">${dt.time}</span>
+            ${dt.relative ? `<span class="badge" style="font-size:10px; padding:1px 6px; background:rgba(0,0,0,0.06); color:var(--text-muted); border-radius:4px; font-weight:500;">${dt.relative}</span>` : ''}
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${dt.date}</div>
+        </td>
         <td>
           <div style="display:flex; gap:8px; align-items:center; flex-wrap:nowrap;">
             <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); editOrder('${o.id}')" title="Ver / Editar" style="padding:6px 10px; font-size:12px; white-space:nowrap;">
@@ -2128,14 +2140,14 @@
         wppBtn = `<span style="font-size:12px; color:var(--text-muted); opacity:0.6;">${rawPhone}</span>`;
       }
 
-      // Status badge
+      // Status badge (sem emojis, pontos indicadores limpos)
       let statusBadge = '';
       if (isRecovered) {
-        statusBadge = `<span class="badge badge-success" style="font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Concluído ${c.orderCode ? `(${escHtml(c.orderCode)})` : ''}</span>`;
+        statusBadge = `<span class="badge badge-success" style="font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:5px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Concluído ${c.orderCode ? `(${escHtml(c.orderCode)})` : ''}</span>`;
       } else if (isContacted) {
-        statusBadge = `<span class="badge" style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px;">💬 Contatado</span>`;
+        statusBadge = `<span class="badge" style="background:rgba(59,130,246,0.12); color:#2563eb; border:1px solid rgba(59,130,246,0.3); font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:6px;"><span style="width:7px; height:7px; border-radius:50%; background:#2563eb; display:inline-block;"></span> Contatado</span>`;
       } else {
-        statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px;">🔴 Pendente</span>`;
+        statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.1); color:#dc2626; border:1px solid rgba(239,68,68,0.25); font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:6px;"><span style="width:7px; height:7px; border-radius:50%; background:#dc2626; display:inline-block;"></span> Pendente</span>`;
       }
 
       return `
@@ -2266,7 +2278,12 @@
         <div style="flex:1;">
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             ${code ? `<span class="badge badge-gold" style="font-family:monospace; font-size:12px; font-weight:700;">${escHtml(code)}</span>` : ''}
-            <span style="font-size:12px; color:var(--text-muted);">${orderData.createdAt ? fmt.date(orderData.createdAt) : ''}</span>
+            ${(() => {
+              const dtModal = formatExactDateTime(orderData.createdAt || orderData.created_at || (orderData.raw_data && orderData.raw_data.createdAt));
+              return dtModal.full !== '—'
+                ? `<span style="font-size:12px; color:var(--text-primary); font-weight:600; display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Aberto em: ${dtModal.full} ${dtModal.relative ? `<span style="color:var(--text-muted); font-weight:400;">(${dtModal.relative})</span>` : ''}</span>`
+                : '';
+            })()}
             ${(() => {
               const isWpp = (orderData.channel === 'whatsapp') || (orderData.paymentMethod === 'whatsapp') || (orderData.source === 'whatsapp') || (typeof orderData.notes === 'string' && orderData.notes.includes('WhatsApp'));
               return isWpp

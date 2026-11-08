@@ -540,19 +540,124 @@ function openLGPDModal() {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 }
 
+function getAnySavedCustomer() {
+  try {
+    const p1 = JSON.parse(localStorage.getItem('nte_saved_customer') || 'null');
+    if (p1 && (p1.phone || p1.cleanPhone)) return { name: p1.name || '', phone: p1.phone || '', cleanPhone: (p1.cleanPhone || p1.phone || '').replace(/\D/g, '') };
+    const p2 = JSON.parse(localStorage.getItem('nte_customer_profile') || 'null');
+    if (p2 && (p2.phone || p2.cleanPhone)) return { name: p2.name || '', phone: p2.phone || '', cleanPhone: (p2.cleanPhone || p2.phone || '').replace(/\D/g, '') };
+    const p3 = localStorage.getItem('nte_customer_phone');
+    if (p3) return { name: localStorage.getItem('nte_customer_name') || '', phone: p3, cleanPhone: p3.replace(/\D/g, '') };
+  } catch (e) {}
+  return null;
+}
+
 /**
  * Opens Customer Identification Modal before redirecting to WhatsApp
  */
 function openCustomerCheckoutModal({ title, items, total, onConfirm }) {
-  // Checkout SEM formulario: o cliente nao preenche mais nome/telefone/email.
-  // Clicou em finalizar -> vai direto pro WhatsApp. A identificacao passa a
-  // acontecer no proprio WhatsApp (o numero e o nome do cliente aparecem para
-  // a loja), e o pedido continua rastreavel pelo numero do pedido + link de
-  // conferencia que seguem na mensagem. A assinatura antiga foi mantida para
-  // nao precisar mexer nos chamadores (orderProductViaWhatsApp / checkoutViaWhatsApp).
-  if (typeof onConfirm === 'function') {
-    onConfirm({ name: '', phone: '', cleanPhone: '', email: '' });
+  // 1. Se já temos o telefone do cliente salvo (ex: digitou no checkout transparente ou em pedido anterior)
+  const saved = getAnySavedCustomer();
+  if (saved && saved.cleanPhone && saved.cleanPhone.length >= 10) {
+    if (typeof onConfirm === 'function') {
+      onConfirm(saved);
+    }
+    return;
   }
+
+  // 2. Micro-prompt rápido para capturar o WhatsApp para o painel admin
+  const existing = document.getElementById('nte-whatsapp-prompt-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'nte-whatsapp-prompt-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);z-index:999999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+
+  overlay.innerHTML = `
+    <div style="background:#ffffff;border-radius:18px;max-width:390px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,0.3);padding:24px;position:relative;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;">
+      <button type="button" id="nte-wpp-prompt-close" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:4px;line-height:1;">&times;</button>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <div style="width:42px;height:42px;border-radius:12px;background:#e7fbf0;display:flex;align-items:center;justify-content:center;color:#168a3f;flex-shrink:0;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+        </div>
+        <div>
+          <h4 style="margin:0;font-size:16px;font-weight:700;color:#0a0a0a;">Atendimento no WhatsApp</h4>
+          <p style="margin:2px 0 0;font-size:12px;color:#71717a;">Informe seu WhatsApp para localizarmos seu pedido</p>
+        </div>
+      </div>
+      <form id="nte-wpp-quick-form" style="margin-top:16px;">
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#27272a;margin-bottom:6px;">Seu WhatsApp com DDD <span style="color:#ef4444;">*</span></label>
+          <input type="tel" id="nte-wpp-prompt-phone" placeholder="(75) 99999-9999" maxlength="15" autocomplete="tel" required style="width:100%;padding:12px 14px;border:1.5px solid #e4e4e7;border-radius:10px;font-size:15px;box-sizing:border-box;outline:none;font-weight:500;transition:border-color .15s;" />
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#27272a;margin-bottom:6px;">Seu Nome (opcional)</label>
+          <input type="text" id="nte-wpp-prompt-name" placeholder="Ex: João Silva" autocomplete="name" style="width:100%;padding:11px 14px;border:1.5px solid #e4e4e7;border-radius:10px;font-size:14px;box-sizing:border-box;outline:none;transition:border-color .15s;" />
+        </div>
+        <button type="submit" id="nte-wpp-prompt-submit" style="width:100%;padding:13px;background:#168a3f;color:#ffffff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(22,138,63,0.25);">
+          <span>Continuar para o WhatsApp</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+        <button type="button" id="nte-wpp-prompt-skip" style="width:100%;margin-top:10px;background:none;border:none;color:#71717a;font-size:12px;cursor:pointer;padding:6px;text-decoration:underline;">
+          Pular e ir direto pro WhatsApp
+        </button>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const phoneInp = overlay.querySelector('#nte-wpp-prompt-phone');
+  const nameInp = overlay.querySelector('#nte-wpp-prompt-name');
+  const form = overlay.querySelector('#nte-wpp-quick-form');
+  const closeBtn = overlay.querySelector('#nte-wpp-prompt-close');
+  const skipBtn = overlay.querySelector('#nte-wpp-prompt-skip');
+
+  phoneInp?.addEventListener('input', (e) => {
+    e.target.value = formatPhoneBR(e.target.value);
+  });
+
+  const finish = (custData) => {
+    overlay.remove();
+    if (custData && custData.cleanPhone) {
+      try {
+        saveCustomerProfile(custData);
+        localStorage.setItem('nte_saved_customer', JSON.stringify(custData));
+        localStorage.setItem('nte_customer_phone', custData.phone || custData.cleanPhone);
+        if (custData.name) localStorage.setItem('nte_customer_name', custData.name);
+      } catch (e) {}
+    }
+    if (typeof onConfirm === 'function') {
+      onConfirm(custData || { name: '', phone: '', cleanPhone: '', email: '' });
+    }
+  };
+
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const rawP = (phoneInp?.value || '').trim();
+    const clean = rawP.replace(/\D/g, '');
+    const nm = (nameInp?.value || '').trim();
+    if (clean.length < 10) {
+      phoneInp.style.borderColor = '#ef4444';
+      phoneInp.focus();
+      return;
+    }
+    finish({ name: nm, phone: formatPhoneBR(clean), cleanPhone: clean, email: '' });
+  });
+
+  skipBtn?.addEventListener('click', () => {
+    finish({ name: '', phone: '', cleanPhone: '', email: '' });
+  });
+
+  closeBtn?.addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  setTimeout(() => phoneInp?.focus(), 100);
 }
 
 /**

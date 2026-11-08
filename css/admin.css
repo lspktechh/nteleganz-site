@@ -570,21 +570,22 @@ input, select, textarea { font-family: inherit; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 19px;
-  height: 19px;
+  min-width: 20px;
+  height: 20px;
   padding: 0 6px;
-  background: var(--gold, #c9a84c);
-  color: #111111;
+  background: #0a0a0a;
+  color: #ffffff !important;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
   font-weight: 700;
+  letter-spacing: -0.01em;
   flex-shrink: 0;
   transition: all 0.2s ease;
 }
 .nav-item.active .nav-notification {
   background: #ffffff;
-  color: #111111;
+  color: #0a0a0a !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 .nav-notification[hidden],
