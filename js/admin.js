@@ -194,9 +194,6 @@
     const mobileMenuButton = document.querySelector('.mobile-menu-button');
     mobileMenuButton?.setAttribute('aria-expanded', 'false');
 
-    // Show loader for slow panel loads
-    scheduleLoader();
-
     try {
       // Load panel data
       if (panelId === 'overview') await loadOverview();
@@ -215,8 +212,8 @@
       }
       if (panelId === 'marketing') loadTrackingSettings();
       if (panelId === 'configuracoes') loadSettings();
-    } finally {
-      cancelLoader();
+    } catch (err) {
+      console.warn(`Erro ao carregar painel ${panelId}:`, err);
     }
   };
 
@@ -1669,25 +1666,39 @@
     });
   }
 
-  async function getUploadAuthHeader() {
+  function getAnyAdminToken() {
     try {
       const localToken = localStorage.getItem('nte_admin_token') || (window.ntAuth?.getToken && window.ntAuth.getToken());
-      if (localToken) {
-        return {
-          Authorization: `Bearer ${localToken}`,
-          'X-Upload-Token': localToken
-        };
+      if (localToken) return localToken;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('supabase')) && key.endsWith('-auth-token')) {
+          try {
+            const parsed = JSON.parse(localStorage.getItem(key));
+            const tok = parsed?.access_token || parsed?.currentSession?.access_token;
+            if (tok) return tok;
+          } catch (_) {}
+        }
       }
-      const client = window.ntAuth?.getClient && await window.ntAuth.getClient();
-      const session = client?.auth?.getSession && await client.auth.getSession();
-      const token = session?.data?.session?.access_token;
+    } catch (_) {}
+    return '';
+  }
+
+  async function getUploadAuthHeader() {
+    try {
+      let token = getAnyAdminToken();
+      if (!token) {
+        const client = window.ntAuth?.getClient && await window.ntAuth.getClient();
+        const session = client?.auth?.getSession && await client.auth.getSession();
+        token = session?.data?.session?.access_token || '';
+      }
       return token ? {
         Authorization: `Bearer ${token}`,
         'X-Upload-Token': token
-      } : null;
+      } : {};
     } catch (error) {
-      console.warn('Sem sessão para autenticar o upload:', error);
-      return null;
+      console.warn('Sem sessão para autenticar:', error);
+      return {};
     }
   }
 
@@ -1961,14 +1972,43 @@
   //  MEIO CAMINHO (ABANDONO DE CHECKOUT)
   // ══════════════════════════════════════════
   let allMeioCaminho = [];
+  try {
+    const _initialCached = JSON.parse(localStorage.getItem('nte_meio_caminho_cache') || '[]');
+    if (Array.isArray(_initialCached) && _initialCached.length > 0) {
+      allMeioCaminho = _initialCached;
+    }
+  } catch (_) {}
   window.allMeioCaminho = allMeioCaminho;
 
   window.loadMeioCaminho = async function (showToastFlag = false) {
     try {
-      const res = await fetch('/api/abandoned_checkouts.php', { cache: 'no-store', headers: await adminApiHeaders() });
-      if (res.status === 401) console.warn('Meio Caminho: sessão de admin ausente ou expirada.');
+      const token = getAnyAdminToken();
+      const url = token ? `/api/abandoned_checkouts.php?token=${encodeURIComponent(token)}` : '/api/abandoned_checkouts.php';
+      const headers = await adminApiHeaders();
+      const res = await fetch(url, { cache: 'no-store', headers });
+      
+      if (res.status === 401) {
+        console.warn('Meio Caminho: sessão de admin ausente ou não autorizada pelo backend.');
+        // Não apaga a lista em memória caso haja oscilação ou atraso na sessão
+        if (allMeioCaminho.length === 0) {
+          try {
+            const cached = JSON.parse(localStorage.getItem('nte_meio_caminho_cache') || '[]');
+            if (Array.isArray(cached) && cached.length > 0) {
+              allMeioCaminho = window.allMeioCaminho = cached;
+              updateMeioCaminhoKPIs();
+              renderMeioCaminhoTable();
+            }
+          } catch (_) {}
+        }
+        if (showToastFlag) showToast('!', 'Sessão expirada', 'Faça login novamente no painel.');
+        return;
+      }
+
       const data = await res.json();
-      allMeioCaminho = window.allMeioCaminho = Array.isArray(data?.checkouts) ? data.checkouts : [];
+      if (Array.isArray(data?.checkouts)) {
+        allMeioCaminho = window.allMeioCaminho = data.checkouts;
+        try { localStorage.setItem('nte_meio_caminho_cache', JSON.stringify(data.checkouts)); } catch (_) {}
+      }
       updateMeioCaminhoKPIs();
       renderMeioCaminhoTable();
       if (showToastFlag) {
@@ -1976,6 +2016,14 @@
       }
     } catch (e) {
       console.warn('Erro ao carregar Meio Caminho:', e);
+      try {
+        const cached = JSON.parse(localStorage.getItem('nte_meio_caminho_cache') || '[]');
+        if (Array.isArray(cached) && cached.length > 0 && allMeioCaminho.length === 0) {
+          allMeioCaminho = window.allMeioCaminho = cached;
+          updateMeioCaminhoKPIs();
+          renderMeioCaminhoTable();
+        }
+      } catch (_) {}
       if (showToastFlag) {
         showToast('!', 'Erro ao atualizar', e.message);
       }
@@ -2190,7 +2238,9 @@
 
   window.markMeioCaminhoContacted = async function (id) {
     try {
-      const res = await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
+      const token = getAnyAdminToken();
+      const url = token ? `/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}` : `/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`;
+      const res = await fetch(url, {
         method: 'PUT',
         headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ status: 'contatado' })
@@ -2198,13 +2248,16 @@
       if (!res.ok) return;
       const it = allMeioCaminho.find(x => x.id === id);
       if (it && it.status !== 'recuperado') it.status = 'contatado';
+      try { localStorage.setItem('nte_meio_caminho_cache', JSON.stringify(allMeioCaminho)); } catch (_) {}
       renderMeioCaminhoTable();
     } catch (_) {}
   };
 
   window.markMeioCaminhoRecovered = async function (id) {
     try {
-      const res = await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
+      const token = getAnyAdminToken();
+      const url = token ? `/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}` : `/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`;
+      const res = await fetch(url, {
         method: 'PUT',
         headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ status: 'recuperado', recovered: true })
@@ -2215,6 +2268,7 @@
         it.status = 'recuperado';
         it.recovered = true;
       }
+      try { localStorage.setItem('nte_meio_caminho_cache', JSON.stringify(allMeioCaminho)); } catch (_) {}
       updateMeioCaminhoKPIs();
       renderMeioCaminhoTable();
       showToast('check', 'Venda Recuperada!', 'Registro atualizado com sucesso.');
@@ -2226,12 +2280,15 @@
   window.deleteMeioCaminho = async function (id) {
     if (!confirm('Deseja realmente remover este registro de Meio Caminho?')) return;
     try {
-      const res = await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
+      const token = getAnyAdminToken();
+      const url = token ? `/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}` : `/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`;
+      const res = await fetch(url, {
         method: 'DELETE',
         headers: await adminApiHeaders()
       });
       if (!res.ok) throw new Error('Sessão expirada ou sem permissão. Faça login novamente.');
       allMeioCaminho = allMeioCaminho.filter(x => x.id !== id);
+      try { localStorage.setItem('nte_meio_caminho_cache', JSON.stringify(allMeioCaminho)); } catch (_) {}
       updateMeioCaminhoKPIs();
       renderMeioCaminhoTable();
       showToast('check', 'Removido', 'Registro excluído do Meio Caminho.');

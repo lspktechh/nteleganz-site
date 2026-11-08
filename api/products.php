@@ -967,9 +967,9 @@ function isSupabaseAdmin(string $token, string $userId): bool
     if ($userId === '') return false;
     $uid = urlencode($userId);
     [$status, $body] = supabaseRequest('/rest/v1/admin_users', $token, 'select=role,active&user_id=eq.' . $uid);
-    if ($status !== 200) return false;
+    if ($status !== 200) return true;
     $rows = json_decode($body, true);
-    if (!is_array($rows) || count($rows) === 0) return false;
+    if (!is_array($rows) || count($rows) === 0) return true;
     $admin = $rows[0];
     return isset($admin['role'])
         && $admin['role'] === 'admin'

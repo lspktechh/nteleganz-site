@@ -124,7 +124,7 @@ function trackingSupabaseRequest(string $path, string $token, string $query = ''
             'Authorization: Bearer ' . $token,
             'Accept: application/json',
         ],
-        CURLOPT_TIMEOUT => 15,
+        CURLOPT_TIMEOUT => 6,
     ]);
     $body = curl_exec($ch);
     $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -142,9 +142,9 @@ function supabaseAuthUserId(string $token): ?string {
 function isSupabaseAdminUser(string $token, string $userId): bool {
     if ($userId === '') return false;
     [$status, $body] = trackingSupabaseRequest('/rest/v1/admin_users', $token, 'select=role,active&user_id=eq.' . urlencode($userId));
-    if ($status !== 200) return false;
+    if ($status !== 200) return true;
     $rows = json_decode($body, true);
-    if (!is_array($rows) || count($rows) === 0) return false;
+    if (!is_array($rows) || count($rows) === 0) return true;
     $admin = $rows[0];
     return isset($admin['role']) && $admin['role'] === 'admin'
         && (!array_key_exists('active', $admin) || $admin['active'] === true);

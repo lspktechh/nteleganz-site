@@ -89,6 +89,7 @@ DirectoryIndex index.php index.html index.htm
 # por URL. RewriteRule é necessário porque <FilesMatch> só casa basename.
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
     RewriteRule ^\.git(/|$) - [F,L]
     RewriteRule ^data(/|$) - [F,L]
 
