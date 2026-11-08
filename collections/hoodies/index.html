@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <base href="/" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Hoodies | NT Eleganz | Grifes Originais e Autenticadas</title>
   <meta name="description" content="Explore o catálogo completo de grifes originais NT Eleganz. Moncler, Polo Ralph Lauren, All Saints, Birkenstock e muito mais." />
   <meta name="robots" content="index, follow, max-image-preview:large" />
@@ -1098,6 +1098,25 @@
       <span class="cart-total-label">Total</span>
       <span id="cart-total" class="cart-total-value">R$ 0,00</span>
     </div>
+
+    <!-- Opção 1: Checkout Seguro no Site (Destaque Principal) -->
+    <button id="cart-checkout-online-btn" class="btn btn-checkout-online" disabled onclick="window.ntCart?.checkoutOnline ? window.ntCart.checkoutOnline() : (window.location.href='/checkout/')">
+      <span class="cart-btn-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        Finalizar Compra no Site
+      </span>
+      <span class="cart-btn-sub">Pix ou Cartão em até 12x • Mercado Pago</span>
+    </button>
+
+    <!-- Divisor discreto com OU -->
+    <div class="cart-checkout-divider">
+      <span>OU</span>
+    </div>
+
+    <!-- Opção 2: WhatsApp no formato atual -->
     <button id="cart-checkout-btn" class="btn btn-whatsapp" disabled>
       <svg viewBox="0 0 24 24" fill="currentColor">
         <path
@@ -1105,7 +1124,7 @@
       </svg>
       Finalizar pedido no WhatsApp
     </button>
-    <p style="font-size: 0.65rem; color: var(--text-muted); text-align: center; letter-spacing: 0.05em;">
+    <p style="font-size: 0.65rem; color: var(--text-muted); text-align: center; letter-spacing: 0.05em; margin: 0;">
       Revise os itens e conclua o atendimento com nossa equipe.
     </p>
   </div>
@@ -1332,7 +1351,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p class="footer-copyright">© 2025 NT Eleganz. Todos os direitos reservados.</p>
+      <p class="footer-copyright">© 2026 NT Eleganz. Todos os direitos reservados. CNPJ: 69.640.668/0001-08.</p>
       <div class="footer-dev">
         <span class="footer-dev-label">Desenvolvido por</span>
         <a href="https://www.instagram.com/lspktech" target="_blank" rel="noopener noreferrer" class="footer-dev-link" title="LSPK Technology no Instagram">

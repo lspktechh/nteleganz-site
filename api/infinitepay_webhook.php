@@ -35,36 +35,20 @@ $isApproved = in_array($status, ['approved', 'payment_approved', 'paid', 'comple
 if ($orderId && $isApproved) {
     $cleanCode = strtoupper(ltrim((string)$orderId, '#'));
 
-    // Atualiza via API de pedidos
+    // Atualiza o pedido direto no armazenamento. Antes era um PUT HTTP sem login na API pública de pedidos,
+    // que agora só aceita admin.
     $updateData = [
         'status' => 'pago',
         'paymentStatus' => 'approved',
         'paidAt' => date('c')
     ];
 
-    $ch = curl_init("https://nteleganz.com.br/api/orders.php?code={$cleanCode}");
-    curl_setopt_array($ch, [
-        CURLOPT_CUSTOMREQUEST => 'PUT',
-        CURLOPT_POSTFIELDS => json_encode($updateData),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 5,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json']
-    ]);
-    @curl_exec($ch);
-    @curl_close($ch);
+    require_once __DIR__ . '/orders_helper.php';
+    updateOrder($cleanCode, $updateData);
 
     // Dispara e-mail oficial de confirmação de compra após pagamento aprovado
     require_once __DIR__ . '/send_order_email.php';
-    $chGet = curl_init("https://nteleganz.com.br/api/orders.php?code={$cleanCode}");
-    curl_setopt_array($chGet, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 5,
-        CURLOPT_HTTPHEADER => ['Accept: application/json']
-    ]);
-    $resGet = @curl_exec($chGet);
-    @curl_close($chGet);
-    $orderObj = $resGet ? json_decode($resGet, true) : null;
-    $orderData = $orderObj['order'] ?? $orderObj ?? null;
+    $orderData = findOrderByCode($cleanCode);
 
     if (is_array($orderData)) {
         try {

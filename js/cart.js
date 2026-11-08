@@ -129,6 +129,7 @@
       emptyState: document.getElementById('cart-empty'),
       totalEl: document.getElementById('cart-total'),
       checkoutBtn: document.getElementById('cart-checkout-btn'),
+      checkoutOnlineBtn: document.getElementById('cart-checkout-online-btn'),
     };
   }
 
@@ -273,11 +274,13 @@
       if (dom.emptyState) dom.emptyState.style.display = 'flex';
       if (dom.totalEl) dom.totalEl.textContent = 'R$ 0,00';
       if (dom.checkoutBtn) dom.checkoutBtn.disabled = true;
+      if (dom.checkoutOnlineBtn) dom.checkoutOnlineBtn.disabled = true;
       return;
     }
 
     if (dom.emptyState) dom.emptyState.style.display = 'none';
     if (dom.checkoutBtn) dom.checkoutBtn.disabled = false;
+    if (dom.checkoutOnlineBtn) dom.checkoutOnlineBtn.disabled = false;
 
     dom.itemsList.innerHTML = cartItems.map((item, idx) => `
       <div class="cart-item" data-idx="${idx}">
@@ -419,24 +422,23 @@
     isOpen ? closeCart() : openCart();
   }
 
-  // ── Checkout Dinâmico (WhatsApp no expediente vs Online fora de expediente) ──
-  function checkout() {
+  // ── Checkout via WhatsApp (Atendimento direto com equipe) ──
+  function checkoutWhatsApp() {
     if (cartItems.length === 0) return;
-    if (window.NTDynamicCheckout && typeof window.NTDynamicCheckout.checkout === 'function') {
-      window.NTDynamicCheckout.checkout(cartItems, formatCurrency(getTotal()));
-      closeCart();
-      return;
-    }
     const total = formatCurrency(getTotal());
     window.ntWpp?.checkout(cartItems, total);
     closeCart();
   }
 
-  // ── Checkout Online NT Eleganz (Preservado para uso futuro / InfinitePay) ──
+  // ── Checkout Online Oficial (Mercado Pago • Pix e Cartão até 12x) ──
   function checkoutOnline() {
     if (cartItems.length === 0) return;
     closeCart();
     window.location.href = '/checkout/';
+  }
+
+  function checkout() {
+    checkoutOnline();
   }
 
   // ── Toast notification ──
@@ -512,6 +514,7 @@
     toggle: toggleCart,
     checkout,
     checkoutOnline,
+    checkoutWhatsApp,
     items: () => cartItems,
     defaultVariant,
     showToast,
@@ -536,9 +539,13 @@
     const cartBtn = document.getElementById('cart-open-btn');
     if (cartBtn) cartBtn.addEventListener('click', toggleCart);
 
-    // Checkout button
+    // Checkout Online button (Mercado Pago • Site)
+    const checkoutOnlineBtn = document.getElementById('cart-checkout-online-btn');
+    if (checkoutOnlineBtn) checkoutOnlineBtn.addEventListener('click', checkoutOnline);
+
+    // Checkout WhatsApp button (Atendimento com equipe)
     const checkoutBtn = document.getElementById('cart-checkout-btn');
-    if (checkoutBtn) checkoutBtn.addEventListener('click', checkout);
+    if (checkoutBtn) checkoutBtn.addEventListener('click', checkoutWhatsApp);
 
     // Close button
     const closeBtn = document.getElementById('cart-close-btn');

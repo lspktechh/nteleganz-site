@@ -171,6 +171,7 @@
     feedbacks: 'Feedbacks de Clientes',
     faq: 'Perguntas frequentes',
     pedidos: 'Pedidos',
+    'meio-caminho': 'Meio Caminho (Recuperação de Vendas)',
     clientes: 'Base de Clientes',
     leads: 'Leads do WhatsApp',
     marketing: 'Marketing, Pixels & Tráfego',
@@ -206,6 +207,7 @@
       if (panelId === 'faq') loadFaq();
 
       if (panelId === 'pedidos') refreshOrders();
+      if (panelId === 'meio-caminho') await loadMeioCaminho();
       if (panelId === 'clientes') renderCustomersTable();
       if (panelId === 'leads') {
         renderLeadsTable();
@@ -378,6 +380,7 @@
       allProducts = await window.ntDB?.products.reload() || [];
       allOrders = await window.ntDB?.orders.getAll() || [];
       await refreshLeads(false);
+      loadMeioCaminho().catch(e => console.warn('Falha ao inicializar Meio Caminho:', e));
       loadCategories().catch(e => console.warn('Falha ao inicializar categorias:', e));
       syncImagesInBackground();
 
@@ -448,8 +451,17 @@
     ['leads-nav-badge', 'leads-topbar-badge'].forEach(id => {
       const badge = document.getElementById(id);
       if (!badge) return;
-      badge.hidden = count === 0;
-      badge.textContent = count > 99 ? '99+' : String(count);
+      if (count > 0) {
+        badge.hidden = false;
+        badge.removeAttribute('hidden');
+        badge.style.display = '';
+        badge.textContent = count > 99 ? '99+' : String(count);
+      } else {
+        badge.hidden = true;
+        badge.setAttribute('hidden', '');
+        badge.style.display = 'none';
+        badge.textContent = '';
+      }
     });
     document.getElementById('leads-topbar-button')?.classList.toggle('has-notifications', count > 0);
   }
@@ -586,6 +598,10 @@
     tbody.innerHTML = recent.map(o => {
       const code = escHtml(o.code || ('#NTE-' + String(o.id).slice(-4).toUpperCase()));
       const thumb = getOrderThumbnail(o);
+      const isWpp = (o.channel === 'whatsapp') || (o.paymentMethod === 'whatsapp') || (o.source === 'whatsapp') || (typeof o.notes === 'string' && o.notes.includes('WhatsApp'));
+      const displayClient = (o.client && o.client !== 'Cliente do site' && o.client !== 'Cliente')
+        ? o.client
+        : (o.clientName || (o.customer && o.customer.name) || (isWpp ? 'Cliente via WhatsApp' : 'Cliente do Checkout'));
       const thumbHtml = thumb
         ? `<img src="${escHtml(thumb)}" alt="" style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:1px solid rgba(201,168,76,0.3); background:#111; cursor:pointer;" onclick="window.open('${escHtml(thumb)}', '_blank')" onerror="this.onerror=null; this.src='../assets/images/logo.png'; this.style.opacity='0.4';" />`
         : `<div style="width:36px; height:36px; border-radius:6px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>`;
@@ -593,7 +609,7 @@
         <tr onclick="openOrderModal('${escHtml(o.id)}')" style="cursor:pointer;" title="Clique para ver os detalhes do pedido">
           <td><span class="badge badge-gold" style="font-family:monospace; font-size:11px; font-weight:700;">${code}</span></td>
           <td>${thumbHtml}</td>
-          <td style="color:var(--text-primary); font-weight:500;">${escHtml(o.client || '—')}</td>
+          <td style="color:var(--text-primary); font-weight:500;">${escHtml(displayClient)}</td>
           <td>${escHtml(o.productName || '—')}</td>
           <td style="color:var(--gold); font-weight:600;">${escHtml(o.value || '—')}</td>
           <td>${statusBadge(o.status)}</td>
@@ -1671,6 +1687,11 @@
     }
   }
 
+  // Headers para as APIs que exigem o admin logado (Meio Caminho, credenciais do Mercado Pago...)
+  async function adminApiHeaders(extra = {}) {
+    return { ...extra, ...((await getUploadAuthHeader()) || {}) };
+  }
+
   async function uploadProductImage(dataUrl, productId, index) {
     const uploadEndpoint = '/upload.php';
     const authHeader = await getUploadAuthHeader();
@@ -1772,12 +1793,23 @@
 
   window.filterOrders = function () {
     const status = document.getElementById('order-filter-status')?.value || '';
-    const filtered = allOrders.filter(o => !status || o.status === status);
+    const channel = document.getElementById('order-filter-channel')?.value || '';
+    const list = window.allOrders || allOrders || [];
+
+    const filtered = list.filter(o => {
+      const matchStatus = !status || o.status === status;
+      const isWpp = (o.channel === 'whatsapp') || (o.paymentMethod === 'whatsapp') || (o.source === 'whatsapp') || (typeof o.notes === 'string' && o.notes.includes('WhatsApp'));
+      const oChannel = isWpp ? 'whatsapp' : 'checkout';
+      const matchChannel = !channel || oChannel === channel;
+      return matchStatus && matchChannel;
+    });
     renderOrdersTableData(filtered);
   };
 
+  window.renderOrdersTable = renderOrdersTable;
   function renderOrdersTable() {
-    renderOrdersTableData([...allOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+    const list = window.allOrders || allOrders || [];
+    renderOrdersTableData([...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
   }
 
   function renderOrdersTableData(orders) {
@@ -1785,7 +1817,7 @@
     if (!tbody) return;
 
     if (orders.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M14 2H6a2 2 0 0 0-2 2v16"/></svg><p>Nenhum pedido encontrado</p><small>Registre pedidos recebidos pelo WhatsApp</small></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M14 2H6a2 2 0 0 0-2 2v16"/></svg><p>Nenhum pedido encontrado</p><small>Os pedidos feitos no Checkout e via WhatsApp aparecerão aqui</small></div></td></tr>`;
       return;
     }
 
@@ -1793,6 +1825,12 @@
       const code = escHtml(o.code || ('#NTE-' + String(o.id).slice(-4).toUpperCase()));
       const thumb = getOrderThumbnail(o);
       const hasMultiple = Array.isArray(o.items) && o.items.length > 1;
+
+      const isWpp = (o.channel === 'whatsapp') || (o.paymentMethod === 'whatsapp') || (o.source === 'whatsapp') || (typeof o.notes === 'string' && o.notes.includes('WhatsApp'));
+      const channelBadge = isWpp
+        ? `<span class="badge" style="background:rgba(37,211,102,0.15); color:#22c55e; border:1px solid rgba(37,211,102,0.35); font-weight:700; font-size:10px; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg> WhatsApp</span>`
+        : `<span class="badge" style="background:rgba(59,130,246,0.12); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); font-weight:700; font-size:10px; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Checkout</span>`;
+
       const thumbHtml = thumb 
         ? `<div style="position:relative; width:44px; height:44px; flex-shrink:0;">
              <img src="${escHtml(thumb)}" alt="" style="width:44px; height:44px; border-radius:8px; object-fit:cover; border:1px solid rgba(201,168,76,0.3); background:#111; cursor:pointer;" onclick="window.open('${escHtml(thumb)}', '_blank')" onerror="this.onerror=null; this.src='../assets/images/logo.png'; this.style.opacity='0.4';" />
@@ -1811,42 +1849,81 @@
         productDetails += `<span style="color:var(--text-primary); font-weight:500;">${escHtml(o.productName || '—')}</span>`;
       }
 
+      const rawClient = (o.client && o.client !== 'Cliente do site' && o.client !== 'Cliente')
+        ? o.client
+        : (o.clientName || (o.customer && o.customer.name) || (o.raw_data && o.raw_data.client) || '');
+
+      const isGenericClient = (!rawClient || rawClient === 'Cliente do site' || rawClient === 'Cliente');
+      const displayClient = isGenericClient
+        ? (isWpp ? 'Cliente via WhatsApp' : 'Cliente do Checkout')
+        : rawClient;
+
+      // Extrai origem de tráfego de forma unificada (UTMs do tracking ou texto das anotações)
+      let originSrc = '';
+      const trk = o.tracking || (o.raw_data && o.raw_data.tracking) || null;
+      if (trk) {
+        originSrc = trk.utm_campaign || trk.utm_source || (trk.fbclid ? 'Meta Ads' : (trk.gclid ? 'Google Ads' : (trk.ttclid ? 'TikTok Ads' : '')));
+      }
+      if (!originSrc) {
+        const notesStr = String(o.notes || '');
+        if (notesStr.includes('📍 origem:')) {
+          const match = notesStr.match(/📍\s*origem:\s*([^\n\r]+)/i);
+          if (match && match[1]) {
+            const raw = match[1].trim();
+            if (/facebook|meta/i.test(raw)) originSrc = 'Meta Ads';
+            else if (/instagram|stories|reels|ig/i.test(raw)) originSrc = 'Instagram';
+            else if (/google/i.test(raw)) originSrc = 'Google Ads';
+            else if (/tiktok/i.test(raw)) originSrc = 'TikTok Ads';
+            else originSrc = raw.split('·')[0].trim();
+          }
+        }
+      }
+
+      const originBadge = originSrc
+        ? `<span class="badge" style="background:rgba(201,168,76,0.12); color:var(--gold,#c9a84c); border:1px solid rgba(201,168,76,0.25); font-size:10px; padding:2px 6px; white-space:nowrap;" title="Origem: ${escHtml(originSrc)}">🎯 ${escHtml(originSrc)}</span>`
+        : '';
+
+      const rawPhone = o.phone || (o.raw_data && o.raw_data.phone) || (o.customer && o.customer.phone) || '';
+      const digits = String(rawPhone).replace(/\D/g, '');
+      let phoneHtml = '';
+      if (digits.length >= 8) {
+        phoneHtml = `
+          <button type="button" onclick="event.stopPropagation(); openWhatsAppModalForOrder('${escHtml(o.id)}')" style="background:rgba(37,211,102,0.12); color:#168a3f; border:1px solid rgba(37,211,102,0.3); font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:6px; cursor:pointer;" title="Opções de mensagem no WhatsApp">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+            <span>${escHtml(rawPhone)}</span>
+          </button>
+        `;
+      } else if (isWpp) {
+        phoneHtml = `
+          <span style="font-size:11px; color:#168a3f; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+            Atendimento WhatsApp
+          </span>
+        `;
+      } else {
+        phoneHtml = '<span style="font-size:11px; color:var(--text-muted); opacity:0.6;">Sem telefone</span>';
+      }
+
       return `
       <tr onclick="openOrderModal('${escHtml(o.id)}')" style="cursor:pointer;" title="Clique para ver os detalhes do pedido">
         <td>
           <span class="badge badge-gold" style="font-family:monospace; font-size:11px; font-weight:700; letter-spacing:0.05em;">${code}</span>
         </td>
+        <td>${channelBadge}</td>
         <td>${thumbHtml}</td>
         <td>
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
-            ${o.source === 'site' ? '<span class="badge badge-gold" title="Pedido feito pelo site" style="font-size:10px; padding:1px 6px;">Site</span>' : ''}
-            ${(() => {
-              const trk = o.tracking || (o.raw_data && o.raw_data.tracking) || null;
-              if (!trk) return '';
-              const src = trk.utm_campaign || trk.utm_source || (trk.fbclid ? 'Meta Ads' : (trk.gclid ? 'Google Ads' : (trk.ttclid ? 'TikTok' : '')));
-              if (!src) return '';
-              return `<span class="badge" style="background:rgba(201,168,76,0.12); color:var(--gold,#c9a84c); border:1px solid rgba(201,168,76,0.25); font-size:10px; padding:1px 6px;" title="Campanha / Origem: ${escHtml(src)}">🎯 ${escHtml(src)}</span>`;
-            })()}
-            <span style="color:var(--text-primary); font-weight:600; font-size:13px;">${escHtml(o.client || 'Cliente')}</span>
+          <div style="font-weight:600; color:var(--text-primary); font-size:13px; line-height:1.3;">${escHtml(displayClient)}</div>
+          <div style="display:flex; align-items:center; gap:6px; margin-top:3px; flex-wrap:wrap;">
+            ${phoneHtml}
+            ${originBadge}
           </div>
-          ${(() => {
-            const rawPhone = o.phone || (o.raw_data && o.raw_data.phone) || '';
-            const digits = String(rawPhone).replace(/\D/g, '');
-            if (!digits) return '<span style="font-size:11px; color:var(--text-muted); opacity:0.6;">Sem telefone</span>';
-            return `
-              <button type="button" onclick="event.stopPropagation(); openWhatsAppModalForOrder('${escHtml(o.id)}')" style="background:rgba(37,211,102,0.12); color:#168a3f; border:1px solid rgba(37,211,102,0.3); font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:6px; margin-top:2px; cursor:pointer;" title="Opções de mensagem no WhatsApp">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                <span>${escHtml(rawPhone)}</span>
-              </button>
-            `;
-          })()}
         </td>
         <td>${productDetails}</td>
         <td>${escHtml([o.size, o.color].filter(Boolean).join(' / ') || '—')}</td>
         <td style="color:var(--gold, #c9a84c); font-weight:600;">${escHtml(o.value || '—')}</td>
         <td>
           <select class="admin-select" style="font-size:11px; padding:4px 24px 4px 6px;" onclick="event.stopPropagation()" onchange="updateOrderStatus('${o.id}', this.value)">
-            ${['novo','confirmado','enviado','entregue','cancelado'].map(s =>
+            ${['novo','confirmado','pago','enviado','entregue','cancelado'].map(s =>
               `<option value="${s}" ${o.status === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`
             ).join('')}
           </select>
@@ -1867,6 +1944,289 @@
       </tr>
     `}).join('');
   }
+
+  // ══════════════════════════════════════════
+  //  MEIO CAMINHO (ABANDONO DE CHECKOUT)
+  // ══════════════════════════════════════════
+  let allMeioCaminho = [];
+  window.allMeioCaminho = allMeioCaminho;
+
+  window.loadMeioCaminho = async function (showToastFlag = false) {
+    try {
+      const res = await fetch('/api/abandoned_checkouts.php', { cache: 'no-store', headers: await adminApiHeaders() });
+      if (res.status === 401) console.warn('Meio Caminho: sessão de admin ausente ou expirada.');
+      const data = await res.json();
+      allMeioCaminho = window.allMeioCaminho = Array.isArray(data?.checkouts) ? data.checkouts : [];
+      updateMeioCaminhoKPIs();
+      renderMeioCaminhoTable();
+      if (showToastFlag) {
+        showToast('check', 'Meio Caminho atualizado', `${allMeioCaminho.length} registros sincronizados`);
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar Meio Caminho:', e);
+      if (showToastFlag) {
+        showToast('!', 'Erro ao atualizar', e.message);
+      }
+    }
+  };
+
+  window.updateMeioCaminhoKPIs = updateMeioCaminhoKPIs;
+  function updateMeioCaminhoKPIs() {
+    const list = window.allMeioCaminho || allMeioCaminho || [];
+    const pendentes = list.filter(c => (c.status || 'pendente') === 'pendente' && !c.recovered);
+    const step1 = pendentes.filter(c => Number(c.step) === 1);
+    const step2 = pendentes.filter(c => Number(c.step) === 2);
+
+    const totalVal = pendentes.reduce((sum, c) => {
+      const v = typeof c.total === 'number' ? c.total : parseFloat(String(c.total || 0).replace(/[^\d,.]/g, '').replace(',', '.')) || 0;
+      return sum + v;
+    }, 0);
+
+    setText('kpi-meio-historico', list.length);
+    setText('kpi-meio-total', pendentes.length);
+    setText('kpi-meio-step1', step1.length);
+    setText('kpi-meio-step2', step2.length);
+    setText('kpi-meio-valor', fmt.currency(totalVal));
+
+    // Atualiza badge de notificação no menu lateral
+    const badge = document.getElementById('meio-caminho-nav-badge');
+    if (badge) {
+      if (pendentes.length > 0) {
+        badge.textContent = pendentes.length;
+        badge.hidden = false;
+        badge.removeAttribute('hidden');
+        badge.style.display = '';
+      } else {
+        badge.textContent = '';
+        badge.hidden = true;
+        badge.setAttribute('hidden', '');
+        badge.style.display = 'none';
+      }
+    }
+  }
+
+  function formatExactDateTime(iso, fallbackTime = '', fallbackDate = '') {
+    if (!iso && !fallbackTime) return { date: '—', time: '—', full: '—', relative: '' };
+    let d = iso ? new Date(iso) : null;
+    if (!d || isNaN(d.getTime())) {
+      return {
+        date: fallbackDate || '—',
+        time: fallbackTime || '—',
+        full: `${fallbackDate} ${fallbackTime}`.trim() || '—',
+        relative: ''
+      };
+    }
+
+    const date = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const diffMs = Date.now() - d.getTime();
+    const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHrs = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHrs / 24);
+
+    let relative = '';
+    if (diffSec < 60) {
+      relative = 'agora';
+    } else if (diffMin < 60) {
+      relative = `há ${diffMin} min`;
+    } else if (diffHrs < 24) {
+      relative = `há ${diffHrs}h`;
+    } else if (diffDays === 1) {
+      relative = 'ontem';
+    } else {
+      relative = `há ${diffDays}d`;
+    }
+
+    return { date, time, full: `${date} às ${time}`, relative };
+  }
+
+  window.filterMeioCaminho = function () {
+    renderMeioCaminhoTable();
+  };
+
+  window.renderMeioCaminhoTable = renderMeioCaminhoTable;
+  function renderMeioCaminhoTable() {
+    const tbody = document.getElementById('meio-caminho-tbody');
+    if (!tbody) return;
+
+    const list = window.allMeioCaminho || allMeioCaminho || [];
+    const filterStatus = document.getElementById('meio-filter-status')?.value || '';
+    let filtered = [...list];
+    if (filterStatus === 'pendente') {
+      filtered = list.filter(c => (c.status || 'pendente') === 'pendente' && !c.recovered);
+    } else if (filterStatus === 'recuperado') {
+      filtered = list.filter(c => c.status === 'recuperado' || c.recovered || c.finalizado);
+    } else if (filterStatus === 'contatado') {
+      filtered = list.filter(c => c.status === 'contatado');
+    }
+
+    // Ordena do mais recente para o mais antigo
+    filtered.sort((a, b) => {
+      const tA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+      const tB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+      return tB - tA;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Nenhum cliente no meio caminho</p><small>Clientes que iniciarem preenchimento no checkout aparecerão aqui com hora exata e permanecerão salvos</small></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(c => {
+      const clientName = escHtml(c.name || 'Cliente sem nome');
+      const phoneDigits = String(c.phone || '').replace(/\D/g, '');
+      const rawPhone = escHtml(c.phone || '—');
+      const email = escHtml(c.email || '—');
+      const cpf = escHtml(c.cpf || '—');
+      const dt = formatExactDateTime(c.createdAt || c.updatedAt, c.exactTime, c.exactDate);
+      const stepNum = Number(c.step || 1);
+      const isRecovered = (c.status === 'recuperado' || c.recovered || c.finalizado);
+      const isContacted = (c.status === 'contatado');
+
+      // Badge da Etapa
+      let stepBadge = '';
+      if (stepNum === 1) {
+        stepBadge = `<span class="badge" style="background:rgba(234,179,8,0.12); color:#eab308; border:1px solid rgba(234,179,8,0.3); font-weight:700; font-size:11px; padding:3px 8px; border-radius:6px;">Etapa 1: Identificação</span>`;
+      } else if (stepNum === 2) {
+        stepBadge = `<span class="badge" style="background:rgba(59,130,246,0.12); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); font-weight:700; font-size:11px; padding:3px 8px; border-radius:6px;">Etapa 2: Endereço & Frete</span>`;
+      } else {
+        stepBadge = `<span class="badge" style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); font-weight:700; font-size:11px; padding:3px 8px; border-radius:6px;">Etapa 3: Pagamento</span>`;
+      }
+
+      // Detalhes dos Produtos
+      let productsHtml = '';
+      if (Array.isArray(c.items) && c.items.length > 0) {
+        productsHtml = c.items.map(it => `
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+            ${it.image ? `<img src="${escHtml(it.image)}" style="width:24px; height:24px; border-radius:4px; object-fit:cover;" onerror="this.style.display='none'">` : ''}
+            <span style="font-size:12px; font-weight:500;">${escHtml(it.name || 'Produto')} (${it.qty || 1}x)</span>
+            ${it.size ? `<span style="font-size:10px; color:var(--text-muted);">Tam: ${escHtml(it.size)}</span>` : ''}
+          </div>
+        `).join('');
+      } else {
+        productsHtml = '<span style="font-size:12px; color:var(--text-muted);">Itens não detalhados</span>';
+      }
+
+      // WhatsApp Action Button
+      let wppBtn = '';
+      if (phoneDigits.length >= 10) {
+        const prodSummary = Array.isArray(c.items) && c.items.length > 0
+          ? c.items.map(it => it.name).join(', ')
+          : 'seu pedido';
+        const greeting = `Olá ${c.name ? c.name.split(' ')[0] : ''}! Vi que você começou seu pedido da ${prodSummary} na NT Eleganz mas parou na etapa de pagamento. Posso te ajudar a concluir ou te enviar uma condição exclusiva?`;
+        const wppUrl = `https://wa.me/55${phoneDigits.startsWith('55') ? phoneDigits.slice(2) : phoneDigits}?text=${encodeURIComponent(greeting)}`;
+
+        wppBtn = `
+          <a href="${wppUrl}" target="_blank" onclick="markMeioCaminhoContacted('${escHtml(c.id)}')" class="btn btn-sm" style="background:rgba(37,211,102,0.15); color:#22c55e; border:1px solid rgba(37,211,102,0.35); font-weight:700; font-size:11px; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:5px; text-decoration:none;" title="Chamar no WhatsApp com mensagem de recuperação">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+            <span>${rawPhone}</span>
+          </a>
+        `;
+      } else {
+        wppBtn = `<span style="font-size:12px; color:var(--text-muted); opacity:0.6;">${rawPhone}</span>`;
+      }
+
+      // Status badge
+      let statusBadge = '';
+      if (isRecovered) {
+        statusBadge = `<span class="badge badge-success" style="font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Concluído ${c.orderCode ? `(${escHtml(c.orderCode)})` : ''}</span>`;
+      } else if (isContacted) {
+        statusBadge = `<span class="badge" style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px;">💬 Contatado</span>`;
+      } else {
+        statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px;">🔴 Pendente</span>`;
+      }
+
+      return `
+        <tr>
+          <td style="font-size:12px; white-space:nowrap;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-weight:700; color:var(--text-primary); font-size:13px; font-variant-numeric:tabular-nums;">${dt.time}</span>
+              ${dt.relative ? `<span class="badge" style="font-size:10px; padding:1px 6px; background:rgba(255,255,255,0.06); color:var(--text-muted); border-radius:4px; font-weight:500;">${dt.relative}</span>` : ''}
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${dt.date}</div>
+          </td>
+          <td>
+            <div style="font-weight:600; color:var(--text-primary); font-size:13px;">${clientName}</div>
+          </td>
+          <td>${wppBtn}</td>
+          <td style="font-size:12px;">
+            <div>${email}</div>
+            <small style="color:var(--text-muted); font-size:10px;">CPF: ${cpf}</small>
+          </td>
+          <td>${stepBadge}</td>
+          <td>${productsHtml}</td>
+          <td style="color:var(--gold,#c9a84c); font-weight:700; font-size:13px;">${escHtml(c.total || '—')}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <div style="display:flex; gap:6px; align-items:center;">
+              ${!isRecovered ? `
+                <button class="btn btn-secondary btn-sm" onclick="markMeioCaminhoRecovered('${escHtml(c.id)}')" title="Marcar como Venda Concluída / Recuperada" style="padding:4px 8px; font-size:11px;">
+                  ✓ Concluído
+                </button>
+              ` : ''}
+              <button class="btn btn-danger btn-sm" onclick="deleteMeioCaminho('${escHtml(c.id)}')" title="Excluir do Histórico" style="padding:4px 8px; font-size:11px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  window.markMeioCaminhoContacted = async function (id) {
+    try {
+      const res = await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ status: 'contatado' })
+      });
+      if (!res.ok) return;
+      const it = allMeioCaminho.find(x => x.id === id);
+      if (it && it.status !== 'recuperado') it.status = 'contatado';
+      renderMeioCaminhoTable();
+    } catch (_) {}
+  };
+
+  window.markMeioCaminhoRecovered = async function (id) {
+    try {
+      const res = await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ status: 'recuperado', recovered: true })
+      });
+      if (!res.ok) throw new Error('Sessão expirada ou sem permissão. Faça login novamente.');
+      const it = allMeioCaminho.find(x => x.id === id);
+      if (it) {
+        it.status = 'recuperado';
+        it.recovered = true;
+      }
+      updateMeioCaminhoKPIs();
+      renderMeioCaminhoTable();
+      showToast('check', 'Venda Recuperada!', 'Registro atualizado com sucesso.');
+    } catch (e) {
+      showToast('!', 'Erro ao atualizar', e.message);
+    }
+  };
+
+  window.deleteMeioCaminho = async function (id) {
+    if (!confirm('Deseja realmente remover este registro de Meio Caminho?')) return;
+    try {
+      const res = await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: await adminApiHeaders()
+      });
+      if (!res.ok) throw new Error('Sessão expirada ou sem permissão. Faça login novamente.');
+      allMeioCaminho = allMeioCaminho.filter(x => x.id !== id);
+      updateMeioCaminhoKPIs();
+      renderMeioCaminhoTable();
+      showToast('check', 'Removido', 'Registro excluído do Meio Caminho.');
+    } catch (e) {
+      showToast('!', 'Erro ao excluir', e.message);
+    }
+  };
 
   window.updateOrderStatus = async function (id, status) {
     await window.ntDB.orders.update(id, { status });
@@ -1907,7 +2267,12 @@
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             ${code ? `<span class="badge badge-gold" style="font-family:monospace; font-size:12px; font-weight:700;">${escHtml(code)}</span>` : ''}
             <span style="font-size:12px; color:var(--text-muted);">${orderData.createdAt ? fmt.date(orderData.createdAt) : ''}</span>
-            ${orderData.source === 'site' ? '<span class="badge badge-gold" style="font-size:10px;">Site</span>' : ''}
+            ${(() => {
+              const isWpp = (orderData.channel === 'whatsapp') || (orderData.paymentMethod === 'whatsapp') || (orderData.source === 'whatsapp') || (typeof orderData.notes === 'string' && orderData.notes.includes('WhatsApp'));
+              return isWpp
+                ? '<span class="badge" style="background:rgba(37,211,102,0.15); color:#22c55e; border:1px solid rgba(37,211,102,0.35); font-weight:700; font-size:11px; padding:2px 8px; border-radius:6px;">Canal: WhatsApp</span>'
+                : '<span class="badge" style="background:rgba(59,130,246,0.12); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); font-weight:700; font-size:11px; padding:2px 8px; border-radius:6px;">Canal: Checkout (Site)</span>';
+            })()}
             ${orderData.code ? `<a href="/order/${encodeURIComponent(orderData.code.replace('#',''))}" target="_blank" class="badge" style="background:transparent; color:var(--text-primary); text-decoration:none; font-size:11px; padding:2px 8px; border:1px solid var(--border); border-radius:6px; display:inline-flex; align-items:center; gap:4px;" title="Abrir página detalhada do pedido"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> Ver no Site</a>` : ''}
           </div>
           <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-top:4px;">${escHtml(orderData.productName || 'Detalhes do Pedido')}</div>
@@ -2011,15 +2376,15 @@
         <div class="form-grid">
           <div class="form-group form-col-full">
             <label>Nome do Cliente *</label>
-            <input type="text" class="form-control" id="o-client" value="${escHtml(orderData.client || '')}" placeholder="João Silva" required>
+            <input type="text" class="form-control" id="o-client" value="${escHtml((orderData.client && orderData.client !== 'Cliente do site' && orderData.client !== 'Cliente') ? orderData.client : (orderData.clientName || (orderData.customer && orderData.customer.name) || (orderData.raw_data && orderData.raw_data.client) || ''))}" placeholder="João Silva" required>
           </div>
           <div class="form-group">
             <label>WhatsApp do Cliente</label>
-            <input type="text" class="form-control" id="o-phone" value="${escHtml(orderData.phone || '')}" placeholder="5511999999999">
+            <input type="text" class="form-control" id="o-phone" value="${escHtml(orderData.phone || (orderData.customer && orderData.customer.phone) || '')}" placeholder="5511999999999">
           </div>
           <div class="form-group">
             <label>E-mail do Cliente</label>
-            <input type="email" class="form-control" id="o-email" value="${escHtml(orderData.email || (orderData.raw_data && orderData.raw_data.email) || '')}" placeholder="cliente@email.com">
+            <input type="email" class="form-control" id="o-email" value="${escHtml(orderData.email || (orderData.customer && orderData.customer.email) || (orderData.raw_data && orderData.raw_data.email) || '')}" placeholder="cliente@email.com">
           </div>
           <div class="form-group form-col-full">
             <label>Produto *</label>
@@ -2451,8 +2816,17 @@
 
     const badge = document.getElementById('clientes-nav-badge');
     if (badge) {
-      badge.textContent = totalCount;
-      badge.hidden = totalCount === 0;
+      if (totalCount > 0) {
+        badge.textContent = totalCount;
+        badge.hidden = false;
+        badge.removeAttribute('hidden');
+        badge.style.display = '';
+      } else {
+        badge.textContent = '';
+        badge.hidden = true;
+        badge.setAttribute('hidden', '');
+        badge.style.display = 'none';
+      }
     }
   }
 
@@ -2841,6 +3215,11 @@
     // Carrega configurações de roteamento dinâmico de checkout
     if (typeof window.loadDynamicCheckoutSettings === 'function') {
       window.loadDynamicCheckoutSettings();
+    }
+
+    // Carrega configurações do Mercado Pago
+    if (typeof window.loadMercadoPagoSettings === 'function') {
+      window.loadMercadoPagoSettings();
     }
   }
 
@@ -3314,6 +3693,118 @@
       }
     }
   };
+
+  // ── Integração Oficial Mercado Pago ──
+  window.loadMercadoPagoSettings = async function () {
+    const alertEl = document.getElementById('mp-alert');
+    if (alertEl) alertEl.innerHTML = '';
+    try {
+      const res = await fetch('/api/mercadopago.php?admin=1', { cache: 'no-store', headers: await adminApiHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.settings) {
+        const s = data.settings;
+        setValue('mp-public-key', s.publicKey || '');
+        setValue('mp-access-token', s.accessToken || '');
+        setValue('mp-webhook-secret', s.webhookSecret || '');
+        setValue('mp-statement-descriptor', s.statementDescriptor || 'NT ELEGANZ');
+        setValue('mp-webhook-url', s.webhookUrl || 'https://nteleganz.com.br/api/mercadopago_webhook.php');
+
+        const indicator = document.getElementById('mp-live-indicator');
+        if (indicator) {
+          if (s.accessToken && s.publicKey) {
+            indicator.textContent = '🟢 Conectado';
+            indicator.style.color = '#009EE3';
+            indicator.style.borderColor = 'rgba(0,158,227,0.3)';
+            indicator.style.background = 'rgba(0,158,227,0.15)';
+          } else {
+            indicator.textContent = '⚠️ Não Configurado';
+            indicator.style.color = '#eab308';
+            indicator.style.borderColor = 'rgba(234,179,8,0.3)';
+            indicator.style.background = 'rgba(234,179,8,0.15)';
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[MercadoPago] Falha ao carregar credenciais:', e);
+    }
+  };
+
+  window.saveMercadoPagoSettingsAdmin = async function () {
+    const alertEl = document.getElementById('mp-alert');
+    const saveBtn = document.getElementById('btn-save-mercadopago');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Salvando...';
+    }
+
+    const payload = {
+      action: 'save_settings',
+      publicKey: (document.getElementById('mp-public-key')?.value || '').trim(),
+      accessToken: (document.getElementById('mp-access-token')?.value || '').trim(),
+      webhookSecret: (document.getElementById('mp-webhook-secret')?.value || '').trim(),
+      statementDescriptor: (document.getElementById('mp-statement-descriptor')?.value || 'NT ELEGANZ').trim()
+    };
+
+    try {
+      const authHeader = (typeof getUploadAuthHeader === 'function') ? await getUploadAuthHeader() : {};
+      const res = await fetch('/api/mercadopago.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authHeader || {})
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Erro ao salvar credenciais do Mercado Pago');
+      }
+
+      if (alertEl) {
+        alertEl.innerHTML = '<div class="alert alert-success" style="margin-bottom:14px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:6px;"><polyline points="20 6 9 17 4 12"/></svg>Credenciais do Mercado Pago atualizadas com sucesso!</div>';
+        setTimeout(() => { if (alertEl) alertEl.innerHTML = ''; }, 4500);
+      }
+
+      showToast('check', 'Mercado Pago Conectado!', 'Credenciais salvas com sucesso');
+      loadMercadoPagoSettings();
+    } catch (err) {
+      if (alertEl) {
+        alertEl.innerHTML = `<div class="alert alert-danger" style="margin-bottom:14px;">${err.message}</div>`;
+      }
+      showToast('!', 'Erro Mercado Pago', err.message);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar Credenciais do Mercado Pago';
+      }
+    }
+  };
+
+  window.togglePasswordVisibility = function (inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (btn) btn.textContent = 'Ocultar';
+    } else {
+      input.type = 'password';
+      if (btn) btn.textContent = 'Ver';
+    }
+  };
+
+  window.copyWebhookUrl = function () {
+    const input = document.getElementById('mp-webhook-url');
+    if (!input) return;
+    navigator.clipboard?.writeText(input.value).then(() => {
+      showToast('check', 'Copiado!', 'URL do webhook copiada');
+    }).catch(() => {
+      input.select();
+      document.execCommand('copy');
+      showToast('check', 'Copiado!', 'URL do webhook copiada');
+    });
+  };
+
   window.loadTrackingSettings = async function () {
     const alertEl = document.getElementById('tracking-alert');
     if (alertEl) alertEl.innerHTML = '';
@@ -4480,6 +4971,9 @@ window.showConfirm = function (msg, callback) {
       }, 20000);
       window.setInterval(() => {
         if (!document.hidden && currentDBMode !== 'local') refreshOrders();
+      }, 25000);
+      window.setInterval(() => {
+        if (!document.hidden) loadMeioCaminho();
       }, 25000);
     }).catch(error => {
       console.error('Não foi possível iniciar a dashboard:', error);

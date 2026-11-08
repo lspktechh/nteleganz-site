@@ -2,13 +2,13 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Dashboard | NT Eleganz Admin</title>
   <meta name="robots" content="noindex, nofollow" />
   <link rel="icon" type="image/webp" href="../assets/images/logonz.webp?v=20260930" />
   <link rel="apple-touch-icon" href="../assets/images/logonz-400.webp" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="../css/admin.css?v=20261007b" />
+  <link rel="stylesheet" href="../css/admin.css?v=20261106-fix" />
 <script src="/js/image-compat.js" defer></script>
 <style>
 .admin-loader{position:fixed;inset:0;background:var(--bg-primary,#080808);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;opacity:1;transition:opacity .3s ease,visibility .3s ease;color:var(--text-primary,#f2efe9)}
@@ -73,6 +73,10 @@
       <div class="nav-item" data-panel="pedidos" onclick="showPanel('pedidos', this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         <span>Pedidos</span>
+      </div>
+      <div class="nav-item" data-panel="meio-caminho" onclick="showPanel('meio-caminho', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Meio Caminho</span><b class="nav-notification" id="meio-caminho-nav-badge" hidden>0</b>
       </div>
       <div class="nav-item" data-panel="clientes" onclick="showPanel('clientes', this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -249,22 +253,24 @@
             <div class="data-card-title">Pedidos Recentes</div>
             <button class="btn btn-secondary btn-sm" onclick="showPanel('pedidos', document.querySelector('[data-panel=pedidos]'))">Ver todos</button>
           </div>
-          <table class="data-table" id="recent-orders-table">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Foto</th>
-                <th>Cliente</th>
-                <th>Produto</th>
-                <th>Valor</th>
-                <th>Status</th>
-                <th>Data</th>
-              </tr>
-            </thead>
-            <tbody id="recent-orders-body">
-              <tr><td colspan="7"><div class="empty-state"><p>Nenhum pedido registrado</p></div></td></tr>
-            </tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="data-table" id="recent-orders-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Foto</th>
+                  <th>Cliente</th>
+                  <th>Produto</th>
+                  <th>Valor</th>
+                  <th>Status</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody id="recent-orders-body">
+                <tr><td colspan="7"><div class="empty-state"><p>Nenhum pedido registrado</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
       </div>
@@ -278,10 +284,12 @@
             <div><div class="data-card-title">Leads do WhatsApp</div><p class="admin-panel-note">Contatos iniciados pelo site aparecem aqui automaticamente.</p></div>
             <div style="display:flex; gap:10px; align-items:center;"><select id="lead-filter-status" class="admin-select" onchange="filterLeads()"><option value="">Todos os status</option><option value="novo">Novo</option><option value="em_atendimento">Em atendimento</option><option value="convertido">Convertido</option><option value="arquivado">Arquivado</option></select><button class="btn btn-secondary btn-sm" onclick="refreshLeads(true)">Atualizar</button></div>
           </div>
-          <table class="data-table">
-            <thead><tr><th>Contato</th><th>Interesse</th><th>Origem</th><th>Status</th><th>Recebido em</th></tr></thead>
-            <tbody id="leads-tbody"><tr><td colspan="5"><div class="empty-state"><p>Nenhum lead registrado</p><small>Os novos contatos pelo WhatsApp aparecerão aqui.</small></div></td></tr></tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead><tr><th>Contato</th><th>Interesse</th><th>Origem</th><th>Status</th><th>Recebido em</th></tr></thead>
+              <tbody id="leads-tbody"><tr><td colspan="5"><div class="empty-state"><p>Nenhum lead registrado</p><small>Os novos contatos pelo WhatsApp aparecerão aqui.</small></div></td></tr></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -527,10 +535,16 @@
           <div class="data-card-header">
             <div class="data-card-title">Gestão de Pedidos</div>
             <div class="data-card-actions">
+              <select class="admin-select" id="order-filter-channel" onchange="filterOrders()">
+                <option value="">Todos os canais</option>
+                <option value="checkout">Checkout (Site)</option>
+                <option value="whatsapp">WhatsApp</option>
+              </select>
               <select class="admin-select" id="order-filter-status" onchange="filterOrders()">
                 <option value="">Todos os status</option>
                 <option value="novo">Novo</option>
                 <option value="confirmado">Confirmado</option>
+                <option value="pago">Pago</option>
                 <option value="enviado">Enviado</option>
                 <option value="entregue">Entregue</option>
                 <option value="cancelado">Cancelado</option>
@@ -541,22 +555,99 @@
               </button>
             </div>
           </div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Foto</th>
-                <th>Cliente</th>
-                <th>Produto / Itens</th>
-                <th>Tam / Cor</th>
-                <th>Valor</th>
-                <th>Status</th>
-                <th>Data</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="orders-tbody"></tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Canal</th>
+                  <th>Foto</th>
+                  <th>Cliente</th>
+                  <th>Produto / Itens</th>
+                  <th>Tam / Cor</th>
+                  <th>Valor</th>
+                  <th>Status</th>
+                  <th>Data</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="orders-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════
+           PANEL: MEIO CAMINHO (ABANDONO DE CHECKOUT)
+      ══════════════════════════════════════════ -->
+      <div id="panel-meio-caminho" class="admin-panel">
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 24px;">
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Histórico Permanente</span></div>
+            <div class="kpi-value" id="kpi-meio-historico">0</div>
+            <div class="kpi-sub">Total acumulado</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Pendentes Ativos</span></div>
+            <div class="kpi-value" id="kpi-meio-total">0</div>
+            <div class="kpi-sub">Parados sem concluir</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Pararam na Identificação</span></div>
+            <div class="kpi-value" id="kpi-meio-step1">0</div>
+            <div class="kpi-sub">Etapa 1 preenchida</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Pararam no Frete / Endereço</span></div>
+            <div class="kpi-value" id="kpi-meio-step2">0</div>
+            <div class="kpi-sub">Etapa 2 preenchida</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Valor em Oportunidade</span></div>
+            <div class="kpi-value" id="kpi-meio-valor" style="color:var(--gold,#c9a84c);">R$ 0,00</div>
+            <div class="kpi-sub">Carrinhos pendentes</div>
+          </div>
+        </div>
+
+        <div class="data-card">
+          <div class="data-card-header">
+            <div>
+              <div class="data-card-title">Clientes no Meio Caminho (Recuperação de Vendas)</div>
+              <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                Histórico permanente de clientes que preencheram o checkout. Registros são mantidos por tempo indeterminado com a hora exata.
+              </div>
+            </div>
+            <div class="data-card-actions">
+              <select class="admin-select" id="meio-filter-status" onchange="filterMeioCaminho()">
+                <option value="" selected>Todos os Registros (Histórico Permanente)</option>
+                <option value="pendente">Apenas Pendentes (Não Concluídos)</option>
+                <option value="recuperado">Apenas Concluídos / Recuperados</option>
+                <option value="contatado">Apenas Contatados</option>
+              </select>
+              <button class="btn btn-secondary" onclick="loadMeioCaminho(true)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                Atualizar
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="min-width:130px;">Horário Exato</th>
+                  <th>Cliente</th>
+                  <th>WhatsApp (Ação Rápida)</th>
+                  <th>E-mail / CPF</th>
+                  <th>Onde Parou</th>
+                  <th>Produtos no Carrinho</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="meio-caminho-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -789,6 +880,79 @@
             </div>
           </div>
 
+          <!-- Gateway de Pagamento Oficial — Mercado Pago -->
+          <div class="settings-card" style="grid-column: 1 / -1;" id="mercadopago-settings-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:12px;">
+              <div>
+                <div class="settings-card-title" style="margin-bottom:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:22px;height:22px;color:#009EE3;flex-shrink:0;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                  <span>Gateway de Pagamento — Mercado Pago</span>
+                  <span id="mp-live-indicator" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;background:rgba(0,158,227,0.15);color:#009EE3;border:1px solid rgba(0,158,227,0.3);">🟢 Conectado</span>
+                </div>
+                <div class="settings-card-desc" style="margin-bottom:0;max-width:850px;">
+                  Processamento oficial com recebimento direto na conta da loja. Permite <strong>Pix Imediato</strong> com QR Code e <strong>Cartão de Crédito em até 12x</strong>.
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:11px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  Ambiente Seguro SSL 256-bit
+                </span>
+              </div>
+            </div>
+
+            <div id="mp-alert"></div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px;margin-bottom:16px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Public Key (Chave Pública do Frontend)</label>
+                <input type="text" class="form-control" id="mp-public-key" placeholder="APP_USR-..." value="APP_USR-c8d843d2-e8c4-4509-93a5-6c7a38be819e" />
+                <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;">Começa com APP_USR-... (Produção) ou TEST-... (Testes)</small>
+              </div>
+
+              <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Access Token (Chave Privada do Backend)</label>
+                <div style="display:flex;gap:6px;">
+                  <input type="password" class="form-control" id="mp-access-token" placeholder="APP_USR-..." value="" />
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="togglePasswordVisibility('mp-access-token', this)" style="padding:0 12px;font-size:12px;">Ver</button>
+                </div>
+                <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;">Token secreto para processar pagamentos na API</small>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px;margin-bottom:16px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Nome na Fatura do Cartão (Statement Descriptor)</label>
+                <input type="text" class="form-control" id="mp-statement-descriptor" placeholder="NT ELEGANZ" value="NT ELEGANZ" maxlength="16" />
+                <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;">Aparece no extrato e fatura bancária do cliente (máx 16 letras)</small>
+              </div>
+
+              <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Assinatura Secreta do Webhook (Secret Signature)</label>
+                <div style="display:flex;gap:6px;">
+                  <input type="password" class="form-control" id="mp-webhook-secret" placeholder="Assinatura secreta..." value="" />
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="togglePasswordVisibility('mp-webhook-secret', this)" style="padding:0 12px;font-size:12px;">Ver</button>
+                </div>
+                <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;">Chave HMAC para validação criptográfica de segurança</small>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">URL do Webhook (Notificações em Tempo Real)</label>
+                <div style="display:flex;gap:6px;">
+                  <input type="text" class="form-control" id="mp-webhook-url" readonly value="https://nteleganz.com.br/api/mercadopago_webhook.php" style="background:var(--bg-secondary);color:var(--text-muted);" />
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="copyWebhookUrl()" style="padding:0 12px;font-size:12px;white-space:nowrap;">Copiar</button>
+                </div>
+                <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block;">Cole nas configurações de Webhooks do painel do Mercado Pago</small>
+              </div>
+            </div>
+
+            <div style="margin-top:18px;display:flex;justify-content:flex-end;">
+              <button type="button" class="btn btn-primary" id="btn-save-mercadopago" onclick="saveMercadoPagoSettingsAdmin()">Salvar Credenciais do Mercado Pago</button>
+            </div>
+          </div>
+
           <!-- Banco de Dados -->
           <div class="settings-card" style="grid-column: 1 / -1;">
             <div class="settings-card-title">
@@ -957,7 +1121,7 @@
               <!-- Controle do Evento PageView -->
               <div style="margin-top:12px; padding:12px 14px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
                 <div style="font-size:12px; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8 -4 8 -11 8 -11 -8z"/><circle cx="12" cy="12" r="3"/></svg>
                   Controle de Disparo do PageView
                 </div>
                 <div style="display:flex; flex-wrap:wrap; gap:18px;">
@@ -1376,8 +1540,8 @@
 
 <!-- Scripts -->
 <script src="../js/auth.js?v=20261007c"></script>
-<script src="../js/db.js?v=20261007c"></script>
-<script src="../js/admin.js?v=20261030b"></script>
+<script src="../js/db.js?v=20261107a"></script>
+<script src="../js/admin.js?v=20261107a"></script>
 <script>
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');

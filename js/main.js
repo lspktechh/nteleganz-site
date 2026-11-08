@@ -895,4 +895,9 @@
     if (!document.hidden) revalidateCatalog();
   });
 
+  // Previne zoom por gesto em Safari iOS / Mobile para não quebrar a dimensão
+  document.addEventListener('gesturestart', function (e) {
+    e.preventDefault();
+  });
+
 })();
