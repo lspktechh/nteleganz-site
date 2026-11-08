@@ -1185,7 +1185,7 @@ if (strpos($firstItemImg, 'http') !== 0) {
     document.addEventListener('DOMContentLoaded', hydrateFromClient);
   </script>
   <!-- Rastreamento & Marketing (Purchase Tracking) -->
-  <script src="/js/tracking.js?v=20261007"></script>
+  <script src="/js/tracking.js?v=20261107-dedup"></script>
   <script>
     (function () {
       const orderPayload = <?= json_encode([

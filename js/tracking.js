@@ -211,9 +211,11 @@
     })(window, document, 'ttq');
   }
 
-  // ── 3. Fila & Disparo dos Eventos Padrão ──
+  // ── 3. Fila & Disparo dos Eventos Padrão com Anti-Duplicação ──
   const eventQueue = [];
   let isReady = false;
+  const recentEventSignatures = new Map();
+  const DEDUP_WINDOW_MS = 2500; // Bloqueia disparos repetidos idênticos em menos de 2.5s
 
   function trackEvent(metaName, ga4Name, data) {
     if (!isReady) {
@@ -224,21 +226,37 @@
   }
 
   function dispatchTrackEvent(metaName, ga4Name, data) {
+    // ── Camada Global de Deduplicação ──
+    const now = Date.now();
+    const payloadStr = JSON.stringify(data?.metaPayload || data || {});
+    const sig = `${metaName}:${data?.eventId || ''}:${payloadStr}`;
+
+    if (recentEventSignatures.has(sig)) {
+      const last = recentEventSignatures.get(sig);
+      if (now - last < DEDUP_WINDOW_MS) {
+        console.warn(`[Tracking] Disparo duplicado de "${metaName}" bloqueado pela proteção inteligente.`);
+        return;
+      }
+    }
+    recentEventSignatures.set(sig, now);
+
+    // Limpeza de cache antigo para poupar memória
+    if (recentEventSignatures.size > 150) {
+      for (const [k, t] of recentEventSignatures.entries()) {
+        if (now - t > 30000) recentEventSignatures.delete(k);
+      }
+    }
+
+    // Garante eventID único para desduplicação nativa na Meta (Pixel + CAPI)
+    const eventId = data?.eventId || `${metaName.toLowerCase()}_${now}_${Math.random().toString(36).substring(2, 8)}`;
+
     // Meta Ads Pixel
     if (window.fbq && metaName) {
       const targetPixelId = trackingConfig && (trackingConfig.meta_pixel_id || trackingConfig.meta_pageview_pixel_id);
       if (targetPixelId) {
-        if (data && data.eventId) {
-          window.fbq('trackSingle', targetPixelId, metaName, data.metaPayload || {}, { eventID: data.eventId });
-        } else {
-          window.fbq('trackSingle', targetPixelId, metaName, data ? (data.metaPayload || data) : {});
-        }
+        window.fbq('trackSingle', targetPixelId, metaName, data ? (data.metaPayload || data) : {}, { eventID: eventId });
       } else {
-        if (data && data.eventId) {
-          window.fbq('track', metaName, data.metaPayload || {}, { eventID: data.eventId });
-        } else {
-          window.fbq('track', metaName, data ? (data.metaPayload || data) : {});
-        }
+        window.fbq('track', metaName, data ? (data.metaPayload || data) : {}, { eventID: eventId });
       }
     }
 
@@ -304,15 +322,17 @@
       });
     },
 
-    // Adição ao Carrinho
+    // Adição ao Carrinho (Disparo Único por Ação do Usuário)
     trackAddToCart(item) {
-      if (!item) return;
+      if (!item || (!item.id && !item.slug && !item.name)) return;
       const price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0).replace(/[^\d,.]/g, '').replace(',', '.')) || 0;
       const id = String(item.id || item.slug || 'prod');
       const name = item.name || 'Produto';
       const qty = Math.max(1, Number(item.qty) || 1);
+      const eventId = `atc_${id}_${Date.now()}`;
 
       trackEvent('AddToCart', 'add_to_cart', {
+        eventId: eventId,
         metaPayload: {
           content_name: name,
           content_ids: [id],
@@ -328,13 +348,25 @@
       });
     },
 
-    // Entrada no Checkout
+    // Entrada no Checkout (com Trava Anti-Duplicação de Sessão)
     trackInitiateCheckout(items, totalValue) {
       const total = typeof totalValue === 'number' ? totalValue : parseFloat(String(totalValue || 0).replace(/[^\d,.]/g, '').replace(',', '.')) || 0;
       const contentIds = Array.isArray(items) ? items.map(i => String(i.id || i.slug || 'prod')) : [];
       const numItems = Array.isArray(items) ? items.reduce((a, b) => a + (Number(b.qty) || 1), 0) : 1;
 
+      // Trava de sessão: evita múltiplos InitiateCheckout ao recarregar ou navegar nas etapas do checkout
+      const icSessionKey = `nte_ic_${contentIds.sort().join('_')}_${Math.round(total)}`;
+      const now = Date.now();
+      const lastIc = Number(sessionStorage.getItem(icSessionKey) || 0);
+      if (now - lastIc < 15000) {
+        return;
+      }
+      sessionStorage.setItem(icSessionKey, String(now));
+
+      const eventId = `ic_${now}`;
+
       trackEvent('InitiateCheckout', 'begin_checkout', {
+        eventId: eventId,
         metaPayload: {
           content_ids: contentIds,
           content_type: 'product',
@@ -494,8 +526,10 @@
       const items = Array.isArray(payload.items) ? payload.items : [];
       const contentIds = items.map(i => String(i.id || i.slug || 'prod'));
       const numItems = items.reduce((a, b) => a + (Number(b.qty) || 1), 0) || 1;
+      const eventId = `lead_wpp_${Date.now()}`;
 
       trackEvent('Lead', 'generate_lead', {
+        eventId: eventId,
         metaPayload: {
           content_name: payload.productName || 'Pedido WhatsApp',
           content_ids: contentIds,
@@ -514,10 +548,11 @@
       if (window.fbq) {
         const targetPixelId = trackingConfig && (trackingConfig.meta_pixel_id || trackingConfig.meta_pageview_pixel_id);
         const contactData = { destination: 'whatsapp', value: value, currency: 'BRL' };
+        const contactId = `contact_${Date.now()}`;
         if (targetPixelId) {
-          window.fbq('trackSingle', targetPixelId, 'Contact', contactData);
+          window.fbq('trackSingle', targetPixelId, 'Contact', contactData, { eventID: contactId });
         } else {
-          window.fbq('track', 'Contact', contactData);
+          window.fbq('track', 'Contact', contactData, { eventID: contactId });
         }
       }
     },
