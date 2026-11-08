@@ -20,19 +20,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/lib/admin_guard.php';
 
-// Listar, alterar e apagar registros (nome, telefone, e-mail, carrinho) é só do admin; o checkout do site só faz POST.
-const ABANDONED_FILE = __DIR__ . '/../data/abandoned_checkouts.json';
+// Arquivo *.live.json é protegido pelo .gitignore e nunca é sobrescrito por deploys do Git na Hostinger.
+const ABANDONED_LIVE_FILE = __DIR__ . '/../data/abandoned_checkouts.live.json';
+const ABANDONED_BASE_FILE = __DIR__ . '/../data/abandoned_checkouts.json';
+const ABANDONED_LOGS_FILE = __DIR__ . '/../data/abandoned_checkouts_audit.log.json';
 
 function readAbandonedCheckouts(): array {
-    if (!file_exists(ABANDONED_FILE)) return [];
-    $raw = @file_get_contents(ABANDONED_FILE);
+    $fileToRead = file_exists(ABANDONED_LIVE_FILE) ? ABANDONED_LIVE_FILE : ABANDONED_BASE_FILE;
+    if (!file_exists($fileToRead)) return [];
+    $raw = @file_get_contents($fileToRead);
     if (!$raw) return [];
     $data = @json_decode($raw, true);
-    return (is_array($data) && isset($data['checkouts']) && is_array($data['checkouts'])) ? $data['checkouts'] : [];
+    $items = (is_array($data) && isset($data['checkouts']) && is_array($data['checkouts'])) ? $data['checkouts'] : [];
+
+    // Se o live já existe, confere se o base tem algum registro que não esteja no live (merge defensivo)
+    if ($fileToRead === ABANDONED_LIVE_FILE && file_exists(ABANDONED_BASE_FILE)) {
+        $rawBase = @file_get_contents(ABANDONED_BASE_FILE);
+        $dataBase = $rawBase ? @json_decode($rawBase, true) : null;
+        $itemsBase = (is_array($dataBase) && isset($dataBase['checkouts']) && is_array($dataBase['checkouts'])) ? $dataBase['checkouts'] : [];
+        if (!empty($itemsBase)) {
+            $existingIds = array_column($items, 'id');
+            foreach ($itemsBase as $bItem) {
+                if (!empty($bItem['id']) && !in_array($bItem['id'], $existingIds, true)) {
+                    $items[] = $bItem;
+                }
+            }
+        }
+    }
+    return $items;
 }
 
 function saveAbandonedCheckouts(array $list): bool {
-    $dir = dirname(ABANDONED_FILE);
+    $dir = dirname(ABANDONED_LIVE_FILE);
     if (!is_dir($dir)) {
         @mkdir($dir, 0755, true);
     }
@@ -42,7 +61,35 @@ function saveAbandonedCheckouts(array $list): bool {
         'checkouts' => array_values($list)
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-    return @file_put_contents(ABANDONED_FILE, $payload, LOCK_EX) !== false;
+    // Salva sempre no .live.json (blindado contra qualquer git pull/deploy) e sincroniza o base
+    $okLive = @file_put_contents(ABANDONED_LIVE_FILE, $payload, LOCK_EX) !== false;
+    @file_put_contents(ABANDONED_BASE_FILE, $payload, LOCK_EX);
+    return $okLive;
+}
+
+function logAbandonedDeletion(string $id, ?array $deletedItem = null): void {
+    $dir = dirname(ABANDONED_LOGS_FILE);
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    $logs = file_exists(ABANDONED_LOGS_FILE) ? @json_decode(@file_get_contents(ABANDONED_LOGS_FILE), true) : [];
+    if (!is_array($logs)) $logs = [];
+
+    $logs[] = [
+        'action' => 'delete',
+        'id' => $id,
+        'deletedAt' => date('c'),
+        'exactTime' => date('H:i:s'),
+        'exactDate' => date('d/m/Y'),
+        'customerName' => $deletedItem['name'] ?? 'Não informado',
+        'customerPhone' => $deletedItem['phone'] ?? 'Não informado',
+        'customerEmail' => $deletedItem['email'] ?? 'Não informado',
+        'step' => $deletedItem['step'] ?? null,
+        'total' => $deletedItem['total'] ?? null,
+        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+        'userAgent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
+    ];
+
+    if (count($logs) > 500) $logs = array_slice($logs, -500);
+    @file_put_contents(ABANDONED_LOGS_FILE, json_encode($logs, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -243,9 +290,19 @@ switch ($method) {
         }
 
         $list = readAbandonedCheckouts();
+        $deletedItem = null;
+        foreach ($list as $it) {
+            if (($it['id'] ?? '') === $targetId) {
+                $deletedItem = $it;
+                break;
+            }
+        }
+
         $filtered = array_filter($list, fn($it) => ($it['id'] ?? '') !== $targetId);
         saveAbandonedCheckouts(array_values($filtered));
-        echo json_encode(['success' => true, 'id' => $targetId]);
+        logAbandonedDeletion($targetId, $deletedItem);
+
+        echo json_encode(['success' => true, 'id' => $targetId, 'logged' => true]);
         exit;
 
     default:
