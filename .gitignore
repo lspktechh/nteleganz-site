@@ -38,3 +38,12 @@ data/feedbacks.backup.json
 # apagar nem reverter nada do que o gestor cadastrou.
 data/*.live.json
 data/.sync_images_stamp
+
+# Segredos e dados pessoais gravados pelo servidor (credenciais do Mercado Pago, pedidos com nome/telefone/
+# e-mail/endereco, checkouts abandonados, sessoes do admin, logs de webhook). Nunca versionar.
+# ATENCAO: ignorar aqui nao remove do git o que ja foi commitado (ver docs do PR sobre git rm --cached).
+data/mercadopago_settings.json
+data/orders.json
+data/abandoned_checkouts.json
+data/admin_sessions.json
+data/logs/

@@ -19,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/lib/live_data.php';
+require_once __DIR__ . '/lib/admin_guard.php';
 
 const MP_SETTINGS_FILE = __DIR__ . '/../data/mercadopago_settings.json';
 const MP_PAYMENTS_URL = 'https://api.mercadopago.com/v1/payments';
@@ -225,8 +226,11 @@ if ($method === 'GET') {
     }
 
     // 3. Consulta de Configurações
+    // As credenciais completas (access token e segredo do webhook) só saem para o painel. Antes bastava
+    // acrescentar ?admin na URL, sem nenhum login.
     $isAdmin = isset($_GET['admin']) || isset($_GET['full']);
     if ($isAdmin) {
+        nte_require_admin();
         echo json_encode([
             'success' => true,
             'settings' => [
@@ -275,10 +279,16 @@ if (!is_array($data)) {
 
 // Ação de Admin: Salvar Configurações
 if (isset($data['action']) && $data['action'] === 'save_settings') {
+    nte_require_admin();
     $current = readMercadoPagoSettings();
     $pub = trim((string)($data['publicKey'] ?? $current['publicKey']));
     $sec = trim((string)($data['accessToken'] ?? $current['accessToken']));
     $desc = trim((string)($data['statementDescriptor'] ?? $current['statementDescriptor']));
+    // Campo do segredo vazio não apaga o que já está salvo (o HTML do painel não vem mais pré-preenchido)
+    $webhookSecret = trim((string)($data['webhookSecret'] ?? ''));
+    if ($webhookSecret === '') {
+        $webhookSecret = trim((string)($current['webhookSecret'] ?? ''));
+    }
 
     if ($pub === '' || $sec === '') {
         http_response_code(400);
@@ -289,7 +299,7 @@ if (isset($data['action']) && $data['action'] === 'save_settings') {
     $updated = array_merge($current, [
         'publicKey' => $pub,
         'accessToken' => $sec,
-        'webhookSecret' => trim((string)($data['webhookSecret'] ?? $current['webhookSecret'] ?? '')),
+        'webhookSecret' => $webhookSecret,
         'statementDescriptor' => !empty($desc) ? mb_substr($desc, 0, 16) : 'NT ELEGANZ',
         'updatedAt' => date('c')
     ]);
@@ -309,6 +319,7 @@ if (isset($data['action']) && $data['action'] === 'save_settings') {
 
 // ── UTILITÁRIO 1: GERAR CSR APPLE PAY NO MERCADO PAGO ──
 if (isset($data['action']) && $data['action'] === 'apple_pay_csr_generate') {
+    nte_require_admin();
     $merchantId = trim((string)($data['merchantIdentifier'] ?? ($settings['applePay']['merchantIdentifier'] ?? 'merchant.com.nteleganz')));
     $org = trim((string)($data['organization'] ?? 'NT Eleganz'));
 
@@ -341,6 +352,7 @@ if (isset($data['action']) && $data['action'] === 'apple_pay_csr_generate') {
 
 // ── UTILITÁRIO 2: UPLOAD DO CERTIFICADO ASSINADO DA APPLE NO MERCADO PAGO ──
 if (isset($data['action']) && $data['action'] === 'apple_pay_cert_upload') {
+    nte_require_admin();
     $certificateBase64 = trim((string)($data['certificate'] ?? ''));
     $certificateId = trim((string)($data['certificateId'] ?? ''));
 

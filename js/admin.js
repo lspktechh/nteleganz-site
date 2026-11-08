@@ -1687,6 +1687,11 @@
     }
   }
 
+  // Headers para as APIs que exigem o admin logado (Meio Caminho, credenciais do Mercado Pago...)
+  async function adminApiHeaders(extra = {}) {
+    return { ...extra, ...((await getUploadAuthHeader()) || {}) };
+  }
+
   async function uploadProductImage(dataUrl, productId, index) {
     const uploadEndpoint = '/upload.php';
     const authHeader = await getUploadAuthHeader();
@@ -1948,7 +1953,8 @@
 
   window.loadMeioCaminho = async function (showToastFlag = false) {
     try {
-      const res = await fetch('/api/abandoned_checkouts.php', { cache: 'no-store' });
+      const res = await fetch('/api/abandoned_checkouts.php', { cache: 'no-store', headers: await adminApiHeaders() });
+      if (res.status === 401) console.warn('Meio Caminho: sessão de admin ausente ou expirada.');
       const data = await res.json();
       allMeioCaminho = window.allMeioCaminho = Array.isArray(data?.checkouts) ? data.checkouts : [];
       updateMeioCaminhoKPIs();
@@ -2172,11 +2178,12 @@
 
   window.markMeioCaminhoContacted = async function (id) {
     try {
-      await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
+      const res = await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ status: 'contatado' })
       });
+      if (!res.ok) return;
       const it = allMeioCaminho.find(x => x.id === id);
       if (it && it.status !== 'recuperado') it.status = 'contatado';
       renderMeioCaminhoTable();
@@ -2185,11 +2192,12 @@
 
   window.markMeioCaminhoRecovered = async function (id) {
     try {
-      await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
+      const res = await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ status: 'recuperado', recovered: true })
       });
+      if (!res.ok) throw new Error('Sessão expirada ou sem permissão. Faça login novamente.');
       const it = allMeioCaminho.find(x => x.id === id);
       if (it) {
         it.status = 'recuperado';
@@ -2206,9 +2214,11 @@
   window.deleteMeioCaminho = async function (id) {
     if (!confirm('Deseja realmente remover este registro de Meio Caminho?')) return;
     try {
-      await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE'
+      const res = await fetch(`/api/abandoned_checkouts.php?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: await adminApiHeaders()
       });
+      if (!res.ok) throw new Error('Sessão expirada ou sem permissão. Faça login novamente.');
       allMeioCaminho = allMeioCaminho.filter(x => x.id !== id);
       updateMeioCaminhoKPIs();
       renderMeioCaminhoTable();
@@ -3689,7 +3699,7 @@
     const alertEl = document.getElementById('mp-alert');
     if (alertEl) alertEl.innerHTML = '';
     try {
-      const res = await fetch('/api/mercadopago.php?admin=1', { cache: 'no-store' });
+      const res = await fetch('/api/mercadopago.php?admin=1', { cache: 'no-store', headers: await adminApiHeaders() });
       if (!res.ok) return;
       const data = await res.json();
       if (data && data.settings) {
