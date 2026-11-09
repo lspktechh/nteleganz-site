@@ -255,6 +255,7 @@
 
   function renderCard(p, index = 0) {
     const isOutOfStock = (p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false;
+    const isSinglePiece = !!(p.singlePiece || p.pecaUnica || p.peca_unica);
     const badgeClass = p.badge === 'OFERTA' ? 'catalog-card__badge--sale' : p.badge === 'LUXO' ? 'catalog-card__badge--new' : '';
     const brand = esc(p.brand || '');
     const name = esc(p.name || '');
@@ -264,6 +265,15 @@
     const productUrl = (window.ntWpp?.getProductUrl ? window.ntWpp.getProductUrl(p) : `/products/?id=${esc(p.id)}`);
     const isAboveFold = (index < 4);
     const loadAttrs = isAboveFold ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" decoding="async"';
+
+    const badgesHtml = [
+      isOutOfStock
+        ? '<span class="catalog-card__badge badge-out-of-stock" style="display:inline-flex !important; position:absolute; top:12px; left:12px; background:#dc2626 !important; color:#ffffff !important; font-size:11px !important; font-weight:700 !important; letter-spacing:0.8px !important; padding:4px 10px !important; border-radius:4px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.3) !important;">ESGOTADO</span>'
+        : '',
+      isSinglePiece
+        ? `<span class="catalog-card__badge badge-peca-unica" style="display:inline-flex !important; position:absolute; ${isOutOfStock ? 'top:42px !important;' : 'top:12px !important;'} left:12px; background:#000000 !important; color:#ffffff !important; font-size:10.5px !important; font-weight:700 !important; letter-spacing:0.08em !important; padding:4px 9px !important; border-radius:2px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.4) !important; line-height:1.2 !important; pointer-events:none !important;">PEÇA ÚNICA</span>`
+        : (!isOutOfStock && p.badge ? `<span class="catalog-card__badge ${badgeClass}">${esc(p.badge)}</span>` : '')
+    ].filter(Boolean).join('');
 
     return `
       <article class="catalog-card ${isOutOfStock ? 'is-out-of-stock' : ''}" role="listitem" data-product-id="${esc(p.id)}">
@@ -278,9 +288,7 @@
             </svg>
             <span>Recarregar</span>
           </button>
-          ${isOutOfStock
-            ? '<span class="catalog-card__badge badge-out-of-stock" style="display:inline-flex !important; position:absolute; top:12px; left:12px; background:#dc2626 !important; color:#ffffff !important; font-size:11px !important; font-weight:700 !important; letter-spacing:0.8px !important; padding:4px 10px !important; border-radius:4px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.3) !important;">ESGOTADO</span>'
-            : (p.badge ? `<span class="catalog-card__badge ${badgeClass}">${esc(p.badge)}</span>` : '')}
+          ${badgesHtml}
           ${!isOutOfStock ? `
           <button class="catalog-card__quick-add" onclick="event.preventDefault();event.stopPropagation();catalogAddToCart('${esc(p.id)}')">
             Adicionar ao Carrinho

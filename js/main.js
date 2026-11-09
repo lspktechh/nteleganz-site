@@ -181,6 +181,7 @@
 
   function renderProductCard(product, index = 0) {
     const isOutOfStock = (product.stock !== undefined && Number(product.stock) <= 0) || product.inStock === false || product.available === false;
+    const isSinglePiece = !!(product.singlePiece || product.pecaUnica || product.peca_unica);
     const rawImage = product.image || (Array.isArray(product.images) && product.images[0]) || '';
     const vpsUrl = resolveProductImg(rawImage);
     const image = escHtml(vpsUrl);
@@ -189,6 +190,11 @@
     const productUrl = (window.ntWpp?.getProductUrl ? window.ntWpp.getProductUrl(product) : `/products/?id=${escHtml(product.id)}`);
     const isAboveFold = (index < 4);
     const loadAttrs = isAboveFold ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" decoding="async"';
+
+    const badgesHtml = [
+      isOutOfStock ? '<span class="product-card__badge badge-out-of-stock" style="display:inline-flex !important; position:absolute; top:12px; left:12px; background:#dc2626 !important; color:#ffffff !important; font-size:11px !important; font-weight:700 !important; letter-spacing:0.8px !important; padding:4px 10px !important; border-radius:4px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.3) !important;">ESGOTADO</span>' : '',
+      isSinglePiece ? `<span class="product-card__badge badge-peca-unica" style="display:inline-flex !important; position:absolute; ${isOutOfStock ? 'top:42px !important;' : 'top:12px !important;'} left:12px; background:#000000 !important; color:#ffffff !important; font-size:10.5px !important; font-weight:700 !important; letter-spacing:0.08em !important; padding:4px 9px !important; border-radius:2px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.4) !important; line-height:1.2 !important; pointer-events:none !important;">PEÇA ÚNICA</span>` : (!isOutOfStock && product.badge ? `<span class="product-card__badge">${escHtml(product.badge)}</span>` : '')
+    ].filter(Boolean).join('');
 
     return `
       <a class="product-card ${isOutOfStock ? 'is-out-of-stock' : ''}" href="${productUrl}" data-product-id="${escHtml(product.id)}" aria-label="Ver ${name}">
@@ -203,7 +209,7 @@
             </svg>
             <span>Recarregar</span>
           </button>
-          ${isOutOfStock ? '<span class="product-card__badge badge-out-of-stock" style="display:inline-flex !important; position:absolute; top:12px; left:12px; background:#dc2626 !important; color:#ffffff !important; font-size:11px !important; font-weight:700 !important; letter-spacing:0.8px !important; padding:4px 10px !important; border-radius:4px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.3) !important;">ESGOTADO</span>' : (product.badge ? `<span class="product-card__badge">${escHtml(product.badge)}</span>` : '')}
+          ${badgesHtml}
         </div>
         <div class="product-card__info">
           <span class="product-card__brand">${brand}</span>

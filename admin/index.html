@@ -395,6 +395,7 @@
                   <option value="in_stock">Em estoque</option>
                   <option value="out_of_stock">Esgotados</option>
                   <option value="featured">Em destaque</option>
+                  <option value="single_piece">Peça Única</option>
                 </select>
                 <button class="btn btn-secondary" id="product-clear-filters" onclick="clearProductFilters()" hidden>Limpar</button>
               </div>
@@ -1324,11 +1325,16 @@
         </div>
 
         <div class="form-group form-col-full">
-          <label>Seções no Site</label>
+          <label>Seções e Destaques no Site</label>
           <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:8px;">
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:400; font-size:0.9rem;">
               <input type="checkbox" id="p-featured" style="width:16px;height:16px;accent-color:#0a0a0a;" />
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg> Mais Vendidos
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500; font-size:0.9rem;">
+              <input type="checkbox" id="p-single-piece" style="width:16px;height:16px;accent-color:#0a0a0a;" />
+              <span class="badge" style="background:#000000; color:#ffffff; font-size:10px; font-weight:800; letter-spacing:0.06em; padding:3px 7px; border-radius:3px; text-transform:uppercase;">PEÇA ÚNICA</span>
+              <span>Marcar como Peça Única (Exibe selo na loja)</span>
             </label>
           </div>
         </div>
@@ -1544,8 +1550,8 @@
 
 <!-- Scripts -->
 <script src="../js/auth.js?v=20261007c"></script>
-<script src="../js/db.js?v=20261109-normalize-items-v3"></script>
-<script src="../js/admin.js?v=20261109-payment-badge-client-v4"></script>
+<script src="../js/db.js?v=20261109-peca-unica-v1"></script>
+<script src="../js/admin.js?v=20261109-peca-unica-v1"></script>
 <script>
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');

@@ -229,6 +229,7 @@
       <div class="search-results-grid" role="listbox" aria-label="Resultados da pesquisa">
         ${itemsToShow.map((p, idx) => {
           const out = isOutOfStock(p);
+          const isSingle = !!(p.singlePiece || p.pecaUnica || p.peca_unica);
           const imgUrl = resolveImg(p);
           const link = getProductUrl(p);
           const price = String(p.price || '').startsWith('R$') ? p.price : `R$ ${p.price || ''}`;
@@ -239,6 +240,7 @@
               <div class="search-item-thumb-box">
                 <img src="${escHtml(imgUrl)}" alt="${escHtml(p.brand || '')} ${escHtml(p.name || '')}" class="search-item-img" loading="lazy" onerror="if(window.handleProductImgError)window.handleProductImgError(this);" />
                 ${out ? '<span class="search-badge-out-tag">ESGOTADO</span>' : ''}
+                ${isSingle ? `<span class="search-badge-single-tag" style="position:absolute; ${out ? 'top:18px;' : 'top:3px;'} left:3px; background:#000000; color:#ffffff; font-size:7.5px; font-weight:800; letter-spacing:0.04em; padding:1px 4px; border-radius:2px; text-transform:uppercase; z-index:2; box-shadow:0 1px 3px rgba(0,0,0,0.5);">ÚNICA</span>` : ''}
               </div>
               <div class="search-item-details">
                 <span class="search-item-brand">${escHtml(p.brand || 'NT Eleganz')}</span>
@@ -246,6 +248,7 @@
                 <div class="search-item-prices">
                   <span class="search-item-price">${escHtml(price)}</span>
                   ${oldPrice ? `<span class="search-item-old-price">${escHtml(oldPrice)}</span>` : ''}
+                  ${isSingle ? '<span class="search-pill-badge" style="background:#000000; color:#ffffff; font-weight:700; font-size:10px; padding:1px 6px; border-radius:3px;">Peça Única</span>' : ''}
                   ${out ? '<span class="search-pill-badge badge-esgotado">Esgotado</span>' : (p.badge ? `<span class="search-pill-badge badge-destaque">${escHtml(p.badge)}</span>` : '')}
                 </div>
               </div>

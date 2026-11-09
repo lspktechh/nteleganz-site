@@ -844,7 +844,7 @@ function sanitizeProduct(array $input, bool $partial = false): ?array
         $record[$field] = $value === null ? $default : max(0, $value);
     }
 
-    foreach (['featured', 'destaque'] as $flag) {
+    foreach (['featured', 'destaque', 'singlePiece', 'pecaUnica', 'peca_unica'] as $flag) {
         if (array_key_exists($flag, $input)) {
             $record[$flag] = $bool($input[$flag]);
         }

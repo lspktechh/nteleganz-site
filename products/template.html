@@ -37,7 +37,7 @@
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/reset.css" />
   <link rel="stylesheet" href="css/animations.css" />
-  <link rel="stylesheet" href="css/components.css?v=20261006" />
+  <link rel="stylesheet" href="css/components.css?v=20261109-peca-unica-v1" />
   <link rel="stylesheet" href="css/main.css" />
 
   <style>
@@ -117,7 +117,7 @@
     @media (max-width: 700px) { .product-page { padding-top: 1rem; } .product-meta, .related-section .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .related-section { padding: 3rem var(--gutter); } .related-box { border-radius: 16px; } }
     @media (max-width: 420px) { .breadcrumb { overflow: hidden; white-space: nowrap; } .product-name { font-size: 1.55rem; } .gallery-main-swiper { border-radius: 7px; } .gallery-main-swiper img { padding: 1rem; } .size-btn { width: 3.65rem; } .related-section .products-grid { gap: .7rem; } .related-box { padding: 1.15rem; } }
   </style>
-  <link rel="stylesheet" href="css/mysupplies.css?v=20261026c" />
+  <link rel="stylesheet" href="css/mysupplies.css?v=20261109-peca-unica-v1" />
 <script src="/js/image-compat.js" defer></script>
 </head>
 <body>
@@ -307,6 +307,7 @@
       <div class="product-gallery">
         <div class="swiper gallery-main-swiper" id="gallery-main" style="position:relative;">
           <span id="product-out-badge" style="display:none; position:absolute; top:16px; left:16px; z-index:10; background:#dc2626; color:#ffffff; font-size:12px; font-weight:700; letter-spacing:1px; padding:6px 14px; border-radius:4px; text-transform:uppercase; box-shadow:0 2px 8px rgba(0,0,0,0.3);">ESGOTADO</span>
+          <span id="product-single-piece-badge" class="badge-peca-unica" style="display:none; position:absolute; top:16px; left:16px; z-index:10; background:#000000; color:#ffffff; font-size:11px; font-weight:700; letter-spacing:0.08em; padding:5px 12px; border-radius:2px; text-transform:uppercase; box-shadow:0 2px 8px rgba(0,0,0,0.35); pointer-events:none;">PEÇA ÚNICA</span>
           <div class="swiper-wrapper" id="gallery-slides">
             <!-- Rendered by JS -->
           </div>
@@ -327,6 +328,7 @@
           <span class="product-price-main" id="product-price">—</span>
           <span class="product-price-old" id="product-old-price" style="display:none;"></span>
           <span class="product-price-badge" id="product-badge" style="display:none;"></span>
+          <span id="product-single-piece-tag" class="badge-peca-unica-tag" style="display:none; background:#000000; color:#ffffff; font-size:11px; font-weight:700; letter-spacing:0.06em; padding:4px 9px; border-radius:2px; text-transform:uppercase; vertical-align:middle; margin-left:8px;">PEÇA ÚNICA</span>
         </div>
 
         <div class="stock-line" id="stock-line" aria-live="polite">Verificando estoque...</div>
@@ -533,9 +535,9 @@
 <script src="js/checkout.js?v=20261006"></script>
 <script src="/js/dynamic-checkout.js?v=20261101"></script>
 <script src="js/menu.js?v=20260930"></script>
-<script src="js/db.js?v=20260930"></script>
-<script src="/js/search.js?v=20261030"></script>
-<script src="js/main.js?v=20261030"></script>
+<script src="js/db.js?v=20261109-peca-unica-v1"></script>
+<script src="/js/search.js?v=20261109-peca-unica-v1"></script>
+<script src="js/main.js?v=20261109-peca-unica-v1"></script>
 <script src="/js/tracking.js?v=20261107-dedup"></script>
 
 <script>
@@ -637,9 +639,16 @@
       : [product.image]).filter(Boolean))];
     document.getElementById('gallery-thumbs').hidden = images.length < 2;
 
+    const isSinglePiece = !!(product.singlePiece || product.pecaUnica || product.peca_unica);
     const outBadge = document.getElementById('product-out-badge');
     if (outBadge) {
       outBadge.style.display = isOutOfStock ? 'inline-flex' : 'none';
+    }
+
+    const singleBadge = document.getElementById('product-single-piece-badge');
+    if (singleBadge) {
+      singleBadge.style.display = isSinglePiece ? 'inline-flex' : 'none';
+      singleBadge.style.top = isOutOfStock ? '52px' : '16px';
     }
 
     const imgStyle = isOutOfStock ? 'style="filter: grayscale(100%); opacity: 0.65;"' : '';
@@ -698,6 +707,11 @@
     document.getElementById('product-price').textContent = product.price;
     document.getElementById('product-desc').textContent = product.desc || '';
     document.getElementById('product-details').textContent = product.desc || 'Produto original, selecionado e autenticado pela NT Eleganz.';
+    const isSinglePiece = !!(product.singlePiece || product.pecaUnica || product.peca_unica);
+    const singleTag = document.getElementById('product-single-piece-tag');
+    if (singleTag) {
+      singleTag.style.display = isSinglePiece ? 'inline-block' : 'none';
+    }
     const stockLine = document.getElementById('stock-line');
     const stock = Number(product.stock);
     const available = product.active !== false && product.available !== false && Number.isFinite(stock) && stock > 0;
@@ -706,6 +720,8 @@
       stockLine.classList.toggle('stock-line--low', available && stock <= LAST_PIECES_THRESHOLD);
       if (!available) {
         stockLine.innerHTML = '<span style="color:#dc2626; font-weight:700;">● ESGOTADO</span>';
+      } else if (isSinglePiece) {
+        stockLine.innerHTML = '<span style="color:var(--text-primary); font-weight:600;"><span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#000; margin-right:5px; vertical-align:middle;"></span>Peça única exclusiva em estoque</span>';
       } else {
         stockLine.textContent = stock > LAST_PIECES_THRESHOLD ? 'Em estoque' : 'Últimas peças';
       }
@@ -786,10 +802,17 @@
       const name = escapeAttr(p.name || '');
       const cardUrl = window.ntWpp?.getProductUrl ? window.ntWpp.getProductUrl(p) : `/products/?id=${escapeAttr(p.id)}`;
       const vpsRelated = resolveProductImg(relatedImg);
+      const isRelOut = (p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false;
+      const isRelSingle = !!(p.singlePiece || p.pecaUnica || p.peca_unica);
+      const relBadges = [
+        isRelOut ? '<span class="product-card__badge badge-out-of-stock" style="display:inline-flex !important; position:absolute; top:12px; left:12px; background:#dc2626 !important; color:#ffffff !important; font-size:11px !important; font-weight:700 !important; letter-spacing:0.8px !important; padding:4px 10px !important; border-radius:4px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.3) !important;">ESGOTADO</span>' : '',
+        isRelSingle ? `<span class="product-card__badge badge-peca-unica" style="display:inline-flex !important; position:absolute; ${isRelOut ? 'top:42px !important;' : 'top:12px !important;'} left:12px; background:#000000 !important; color:#ffffff !important; font-size:10.5px !important; font-weight:700 !important; letter-spacing:0.08em !important; padding:4px 9px !important; border-radius:2px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.4) !important; line-height:1.2 !important; pointer-events:none !important;">PEÇA ÚNICA</span>` : (!isRelOut && p.badge ? `<span class="product-card__badge">${escapeAttr(p.badge)}</span>` : '')
+      ].filter(Boolean).join('');
       return `
-      <div class="product-card" onclick="window.location='${cardUrl}'" style="cursor:pointer;">
+      <div class="product-card ${isRelOut ? 'is-out-of-stock' : ''}" onclick="window.location='${cardUrl}'" style="cursor:pointer;">
         <div class="product-card__image-wrap">
           <img src="${escapeAttr(vpsRelated)}" alt="${brand} ${name}" loading="lazy" decoding="async"
+            style="${isRelOut ? 'filter: grayscale(100%); opacity: 0.6;' : ''}"
             onload="this.classList.add('is-loaded');if(this.parentElement)this.parentElement.classList.add('is-loaded');"
             onerror="window.handleProductImgError(this);">
           <button type="button" class="nte-img-retry-btn" aria-label="Recarregar imagem" title="Recarregar imagem" onclick="event.preventDefault();event.stopPropagation();window.nteRetryImage(this, event);">
@@ -798,7 +821,7 @@
             </svg>
             <span>Recarregar</span>
           </button>
-          ${p.badge ? `<span class="product-card__badge">${escapeAttr(p.badge)}</span>` : ''}
+          ${relBadges}
         </div>
         <div class="product-card__info">
           <span class="product-card__brand">${brand}</span>

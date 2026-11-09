@@ -70,6 +70,12 @@
       if (!record.imageUrl && (first.image || first.imageUrl)) record.imageUrl = first.image || first.imageUrl;
     }
 
+    if (record.singlePiece !== undefined || record.pecaUnica !== undefined || record.peca_unica !== undefined) {
+      const isSingle = !!(record.singlePiece || record.pecaUnica || record.peca_unica);
+      record.singlePiece = isSingle;
+      record.pecaUnica = isSingle;
+    }
+
     return record;
   }
 
