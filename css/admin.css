@@ -936,7 +936,7 @@ input, select, textarea { font-family: inherit; }
 
 .data-table th {
   text-align: left;
-  padding: 11px 20px;
+  padding: 11px 14px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -948,7 +948,7 @@ input, select, textarea { font-family: inherit; }
 }
 
 .data-table td {
-  padding: 14px 20px;
+  padding: 12px 14px;
   border-bottom: 1px solid rgba(0,0,0,0.04);
   vertical-align: middle;
   font-size: 13px;
@@ -961,7 +961,24 @@ input, select, textarea { font-family: inherit; }
 }
 .data-table tbody tr:hover td { background: var(--bg-hover); }
 .data-table tbody tr:last-child td { border-bottom: none; }
-.table-responsive { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+.table-responsive::-webkit-scrollbar {
+  height: 6px;
+}
+.table-responsive::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
+}
 .table-responsive .data-table { min-width:820px; }
 
 .product-thumb {

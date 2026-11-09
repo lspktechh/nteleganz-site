@@ -47,6 +47,29 @@
     if (!record.imageUrl && record.image_url) record.imageUrl = record.image_url;
     if (record.image) record.image = upgradeBuiltinImage(record.image);
     if (Array.isArray(record.images)) record.images = record.images.map(upgradeBuiltinImage);
+
+    // Normalização robusta para itens de pedidos (quando items vem como array, string JSON ou em raw_data)
+    let orderItems = Array.isArray(record.items) ? record.items : [];
+    if (!orderItems.length && typeof record.items === 'string') {
+      try { orderItems = JSON.parse(record.items); } catch (_) {}
+    }
+    if (!orderItems.length && record.raw_data && record.raw_data.items) {
+      try {
+        orderItems = Array.isArray(record.raw_data.items) ? record.raw_data.items : JSON.parse(record.raw_data.items);
+      } catch (_) {}
+    }
+    if (Array.isArray(orderItems) && orderItems.length > 0) {
+      record.items = orderItems;
+      const first = orderItems[0];
+      if (!record.productName || record.productName === '—') {
+        record.productName = orderItems.length > 1 ? (orderItems.length + ' itens no pedido') : (first.name || first.title || '');
+      }
+      if (!record.productBrand && first.brand) record.productBrand = first.brand;
+      if (!record.size && first.size) record.size = first.size;
+      if (!record.color && first.color) record.color = first.color;
+      if (!record.imageUrl && (first.image || first.imageUrl)) record.imageUrl = first.image || first.imageUrl;
+    }
+
     return record;
   }
 

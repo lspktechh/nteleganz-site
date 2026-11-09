@@ -569,14 +569,25 @@
     let found = '';
     if (o.imageUrl && typeof o.imageUrl === 'string' && o.imageUrl.trim() !== '') {
       found = o.imageUrl;
-    } else if (Array.isArray(o.items) && o.items[0]?.image) {
-      found = o.items[0].image;
-    } else if (o.productId && allProducts.length) {
-      const p = allProducts.find(x => String(x.id) === String(o.productId));
-      if (p) found = p.image || (Array.isArray(p.images) && p.images[0]) || '';
-    } else if (o.productName && allProducts.length) {
-      const p = allProducts.find(x => x.name && x.name.toLowerCase() === o.productName.toLowerCase());
-      if (p) found = p.image || (Array.isArray(p.images) && p.images[0]) || '';
+    } else {
+      let itemsList = Array.isArray(o.items) ? o.items : [];
+      if (!itemsList.length && typeof o.items === 'string') {
+        try { itemsList = JSON.parse(o.items); } catch (_) {}
+      }
+      if (!itemsList.length && o.raw_data && o.raw_data.items) {
+        try {
+          itemsList = Array.isArray(o.raw_data.items) ? o.raw_data.items : JSON.parse(o.raw_data.items);
+        } catch (_) {}
+      }
+      if (itemsList.length > 0 && (itemsList[0]?.image || itemsList[0]?.imageUrl)) {
+        found = itemsList[0].image || itemsList[0].imageUrl;
+      } else if (o.productId && allProducts.length) {
+        const p = allProducts.find(x => String(x.id) === String(o.productId));
+        if (p) found = p.image || (Array.isArray(p.images) && p.images[0]) || '';
+      } else if (o.productName && allProducts.length) {
+        const p = allProducts.find(x => x.name && x.name.toLowerCase() === o.productName.toLowerCase());
+        if (p) found = p.image || (Array.isArray(p.images) && p.images[0]) || '';
+      }
     }
     return found ? (typeof resolveAdminProductImg === 'function' ? resolveAdminProductImg(found) : found) : '';
   }
@@ -603,12 +614,32 @@
         ? `<img src="${escHtml(thumb)}" alt="" style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:1px solid rgba(201,168,76,0.3); background:#111; cursor:pointer;" onclick="window.open('${escHtml(thumb)}', '_blank')" onerror="this.onerror=null; this.src='../assets/images/logo.png'; this.style.opacity='0.4';" />`
         : `<div style="width:36px; height:36px; border-radius:6px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>`;
       const dtRecent = formatExactDateTime(o.createdAt || o.created_at);
+
+      let recentItemsList = Array.isArray(o.items) ? o.items : [];
+      if (!recentItemsList.length && typeof o.items === 'string') {
+        try { recentItemsList = JSON.parse(o.items); } catch (_) {}
+      }
+      if (!recentItemsList.length && o.raw_data && o.raw_data.items) {
+        try {
+          recentItemsList = Array.isArray(o.raw_data.items) ? o.raw_data.items : JSON.parse(o.raw_data.items);
+        } catch (_) {}
+      }
+      let recentProductText = o.productName || '';
+      if ((!recentProductText || recentProductText === '—') && recentItemsList.length > 0) {
+        if (recentItemsList.length > 1) {
+          recentProductText = `${recentItemsList.length} itens no pedido`;
+        } else {
+          const it = recentItemsList[0];
+          recentProductText = `${it.qty && it.qty > 1 ? it.qty + 'x ' : ''}${it.name || it.title || 'Produto'}`;
+        }
+      }
+
       return `
         <tr onclick="openOrderModal('${escHtml(o.id)}')" style="cursor:pointer;" title="Clique para ver os detalhes do pedido">
           <td><span class="badge badge-gold" style="font-family:monospace; font-size:11px; font-weight:700;">${code}</span></td>
           <td>${thumbHtml}</td>
           <td style="color:var(--text-primary); font-weight:500;">${escHtml(displayClient)}</td>
-          <td>${escHtml(o.productName || '—')}</td>
+          <td>${escHtml(recentProductText || '—')}</td>
           <td style="color:var(--gold); font-weight:600;">${escHtml(o.value || '—')}</td>
           <td>${statusBadge(o.status)}</td>
           <td style="font-size:12px; white-space:nowrap;">
@@ -1946,7 +1977,20 @@
     tbody.innerHTML = orders.map((o) => {
       const code = escHtml(o.code || ('#NTE-' + String(o.id).slice(-4).toUpperCase()));
       const thumb = getOrderThumbnail(o);
-      const hasMultiple = Array.isArray(o.items) && o.items.length > 1;
+
+      let itemsList = Array.isArray(o.items) ? o.items : [];
+      if (!itemsList.length && typeof o.items === 'string') {
+        try { itemsList = JSON.parse(o.items); } catch (_) {}
+      }
+      if (!itemsList.length && o.raw_data && o.raw_data.items) {
+        try {
+          itemsList = Array.isArray(o.raw_data.items) ? o.raw_data.items : JSON.parse(o.raw_data.items);
+        } catch (_) {}
+      }
+      if (!Array.isArray(itemsList)) itemsList = [];
+
+      const hasMultiple = itemsList.length > 1;
+      const firstItem = itemsList.length > 0 ? itemsList[0] : null;
 
       const isWpp = (o.channel === 'whatsapp') || (o.paymentMethod === 'whatsapp') || (o.source === 'whatsapp') || (typeof o.notes === 'string' && o.notes.includes('WhatsApp'));
       const channelBadge = isWpp
@@ -1956,19 +2000,38 @@
       const thumbHtml = thumb 
         ? `<div style="position:relative; width:44px; height:44px; flex-shrink:0;">
              <img src="${escHtml(thumb)}" alt="" style="width:44px; height:44px; border-radius:8px; object-fit:cover; border:1px solid rgba(201,168,76,0.3); background:#111; cursor:pointer;" onclick="window.open('${escHtml(thumb)}', '_blank')" onerror="this.onerror=null; this.src='../assets/images/logo.png'; this.style.opacity='0.4';" />
-             ${hasMultiple ? `<span style="position:absolute; bottom:-3px; right:-3px; background:var(--gold,#c9a84c); color:#000; font-size:9px; font-weight:800; border-radius:10px; padding:1px 5px; line-height:1.2;">+${o.items.length}</span>` : ''}
+             ${hasMultiple ? `<span style="position:absolute; bottom:-3px; right:-3px; background:var(--gold,#c9a84c); color:#000; font-size:9px; font-weight:800; border-radius:10px; padding:1px 5px; line-height:1.2;">+${itemsList.length}</span>` : ''}
            </div>`
         : `<div style="width:44px; height:44px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>`;
 
       let productDetails = '';
       if (hasMultiple) {
-        productDetails = `<span style="color:var(--gold); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; font-weight:600;">${o.items.length} itens no pedido</span><br>`;
-        productDetails += `<span style="font-size:12px; color:var(--text-secondary);">${escHtml(o.items.map(it => `${it.qty || 1}x ${it.name}`).join(', '))}</span>`;
+        productDetails = `<span style="color:var(--gold,#c9a84c); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; font-weight:700;">${itemsList.length} ITENS NO PEDIDO</span><br>`;
+        productDetails += `<span style="font-size:12px; color:var(--text-secondary); line-height:1.4;">${escHtml(itemsList.map(it => `${it.qty || 1}x ${it.name || it.title || 'Produto'}`).join(', '))}</span>`;
+      } else if (firstItem) {
+        const itemBrand = firstItem.brand || o.productBrand || '';
+        const itemName = firstItem.name || firstItem.title || o.productName || 'Produto';
+        const itemQty = (firstItem.qty && Number(firstItem.qty) > 1) ? `${firstItem.qty}x ` : '';
+        if (itemBrand) {
+          productDetails += `<span style="color:var(--gold,#c9a84c); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; font-weight:700;">${escHtml(itemBrand)}</span><br>`;
+        }
+        productDetails += `<span style="color:var(--text-primary); font-weight:600; font-size:12.5px;">${escHtml(itemQty + itemName)}</span>`;
       } else {
         if (o.productBrand) {
-          productDetails += `<span style="color:var(--gold); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; font-weight:600;">${escHtml(o.productBrand)}</span><br>`;
+          productDetails += `<span style="color:var(--gold,#c9a84c); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; font-weight:700;">${escHtml(o.productBrand)}</span><br>`;
         }
-        productDetails += `<span style="color:var(--text-primary); font-weight:500;">${escHtml(o.productName || '—')}</span>`;
+        productDetails += `<span style="color:var(--text-primary); font-weight:600; font-size:12.5px;">${escHtml(o.productName || '—')}</span>`;
+      }
+
+      let tamCorText = '—';
+      if (hasMultiple) {
+        const parts = itemsList.map(it => [it.size, it.color].filter(Boolean).join('/')).filter(Boolean);
+        tamCorText = parts.length > 0 ? parts.join(', ') : ([o.size, o.color].filter(Boolean).join(' / ') || '—');
+      } else if (firstItem) {
+        const parts = [firstItem.size || o.size, firstItem.color || o.color].filter(Boolean);
+        tamCorText = parts.length > 0 ? parts.join(' / ') : ([o.size, o.color].filter(Boolean).join(' / ') || '—');
+      } else {
+        tamCorText = [o.size, o.color].filter(Boolean).join(' / ') || '—';
       }
 
       const rawClient = (o.client && o.client !== 'Cliente do site' && o.client !== 'Cliente')
@@ -2045,7 +2108,7 @@
           </div>
         </td>
         <td>${productDetails}</td>
-        <td>${escHtml([o.size, o.color].filter(Boolean).join(' / ') || '—')}</td>
+        <td>${escHtml(tamCorText)}</td>
         <td style="color:var(--gold, #c9a84c); font-weight:600;">${escHtml(o.value || '—')}</td>
         <td>
           <select class="admin-select" style="font-size:11px; padding:4px 24px 4px 6px;" onclick="event.stopPropagation()" onchange="updateOrderStatus('${o.id}', this.value)">
@@ -2287,15 +2350,31 @@
       }
 
       // Detalhes dos Produtos
+      let cartItems = Array.isArray(c.items) ? c.items : [];
+      if (!cartItems.length && typeof c.items === 'string') {
+        try { cartItems = JSON.parse(c.items); } catch (_) {}
+      }
+      if (!cartItems.length && c.raw_data && c.raw_data.items) {
+        try {
+          cartItems = Array.isArray(c.raw_data.items) ? c.raw_data.items : JSON.parse(c.raw_data.items);
+        } catch (_) {}
+      }
+      if (!Array.isArray(cartItems)) cartItems = [];
+
       let productsHtml = '';
-      if (Array.isArray(c.items) && c.items.length > 0) {
-        productsHtml = c.items.map(it => `
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-            ${it.image ? `<img src="${escHtml(it.image)}" style="width:24px; height:24px; border-radius:4px; object-fit:cover; border:1px solid var(--border);" onerror="this.style.display='none'">` : ''}
-            <span style="font-size:12px; font-weight:500;">${escHtml(it.name || 'Produto')} (${it.qty || 1}x)</span>
-            ${it.size ? `<span style="font-size:10px; color:var(--text-muted); background:var(--bg-hover); padding:1px 4px; border-radius:3px;">Tam: ${escHtml(it.size)}</span>` : ''}
-          </div>
-        `).join('');
+      if (cartItems.length > 0) {
+        productsHtml = cartItems.map(it => {
+          const itemImg = it.image || it.imageUrl;
+          const itemName = it.name || it.title || 'Produto';
+          return `
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              ${itemImg ? `<img src="${escHtml(itemImg)}" style="width:24px; height:24px; border-radius:4px; object-fit:cover; border:1px solid var(--border);" onerror="this.style.display='none'">` : ''}
+              <span style="font-size:12px; font-weight:500;">${escHtml(itemName)} (${it.qty || 1}x)</span>
+              ${it.size ? `<span style="font-size:10px; color:var(--text-muted); background:var(--bg-hover); padding:1px 4px; border-radius:3px;">Tam: ${escHtml(it.size)}</span>` : ''}
+              ${it.color ? `<span style="font-size:10px; color:var(--text-muted); background:var(--bg-hover); padding:1px 4px; border-radius:3px;">Cor: ${escHtml(it.color)}</span>` : ''}
+            </div>
+          `;
+        }).join('');
       } else {
         productsHtml = '<span style="font-size:12px; color:var(--text-muted);">Itens não detalhados</span>';
       }
@@ -2304,8 +2383,8 @@
       let wppBtn = '';
       if (cleanDigits.length >= 10) {
         const firstName = c.name ? c.name.trim().split(' ')[0] : 'Cliente';
-        const prodSummary = Array.isArray(c.items) && c.items.length > 0
-          ? c.items.map(it => it.name).join(', ')
+        const prodSummary = cartItems.length > 0
+          ? cartItems.map(it => it.name || it.title || 'item').join(', ')
           : 'seu pedido';
         
         let greeting = '';
@@ -2605,9 +2684,19 @@
     let itemsList = [];
     if (Array.isArray(orderData.items) && orderData.items.length > 0) {
       itemsList = orderData.items;
-    } else if (orderData.productName) {
+    } else if (typeof orderData.items === 'string') {
+      try { itemsList = JSON.parse(orderData.items); } catch (_) {}
+    }
+    if ((!itemsList || !itemsList.length) && orderData.raw_data && orderData.raw_data.items) {
+      try {
+        itemsList = Array.isArray(orderData.raw_data.items) ? orderData.raw_data.items : JSON.parse(orderData.raw_data.items);
+      } catch (_) {}
+    }
+    if (!Array.isArray(itemsList)) itemsList = [];
+
+    if (itemsList.length === 0 && (orderData.productName || orderData.productBrand)) {
       itemsList = [{
-        name: orderData.productName,
+        name: orderData.productName || 'Produto',
         brand: orderData.productBrand || '',
         size: orderData.size || '',
         color: orderData.color || '',

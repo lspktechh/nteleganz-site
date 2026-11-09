@@ -100,6 +100,44 @@ function normalizeOrderChannel(array $order): array {
         $order['email'] = $order['customer']['email'];
     }
 
+    // Normaliza produtos/itens e preenche productName, brand, size, color, imageUrl
+    $rawItems = $order['items'] ?? [];
+    if (is_string($rawItems)) {
+        $decoded = @json_decode($rawItems, true);
+        if (is_array($decoded)) {
+            $rawItems = $decoded;
+            $order['items'] = $decoded;
+        }
+    }
+    if ((empty($rawItems) || !is_array($rawItems)) && !empty($order['raw_data']['items'])) {
+        $rawItems = is_array($order['raw_data']['items']) ? $order['raw_data']['items'] : (@json_decode($order['raw_data']['items'], true) ?: []);
+        if (!empty($rawItems) && is_array($rawItems)) {
+            $order['items'] = $rawItems;
+        }
+    }
+    if (is_array($rawItems) && !empty($rawItems)) {
+        $firstItem = $rawItems[0] ?? [];
+        if (empty($order['productName']) || $order['productName'] === '—') {
+            if (count($rawItems) > 1) {
+                $order['productName'] = count($rawItems) . ' itens no pedido';
+            } else {
+                $order['productName'] = $firstItem['name'] ?? ($firstItem['title'] ?? '');
+            }
+        }
+        if (empty($order['productBrand']) && !empty($firstItem['brand'])) {
+            $order['productBrand'] = $firstItem['brand'];
+        }
+        if (empty($order['size']) && !empty($firstItem['size'])) {
+            $order['size'] = $firstItem['size'];
+        }
+        if (empty($order['color']) && !empty($firstItem['color'])) {
+            $order['color'] = $firstItem['color'];
+        }
+        if (empty($order['imageUrl']) && !empty($firstItem['image'])) {
+            $order['imageUrl'] = $firstItem['image'];
+        }
+    }
+
     return $order;
 }
 
