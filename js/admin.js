@@ -634,11 +634,38 @@
         }
       }
 
+      const stRecent = String(o.status || '').toLowerCase().trim();
+      const pstRecent = String(o.paymentStatus || (o.raw_data && o.raw_data.paymentStatus) || '').toLowerCase().trim();
+      const isPaidRecent = (
+        stRecent === 'pago' || 
+        stRecent === 'confirmado' || 
+        stRecent === 'enviado' || 
+        stRecent === 'entregue' || 
+        stRecent === 'concluido' || 
+        stRecent === 'em_separacao' || 
+        pstRecent === 'approved' || 
+        pstRecent === 'paid'
+      );
+      const isCancelledRecent = (stRecent === 'cancelado' || pstRecent === 'cancelled' || pstRecent === 'rejected');
+      let payStatusBadgeRecent = '';
+      if (isCancelledRecent) {
+        payStatusBadgeRecent = `<span class="badge" style="background:rgba(239,68,68,0.12); color:#dc2626; border:1px solid rgba(239,68,68,0.3); font-weight:700; font-size:10px; padding:1px 6px; border-radius:4px; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;">Cancelado</span>`;
+      } else if (isPaidRecent) {
+        payStatusBadgeRecent = `<span class="badge" style="background:rgba(34,197,94,0.12); color:#16a34a; border:1px solid rgba(34,197,94,0.3); font-weight:700; font-size:10px; padding:1px 6px; border-radius:4px; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Pago</span>`;
+      } else {
+        payStatusBadgeRecent = `<span class="badge" style="background:rgba(245,158,11,0.14); color:#b45309; border:1px solid rgba(245,158,11,0.35); font-weight:700; font-size:10px; padding:1px 6px; border-radius:4px; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;"><span style="width:5px; height:5px; border-radius:50%; background:#d97706; display:inline-block;"></span> Pendente</span>`;
+      }
+
       return `
         <tr onclick="openOrderModal('${escHtml(o.id)}')" style="cursor:pointer;" title="Clique para ver os detalhes do pedido">
           <td><span class="badge badge-gold" style="font-family:monospace; font-size:11px; font-weight:700;">${code}</span></td>
           <td>${thumbHtml}</td>
-          <td style="color:var(--text-primary); font-weight:500;">${escHtml(displayClient)}</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span style="color:var(--text-primary); font-weight:600;">${escHtml(displayClient)}</span>
+              ${payStatusBadgeRecent}
+            </div>
+          </td>
           <td>${escHtml(recentProductText || '—')}</td>
           <td style="color:var(--gold); font-weight:600;">${escHtml(o.value || '—')}</td>
           <td>${statusBadge(o.status)}</td>
@@ -2043,6 +2070,30 @@
         ? (isWpp ? 'Cliente via WhatsApp' : 'Cliente do Checkout')
         : rawClient;
 
+      // Badge de Status de Pagamento ao lado do nome do cliente (solicitado: Verde se pago, Amarelo se pendente)
+      const st = String(o.status || '').toLowerCase().trim();
+      const pst = String(o.paymentStatus || (o.raw_data && o.raw_data.paymentStatus) || '').toLowerCase().trim();
+      const isPaid = (
+        st === 'pago' || 
+        st === 'confirmado' || 
+        st === 'enviado' || 
+        st === 'entregue' || 
+        st === 'concluido' || 
+        st === 'em_separacao' || 
+        pst === 'approved' || 
+        pst === 'paid'
+      );
+      const isCancelled = (st === 'cancelado' || pst === 'cancelled' || pst === 'rejected');
+
+      let payStatusBadge = '';
+      if (isCancelled) {
+        payStatusBadge = `<span class="badge" style="background:rgba(239,68,68,0.12); color:#dc2626; border:1px solid rgba(239,68,68,0.3); font-weight:700; font-size:10px; padding:2px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; vertical-align:middle; white-space:nowrap;">Cancelado</span>`;
+      } else if (isPaid) {
+        payStatusBadge = `<span class="badge" style="background:rgba(34,197,94,0.12); color:#16a34a; border:1px solid rgba(34,197,94,0.3); font-weight:700; font-size:10px; padding:2px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; vertical-align:middle; white-space:nowrap;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Pago</span>`;
+      } else {
+        payStatusBadge = `<span class="badge" style="background:rgba(245,158,11,0.14); color:#b45309; border:1px solid rgba(245,158,11,0.35); font-weight:700; font-size:10px; padding:2px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; vertical-align:middle; white-space:nowrap;"><span style="width:6px; height:6px; border-radius:50%; background:#d97706; display:inline-block;"></span> Pendente</span>`;
+      }
+
       // Extrai origem de tráfego de forma unificada (UTMs do tracking ou texto das anotações)
       let originSrc = '';
       const trk = o.tracking || (o.raw_data && o.raw_data.tracking) || null;
@@ -2101,8 +2152,11 @@
         <td>${channelBadge}</td>
         <td>${thumbHtml}</td>
         <td>
-          <div style="font-weight:600; color:var(--text-primary); font-size:13px; line-height:1.3;">${escHtml(displayClient)}</div>
-          <div style="display:flex; align-items:center; gap:6px; margin-top:3px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:7px; flex-wrap:wrap;">
+            <span style="font-weight:600; color:var(--text-primary); font-size:13px; line-height:1.3;">${escHtml(displayClient)}</span>
+            ${payStatusBadge}
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; margin-top:4px; flex-wrap:wrap;">
             ${phoneHtml}
             ${originBadge}
           </div>
