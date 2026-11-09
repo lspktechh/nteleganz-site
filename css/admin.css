@@ -833,14 +833,16 @@ input, select, textarea { font-family: inherit; }
   justify-content: space-between;
   padding: 18px 22px;
   border-bottom: 1px solid var(--border);
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .data-card-title {
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
+  min-width: 140px;
 }
 
 .data-card-actions {
@@ -848,6 +850,31 @@ input, select, textarea { font-family: inherit; }
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.data-card-actions .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.data-card-actions .admin-select {
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#panel-pedidos .data-table {
+  min-width: 960px;
+}
+
+#panel-meio-caminho .data-table {
+  min-width: 1080px;
 }
 
 .data-table {

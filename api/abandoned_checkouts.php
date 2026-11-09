@@ -183,10 +183,11 @@ switch ($method) {
         }
 
         $step = intval($input['step'] ?? 1);
+        $statusIncoming = (string)($input['status'] ?? 'pendente');
         $stepNames = [
             1 => 'Etapa 1: Identificação',
             2 => 'Etapa 2: Endereço & Frete',
-            3 => 'Etapa 3: Resumo & Pagamento'
+            3 => ($statusIncoming === 'pagamento_pendente' ? 'Pagamento Pendente (Pix/Cartão Gerado)' : 'Etapa 3: Resumo & Pagamento')
         ];
         $stepName = $stepNames[$step] ?? "Etapa {$step}";
 

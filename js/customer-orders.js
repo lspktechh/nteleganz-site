@@ -7,7 +7,13 @@
   'use strict';
 
   function formatPhoneBR(value) {
-    const digits = String(value || '').replace(/\D/g, '').slice(0, 11);
+    let raw = String(value || '').trim();
+    raw = raw.replace(/^(\+?55|0055)/, '');
+    let digits = raw.replace(/\D/g, '');
+    if (digits.startsWith('55') && (digits.length >= 12 || (digits.length === 11 && digits[2] !== '9'))) {
+      digits = digits.slice(2);
+    }
+    if (digits.length > 11) digits = digits.slice(0, 11);
     if (!digits) return '';
     if (digits.length <= 2) return `(${digits}`;
     if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;

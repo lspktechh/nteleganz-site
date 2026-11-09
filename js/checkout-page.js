@@ -57,12 +57,18 @@
 
   // ── Máscaras de Input ──
   function maskPhone(v) {
-    v = v.replace(/\D/g, '');
-    if (v.length > 11) v = v.substring(0, 11);
-    if (v.length > 10) return v.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
-    if (v.length > 6) return v.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
-    if (v.length > 2) return v.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
-    return v;
+    let raw = String(v || '').trim();
+    raw = raw.replace(/^(\+?55|0055)/, '');
+    let digits = raw.replace(/\D/g, '');
+    if (digits.startsWith('55') && (digits.length >= 12 || (digits.length === 11 && digits[2] !== '9'))) {
+      digits = digits.slice(2);
+    }
+    if (digits.length > 11) digits = digits.slice(0, 11);
+    if (!digits) return '';
+    if (digits.length > 10) return digits.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+    if (digits.length > 6) return digits.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
+    if (digits.length > 2) return digits.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
+    return digits;
   }
 
   function maskCPF(v) {
@@ -437,6 +443,7 @@
       }
       updatePaymentButtonText();
       updateProgress();
+      populateReviewCard();
     }
 
     if (tabPix) {
@@ -463,6 +470,13 @@
       cardAppleBtn.addEventListener('click', (e) => {
         e.preventDefault();
         submitApplePayTrigger();
+      });
+    }
+
+    const instSelect = document.getElementById('chk-card-installments');
+    if (instSelect) {
+      instSelect.addEventListener('change', () => {
+        populateReviewCard();
       });
     }
 
@@ -770,7 +784,7 @@
     meioCaminhoSessionId = 'mc_' + Date.now();
   }
 
-  async function syncMeioCaminho(step, finalizado = false, orderCode = '') {
+  async function syncMeioCaminho(step, finalizado = false, orderCode = '', customStatus = '') {
     try {
       const name = getVal('chk-name');
       const email = getVal('chk-email');
@@ -783,6 +797,8 @@
       const isFree = selectedShipping && selectedShipping.freeAbove && subtotal >= selectedShipping.freeAbove;
       const effectiveShippingPrice = isFree ? 0 : Number((selectedShipping && selectedShipping.price) || 0);
       const trackingData = window.nteTracking ? window.nteTracking.getTrackingData() : {};
+
+      const currentStatus = finalizado ? 'recuperado' : (customStatus || 'pendente');
 
       const payload = {
         sessionId: meioCaminhoSessionId,
@@ -818,9 +834,10 @@
         subtotal: fmtMoney(subtotal),
         total: fmtMoney(subtotal + effectiveShippingPrice),
         tracking: trackingData,
-        status: finalizado ? 'recuperado' : 'pendente',
+        status: currentStatus,
+        paymentMethod: selectedPaymentMethod || 'pix',
         finalizado: !!finalizado,
-        orderCode: orderCode || ''
+        orderCode: orderCode || currentOrderCode || ''
       };
 
       await fetch('/api/abandoned_checkouts.php', {
@@ -1160,8 +1177,8 @@
         localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(payload.customer));
       } catch (e) {}
 
-      // Marca o carrinho como recuperado/concluído no Meio Caminho
-      syncMeioCaminho(3, true, currentOrderCode);
+      // Registra como Pagamento Pendente no Meio Caminho (aguardando confirmação do banco)
+      syncMeioCaminho(3, false, currentOrderCode, 'pagamento_pendente');
 
       // Disparo oficial para Meta Ads (indicando destino Checkout)
       if (window.nteTracking && typeof window.nteTracking.trackOrderDispatch === 'function') {
@@ -1288,6 +1305,8 @@
         if (check && check.isApproved) {
           clearInterval(pollingInterval);
           clearInterval(countdownInterval);
+          // Marca definitivamente como Concluído / Recuperado no Meio Caminho
+          syncMeioCaminho(3, true, orderCode, 'recuperado');
           showSuccessScreen(orderCode, totalFormatted);
         }
       } catch (e) {
@@ -1835,7 +1854,7 @@
       const instList = calculateInstallments(baseTotal);
       const instData = instList.find(i => i.installment === instCount) || { total: baseTotal, value: baseTotal, interestAmount: 0 };
 
-      if (payTitleEl) payTitleEl.textContent = `Cartão ${brandName} final •••• ${last4}`;
+      if (payTitleEl) payTitleEl.textContent = cardNum ? `Cartão ${brandName} final •••• ${last4}` : 'Cartão de Crédito';
       if (paySubEl) {
         if (instCount === 1) {
           paySubEl.textContent = `1x de ${fmtMoney(instData.value)} à vista (Sem juros)`;

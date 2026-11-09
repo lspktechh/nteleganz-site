@@ -8,7 +8,7 @@
   <link rel="icon" type="image/webp" href="../assets/images/logonz.webp?v=20260930" />
   <link rel="apple-touch-icon" href="../assets/images/logonz-400.webp" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="../css/admin.css?v=20261107b" />
+  <link rel="stylesheet" href="../css/admin.css?v=20261109a" />
 <script src="/js/image-compat.js" defer></script>
 <style>
 .admin-loader{position:fixed;inset:0;background:var(--bg-primary,#080808);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;opacity:1;transition:opacity .3s ease,visibility .3s ease;color:var(--text-primary,#f2efe9)}
@@ -541,15 +541,16 @@
                 <option value="whatsapp">WhatsApp</option>
               </select>
               <select class="admin-select" id="order-filter-status" onchange="filterOrders()">
-                <option value="">Todos os status</option>
-                <option value="novo">Novo</option>
-                <option value="confirmado">Confirmado</option>
+                <option value="pagos" selected>Pedidos Pagos / Confirmados (Padrão)</option>
+                <option value="todos">Todos os status (inclusive pendentes)</option>
                 <option value="pago">Pago</option>
+                <option value="confirmado">Confirmado</option>
                 <option value="enviado">Enviado</option>
                 <option value="entregue">Entregue</option>
                 <option value="cancelado">Cancelado</option>
+                <option value="pendente">Apenas Pendentes (Aguardando Pagamento)</option>
               </select>
-              <button class="btn btn-primary" onclick="openOrderModal()">
+              <button class="btn btn-primary" onclick="openOrderModal()" style="white-space:nowrap; flex-shrink:0;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Registrar Pedido
               </button>
@@ -620,11 +621,13 @@
             <div class="data-card-actions">
               <select class="admin-select" id="meio-filter-status" onchange="filterMeioCaminho()">
                 <option value="" selected>Todos os Registros (Histórico Permanente)</option>
-                <option value="pendente">Apenas Pendentes (Não Concluídos)</option>
+                <option value="pagamento_pendente">Apenas Pagamento Pendente (Pix/Cartão Gerado)</option>
+                <option value="etapas">Apenas Abandonos de Etapas (Sem Gerar Pagamento)</option>
+                <option value="pendente">Apenas Pendentes Ativos (Gerais)</option>
                 <option value="recuperado">Apenas Concluídos / Recuperados</option>
                 <option value="contatado">Apenas Contatados</option>
               </select>
-              <button class="btn btn-secondary" onclick="loadMeioCaminho(true)">
+              <button class="btn btn-secondary" onclick="loadMeioCaminho(true)" style="white-space:nowrap; flex-shrink:0;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
                 Atualizar
               </button>
@@ -1457,7 +1460,7 @@
      MODAL: PEDIDO
 ══════════════════════════════════════════ -->
 <div id="order-modal" class="modal-overlay" onclick="if(event.target===this)closeOrderModal()">
-  <div class="modal" style="max-width:760px; width:100%;">
+  <div class="modal" style="max-width:860px; width:100%;">
     <div class="modal-header">
       <div class="modal-title" id="order-modal-title">Detalhes do Pedido</div>
       <button class="modal-close" onclick="closeOrderModal()">×</button>
@@ -1541,7 +1544,7 @@
 <!-- Scripts -->
 <script src="../js/auth.js?v=20261007c"></script>
 <script src="../js/db.js?v=20261107a"></script>
-<script src="../js/admin.js?v=20261107-fixmeio"></script>
+<script src="../js/admin.js?v=20261109-white-orders"></script>
 <script>
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');

@@ -269,6 +269,42 @@ function updateOrder(string $idOrCode, array $updateData): ?array {
     $updated = $local[$foundIdx];
     saveLocalOrders($local);
 
+    // Sincroniza Meio Caminho se o pedido foi pago / concluído
+    $st = strtolower((string)($updated['status'] ?? ''));
+    $pst = strtolower((string)($updated['paymentStatus'] ?? ''));
+    if ($st === 'pago' || $st === 'confirmado' || $pst === 'approved' || $pst === 'paid') {
+        try {
+            $liveFile = __DIR__ . '/../data/abandoned_checkouts.live.json';
+            $baseFile = __DIR__ . '/../data/abandoned_checkouts.json';
+            $targetFile = file_exists($liveFile) ? $liveFile : $baseFile;
+            if (file_exists($targetFile)) {
+                $raw = @file_get_contents($targetFile);
+                $d = $raw ? @json_decode($raw, true) : null;
+                if (is_array($d) && !empty($d['checkouts'])) {
+                    $changed = false;
+                    $codeClean = strtoupper(ltrim((string)($updated['code'] ?? ''), '#'));
+                    foreach ($d['checkouts'] as &$chk) {
+                        $chkCode = strtoupper(ltrim((string)($chk['orderCode'] ?? ''), '#'));
+                        if ($codeClean !== '' && $chkCode === $codeClean && empty($chk['recovered'])) {
+                            $chk['status'] = 'recuperado';
+                            $chk['recovered'] = true;
+                            $chk['finalizado'] = true;
+                            $chk['orderCode'] = $updated['code'] ?? '';
+                            $chk['finalizedAt'] = date('c');
+                            $changed = true;
+                        }
+                    }
+                    unset($chk);
+                    if ($changed) {
+                        $newPayload = json_encode($d, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                        @file_put_contents($liveFile, $newPayload, LOCK_EX);
+                        @file_put_contents($baseFile, $newPayload, LOCK_EX);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {}
+    }
+
     // Atualiza na VPS
     $vpsId = $updated['id'] ?? $idOrCode;
     callVpsOrders('PUT', VPS_API_ORDERS . '/' . urlencode($vpsId), $updateData);

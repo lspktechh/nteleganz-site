@@ -400,108 +400,11 @@
               </button>
             </div>
 
-            <!-- 1. Card de Revisão Completa do Pedido (ACIMA do Pagamento) -->
-            <div class="chk-card" id="card-revisao" style="margin-bottom: 22px;">
+                        <!-- 1. Card de Forma de Pagamento (PRIMEIRO) -->
+            <div class="chk-card" id="card-pagamento" style="margin-bottom: 22px;">
               <div class="chk-card-header">
                 <div class="chk-card-title-wrap">
                   <span class="chk-card-num">03</span>
-                  <h3>Revisão do Pedido</h3>
-                </div>
-                <span class="chk-card-sub">Confira todos os dados e valores antes de efetuar o pagamento</span>
-              </div>
-              <div class="chk-card-body">
-                <!-- Blocos de Revisão das Informações Preenchidas -->
-                <div class="chk-review-grid">
-                  <!-- Bloco 1: Identificação -->
-                  <div class="chk-review-block">
-                    <div class="chk-review-block-header">
-                      <div class="chk-review-block-title">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        <span>Identificação</span>
-                      </div>
-                      <button type="button" class="chk-btn-edit-step" id="chk-edit-step-1">Alterar</button>
-                    </div>
-                    <div class="chk-review-block-content">
-                      <p class="chk-rev-line-bold" id="chk-rev-name">—</p>
-                      <p class="chk-rev-line" id="chk-rev-email">—</p>
-                      <p class="chk-rev-line"><span id="chk-rev-phone">—</span></p>
-                      <p class="chk-rev-line">CPF: <span id="chk-rev-cpf">—</span></p>
-                    </div>
-                  </div>
-
-                  <!-- Bloco 2: Endereço de Entrega -->
-                  <div class="chk-review-block">
-                    <div class="chk-review-block-header">
-                      <div class="chk-review-block-title">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                        <span>Endereço de Entrega</span>
-                      </div>
-                      <button type="button" class="chk-btn-edit-step" id="chk-edit-step-2">Alterar</button>
-                    </div>
-                    <div class="chk-review-block-content">
-                      <p class="chk-rev-line-bold" id="chk-rev-street">—</p>
-                      <p class="chk-rev-line" id="chk-rev-complement">—</p>
-                      <p class="chk-rev-line" id="chk-rev-district-city">—</p>
-                      <p class="chk-rev-line">CEP: <span id="chk-rev-cep">—</span></p>
-                    </div>
-                  </div>
-
-                  <!-- Bloco 3: Modalidade de Envio -->
-                  <div class="chk-review-block">
-                    <div class="chk-review-block-header">
-                      <div class="chk-review-block-title">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
-                        <span>Modalidade de Envio</span>
-                      </div>
-                      <button type="button" class="chk-btn-edit-step" id="chk-edit-step-3">Alterar</button>
-                    </div>
-                    <div class="chk-review-block-content">
-                      <p class="chk-rev-line-bold" id="chk-rev-shipping-name">—</p>
-                      <p class="chk-rev-line" id="chk-rev-shipping-deadline">—</p>
-                      <p class="chk-rev-line-gold" id="chk-rev-shipping-price">—</p>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Seção de Produtos no Pedido -->
-                <div class="chk-review-section-title">
-                  <h4>Produtos no Pedido (<span id="chk-rev-items-count">0</span>)</h4>
-                </div>
-                <div class="chk-review-products-list" id="chk-review-products-list">
-                  <!-- Renderizado via JavaScript com foto, título, quantidade e preço -->
-                </div>
-
-                <!-- Resumo Financeiro Completo na Revisão -->
-                <div class="chk-review-financial">
-                  <div class="chk-review-fin-row">
-                    <span>Subtotal dos produtos</span>
-                    <span id="chk-rev-fin-subtotal" class="chk-rev-val-bold">R$ 0,00</span>
-                  </div>
-                  <div class="chk-review-fin-row">
-                    <span id="chk-rev-fin-shipping-name">Frete</span>
-                    <span id="chk-rev-fin-shipping-val" class="chk-rev-val-bold">R$ 0,00</span>
-                  </div>
-                  <div class="chk-review-fin-row" id="chk-rev-fin-interest-row" style="display: none;">
-                    <span>Juros do parcelamento</span>
-                    <span id="chk-rev-fin-interest" class="chk-rev-val-bold">R$ 0,00</span>
-                  </div>
-                  <div class="chk-review-fin-divider"></div>
-                  <div class="chk-review-fin-row chk-review-fin-total">
-                    <div>
-                      <span class="chk-rev-fin-total-title">TOTAL DO PEDIDO</span>
-                      <small id="chk-rev-fin-pay-condition">Em até 12x no cartão ou à vista via Pix</small>
-                    </div>
-                    <span class="chk-rev-fin-total-value" id="chk-rev-fin-total">R$ 0,00</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 2. Card de Forma de Pagamento (LOGO ABAIXO da Revisão) -->
-            <div class="chk-card" id="card-pagamento">
-              <div class="chk-card-header">
-                <div class="chk-card-title-wrap">
-                  <span class="chk-card-num">03.1</span>
                   <h3>Escolha a Forma de Pagamento</h3>
                 </div>
                 <span class="chk-card-sub">Ambiente Criptografado Mercado Pago • Sem redirecionamento</span>
@@ -747,6 +650,118 @@
               </div>
             </div>
 
+            <!-- 2. Card de Resumo da Compra & Revisão (LOGO ABAIXO do Pagamento) -->
+            <div class="chk-card" id="card-revisao" style="margin-bottom: 22px;">
+              <div class="chk-card-header">
+                <div class="chk-card-title-wrap">
+                  <span class="chk-card-num">03.1</span>
+                  <h3>Resumo da Compra & Revisão</h3>
+                </div>
+                <span class="chk-card-sub">Confira todos os dados e o método de pagamento selecionado</span>
+              </div>
+              <div class="chk-card-body">
+                <!-- Blocos de Revisão das Informações Preenchidas -->
+                <div class="chk-review-grid">
+                  <!-- Bloco 1: Identificação -->
+                  <div class="chk-review-block">
+                    <div class="chk-review-block-header">
+                      <div class="chk-review-block-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span>Identificação</span>
+                      </div>
+                      <button type="button" class="chk-btn-edit-step" id="chk-edit-step-1">Alterar</button>
+                    </div>
+                    <div class="chk-review-block-content">
+                      <p class="chk-rev-line-bold" id="chk-rev-name">—</p>
+                      <p class="chk-rev-line" id="chk-rev-email">—</p>
+                      <p class="chk-rev-line"><span id="chk-rev-phone">—</span></p>
+                      <p class="chk-rev-line">CPF: <span id="chk-rev-cpf">—</span></p>
+                    </div>
+                  </div>
+
+                  <!-- Bloco 2: Endereço de Entrega -->
+                  <div class="chk-review-block">
+                    <div class="chk-review-block-header">
+                      <div class="chk-review-block-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        <span>Endereço de Entrega</span>
+                      </div>
+                      <button type="button" class="chk-btn-edit-step" id="chk-edit-step-2">Alterar</button>
+                    </div>
+                    <div class="chk-review-block-content">
+                      <p class="chk-rev-line-bold" id="chk-rev-street">—</p>
+                      <p class="chk-rev-line" id="chk-rev-complement">—</p>
+                      <p class="chk-rev-line" id="chk-rev-district-city">—</p>
+                      <p class="chk-rev-line">CEP: <span id="chk-rev-cep">—</span></p>
+                    </div>
+                  </div>
+
+                  <!-- Bloco 3: Modalidade de Envio -->
+                  <div class="chk-review-block">
+                    <div class="chk-review-block-header">
+                      <div class="chk-review-block-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                        <span>Modalidade de Envio</span>
+                      </div>
+                      <button type="button" class="chk-btn-edit-step" id="chk-edit-step-3">Alterar</button>
+                    </div>
+                    <div class="chk-review-block-content">
+                      <p class="chk-rev-line-bold" id="chk-rev-shipping-name">—</p>
+                      <p class="chk-rev-line" id="chk-rev-shipping-deadline">—</p>
+                      <p class="chk-rev-line-gold" id="chk-rev-shipping-price">—</p>
+                    </div>
+                  </div>
+
+                  <!-- Bloco 4: Forma de Pagamento Selecionada -->
+                  <div class="chk-review-block" id="chk-review-block-payment">
+                    <div class="chk-review-block-header">
+                      <div class="chk-review-block-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                        <span>Pagamento Selecionado</span>
+                      </div>
+                      <button type="button" class="chk-btn-edit-step" id="chk-edit-step-payment" onclick="document.getElementById('card-pagamento')?.scrollIntoView({behavior:'smooth'})">Alterar</button>
+                    </div>
+                    <div class="chk-review-block-content">
+                      <p class="chk-rev-line-bold" id="chk-rev-payment-title">Pix Instantâneo (Aprovação Imediata)</p>
+                      <p class="chk-rev-line-gold" id="chk-rev-payment-sub">QR Code e Chave Copia e Cola gerados na próxima tela</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Seção de Produtos no Pedido -->
+                <div class="chk-review-section-title">
+                  <h4>Produtos no Pedido (<span id="chk-rev-items-count">0</span>)</h4>
+                </div>
+                <div class="chk-review-products-list" id="chk-review-products-list">
+                  <!-- Renderizado via JavaScript com foto, título, quantidade e preço -->
+                </div>
+
+                <!-- Resumo Financeiro Completo na Revisão -->
+                <div class="chk-review-financial">
+                  <div class="chk-review-fin-row">
+                    <span>Subtotal dos produtos</span>
+                    <span id="chk-rev-fin-subtotal" class="chk-rev-val-bold">R$ 0,00</span>
+                  </div>
+                  <div class="chk-review-fin-row">
+                    <span id="chk-rev-fin-shipping-name">Frete</span>
+                    <span id="chk-rev-fin-shipping-val" class="chk-rev-val-bold">R$ 0,00</span>
+                  </div>
+                  <div class="chk-review-fin-row" id="chk-rev-fin-interest-row" style="display: none;">
+                    <span>Juros do parcelamento</span>
+                    <span id="chk-rev-fin-interest" class="chk-rev-val-bold">R$ 0,00</span>
+                  </div>
+                  <div class="chk-review-fin-divider"></div>
+                  <div class="chk-review-fin-row chk-review-fin-total">
+                    <div>
+                      <span class="chk-rev-fin-total-title">TOTAL DO PEDIDO</span>
+                      <small id="chk-rev-fin-pay-condition">Em até 12x no cartão ou à vista via Pix</small>
+                    </div>
+                    <span class="chk-rev-fin-total-value" id="chk-rev-fin-total">R$ 0,00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
         </div>
@@ -842,6 +857,6 @@
   <!-- Scripts -->
   <script src="https://sdk.mercadopago.com/js/v2"></script>
   <script src="/js/tracking.js?v=20261107-dedup"></script>
-  <script src="/js/checkout-page.js?v=20261106-meio-caminho"></script>
+  <script src="/js/checkout-page.js?v=20261109-reorder-pay"></script>
 </body>
 </html>
