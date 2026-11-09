@@ -1047,7 +1047,7 @@ input, select, textarea { font-family: inherit; }
   .table-brand { font-size: 8px; }
   .table-name { font-size: 12px; }
   .data-table th, .data-table td { padding: 8px 8px; font-size: 11px; }
-  .table-responsive .data-table { min-width: 560px; }
+  .table-responsive .data-table { min-width: 0 !important; width: 100% !important; }
 }
 
 .pagination {
@@ -1638,6 +1638,412 @@ select.form-control {
   #panel-configuracoes div[style*="grid-template-columns"] {
     grid-template-columns: 1fr !important;
   }
+
+  /* ══════════════════════════════════════════
+     RESPONSIVE MOBILE CARDS FOR TABLES
+     (Eliminates horizontal scrolling on mobile)
+  ══════════════════════════════════════════ */
+  .table-responsive,
+  div[style*="overflow-x:auto"],
+  div[style*="overflow-x: auto"] {
+    overflow-x: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .table-responsive .data-table,
+  .data-table {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    border: none !important;
+  }
+  .data-table thead {
+    display: none !important;
+  }
+  .data-table tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Base Card per Row */
+  .data-table tbody tr {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    background: #ffffff !important;
+    border: 1px solid var(--border, #e5e5e5) !important;
+    border-radius: 14px !important;
+    padding: 14px 14px !important;
+    gap: 10px !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+  }
+  .data-table tbody tr:hover td {
+    background: transparent !important;
+  }
+  .data-table tbody tr td {
+    display: block !important;
+    padding: 0 !important;
+    border: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* ── 1. GESTÃO DE PEDIDOS (#orders-tbody) ── */
+  #orders-tbody tr td:nth-child(1) {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+    padding-bottom: 8px !important;
+  }
+  #orders-tbody tr td:nth-child(2) {
+    display: inline-flex !important;
+    width: auto !important;
+  }
+  #orders-tbody tr td:nth-child(3) {
+    float: left;
+    margin-right: 12px;
+    margin-bottom: 4px;
+    width: 44px !important;
+  }
+  #orders-tbody tr td:nth-child(4) {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    min-height: 44px;
+  }
+  #orders-tbody tr td:nth-child(5) {
+    clear: both;
+    background: rgba(0, 0, 0, 0.03) !important;
+    border-radius: 8px !important;
+    padding: 10px 12px !important;
+    margin-top: 4px !important;
+  }
+  #orders-tbody tr td:nth-child(6) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 12px !important;
+  }
+  #orders-tbody tr td:nth-child(6)::before {
+    content: "Tamanho / Cor:";
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  #orders-tbody tr td:nth-child(7) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: var(--gold, #c9a84c) !important;
+  }
+  #orders-tbody tr td:nth-child(7)::before {
+    content: "Valor do Pedido:";
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  #orders-tbody tr td:nth-child(8) {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+  #orders-tbody tr td:nth-child(8)::before {
+    content: "Alterar Status:";
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  #orders-tbody tr td:nth-child(8) select {
+    flex: 1 !important;
+    max-width: 180px !important;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+  }
+  #orders-tbody tr td:nth-child(9) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 11px !important;
+    color: var(--text-muted) !important;
+    border-top: 1px dashed rgba(0, 0, 0, 0.08) !important;
+    padding-top: 8px !important;
+  }
+  #orders-tbody tr td:nth-child(9)::before {
+    content: "Data do pedido:";
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  #orders-tbody tr td:nth-child(10) {
+    border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+    padding-top: 10px !important;
+  }
+  #orders-tbody tr td:nth-child(10) > div {
+    display: flex !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  #orders-tbody tr td:nth-child(10) button {
+    flex: 1 !important;
+    justify-content: center !important;
+    height: 38px !important;
+  }
+
+  /* ── 2. MEIO CAMINHO (#meio-caminho-tbody) ── */
+  #meio-caminho-tbody tr td:nth-child(1) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+    padding-bottom: 8px !important;
+  }
+  #meio-caminho-tbody tr td:nth-child(2) {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+  }
+  #meio-caminho-tbody tr td:nth-child(3) a,
+  #meio-caminho-tbody tr td:nth-child(3) span {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+  }
+  #meio-caminho-tbody tr td:nth-child(4) {
+    font-size: 12px !important;
+    color: var(--text-secondary) !important;
+    word-break: break-all !important;
+  }
+  #meio-caminho-tbody tr td:nth-child(5) {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+  #meio-caminho-tbody tr td:nth-child(6) {
+    background: rgba(0, 0, 0, 0.03) !important;
+    border-radius: 8px !important;
+    padding: 10px 12px !important;
+  }
+  #meio-caminho-tbody tr td:nth-child(7) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: var(--gold, #c9a84c) !important;
+  }
+  #meio-caminho-tbody tr td:nth-child(7)::before {
+    content: "Total em oportunidade:";
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  #meio-caminho-tbody tr td:nth-child(8) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  #meio-caminho-tbody tr td:nth-child(8)::before {
+    content: "Situação do lead:";
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  #meio-caminho-tbody tr td:nth-child(9) {
+    border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+    padding-top: 10px !important;
+  }
+  #meio-caminho-tbody tr td:nth-child(9) > div {
+    display: flex !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  #meio-caminho-tbody tr td:nth-child(9) button {
+    flex: 1 !important;
+    justify-content: center !important;
+    height: 38px !important;
+  }
+
+  /* ── 3. BASE DE CLIENTES (#customers-tbody) ── */
+  #customers-tbody tr td:nth-child(1) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+    padding-bottom: 8px !important;
+  }
+  #customers-tbody tr td:nth-child(2) button {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+  #customers-tbody tr td:nth-child(3) {
+    font-size: 12px !important;
+    word-break: break-all !important;
+  }
+  #customers-tbody tr td:nth-child(4) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 12px !important;
+  }
+  #customers-tbody tr td:nth-child(4)::before {
+    content: "Volume de compras:";
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  #customers-tbody tr td:nth-child(5) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: var(--gold, #c9a84c) !important;
+  }
+  #customers-tbody tr td:nth-child(5)::before {
+    content: "Total em pedidos:";
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  #customers-tbody tr td:nth-child(6) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 11px !important;
+    color: var(--text-muted) !important;
+  }
+  #customers-tbody tr td:nth-child(6)::before {
+    content: "Último pedido:";
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  #customers-tbody tr td:nth-child(7) {
+    border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+    padding-top: 10px !important;
+  }
+  #customers-tbody tr td:nth-child(7) > div {
+    display: flex !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  #customers-tbody tr td:nth-child(7) button {
+    flex: 1 !important;
+    justify-content: center !important;
+    height: 38px !important;
+  }
+
+  /* ── 4. PRODUTOS (#products-tbody) ── */
+  #products-tbody tr td:nth-child(1) {
+    float: left;
+    width: 60px !important;
+    height: 60px !important;
+    margin-right: 12px;
+    margin-bottom: 6px;
+  }
+  #products-tbody tr td:nth-child(1) .product-thumb {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 8px !important;
+  }
+  #products-tbody tr td:nth-child(2) {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    min-height: 40px;
+  }
+  #products-tbody tr td:nth-child(3) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: baseline !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: var(--gold, #c9a84c) !important;
+  }
+  #products-tbody tr td:nth-child(3)::before {
+    content: "Preço de venda:";
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  #products-tbody tr td:nth-child(4) {
+    clear: both;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 12px !important;
+    border-top: 1px dashed rgba(0, 0, 0, 0.08) !important;
+    padding-top: 6px !important;
+  }
+  #products-tbody tr td:nth-child(4)::before {
+    content: "Categoria:";
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  #products-tbody tr td:nth-child(5) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  #products-tbody tr td:nth-child(5)::before {
+    content: "Destaques:";
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  #products-tbody tr td:nth-child(6) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  #products-tbody tr td:nth-child(6)::before {
+    content: "Estoque atual:";
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  #products-tbody tr td:nth-child(7) {
+    border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+    padding-top: 10px !important;
+  }
+  #products-tbody tr td:nth-child(7) > div {
+    display: flex !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  #products-tbody tr td:nth-child(7) button {
+    flex: 1 !important;
+    justify-content: center !important;
+    height: 38px !important;
+  }
+  #products-tbody tr td:nth-child(7) button:first-child {
+    flex: 2 !important;
+  }
+
+  /* Pagination wrap */
+  .pagination {
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    justify-content: center !important;
+    gap: 10px !important;
+  }
+  .pagination select {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1686,7 +2092,7 @@ select.form-control {
   .data-card-header { padding: 14px 16px; flex-direction: column; align-items: flex-start; gap: 10px; }
   .data-card-title { font-size: 14px; }
   .data-table th, .data-table td { padding: 8px 10px; font-size: 11px; }
-  .table-responsive .data-table { min-width: 600px; }
+  .table-responsive .data-table { min-width: 0 !important; width: 100% !important; }
   
   .form-grid { grid-template-columns: 1fr; gap: 12px; }
   .form-group label { font-size: 10px; }
@@ -1778,7 +2184,7 @@ select.form-control {
   .chart-card { padding: 14px; }
   
   .data-table th, .data-table td { padding: 8px 8px; font-size: 10px; }
-  .table-responsive .data-table { min-width: 500px; }
+  .table-responsive .data-table { min-width: 0 !important; width: 100% !important; }
   
   .form-control { padding: 12px 14px; font-size: 16px; }
   .admin-search { padding: 12px 14px 12px 38px; font-size: 16px; }

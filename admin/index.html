@@ -8,7 +8,7 @@
   <link rel="icon" type="image/webp" href="../assets/images/logonz.webp?v=20260930" />
   <link rel="apple-touch-icon" href="../assets/images/logonz-400.webp" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="../css/admin.css?v=20261109-mobile-fix-v2" />
+  <link rel="stylesheet" href="../css/admin.css?v=20261109-mobile-fix-v3" />
 <script src="/js/image-compat.js" defer></script>
 <style>
 .admin-loader{position:fixed;inset:0;background:var(--bg-primary,#080808);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;opacity:1;transition:opacity .3s ease,visibility .3s ease;color:var(--text-primary,#f2efe9)}
@@ -416,6 +416,7 @@
             </thead>
             <tbody id="products-tbody"></tbody>
           </table>
+          </div>
           <div class="pagination" id="products-pagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 16px; padding: 12px 0;">
             <button class="btn btn-secondary btn-sm" id="pagination-prev" onclick="changeProductPage(-1)" disabled style="display: none;">Anterior</button>
             <span id="pagination-info" style="color: var(--text-secondary); font-size: 14px;">Carregando produtos...</span>
@@ -427,7 +428,6 @@
               <option value="50">50 por página</option>
               <option value="20">20 por página</option>
             </select>
-          </div>
           </div>
         </div>
       </div>
@@ -690,7 +690,7 @@
               <input type="text" class="form-control" id="customer-search-input" placeholder="Buscar por nome, telefone ou e-mail..." oninput="filterCustomers()" style="width:100%;" />
             </div>
           </div>
-          <div style="overflow-x:auto;">
+          <div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
