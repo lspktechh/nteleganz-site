@@ -1808,12 +1808,26 @@
 
   window.cleanPhoneDigitsBR = cleanPhoneDigitsBR;
   function cleanPhoneDigitsBR(value) {
-    let raw = String(value || '').trim();
-    raw = raw.replace(/^(\+?55|0055)/, '');
-    let digits = raw.replace(/\D/g, '');
-    if (digits.startsWith('55') && (digits.length >= 12 || (digits.length === 11 && digits[2] !== '9'))) {
+    let digits = String(value || '').replace(/\D/g, '');
+    if (!digits) return '';
+
+    // Se tem 12 ou 13 dígitos e começa com 55 (DDI do Brasil):
+    if ((digits.length === 12 || digits.length === 13) && digits.startsWith('55')) {
       digits = digits.slice(2);
     }
+    // Se tem 11 dígitos, começa com 55 e os dígitos 2 e 3 são um DDD brasileiro válido (ex: 5575..., 5511..., 5521...):
+    else if (digits.length === 11 && digits.startsWith('55') && digits[2] !== '9') {
+      digits = digits.slice(2);
+    }
+    // Se o usuário digitou 55 seguido do DDD (4 dígitos ou mais, ex: 5575...):
+    else if (digits.length >= 4 && digits.startsWith('55') && parseInt(digits.slice(2, 4), 10) >= 11) {
+      digits = digits.slice(2);
+    }
+    // Se tem mais de 13 dígitos e começa com 55:
+    else if (digits.length > 13 && digits.startsWith('55')) {
+      digits = digits.slice(2);
+    }
+
     return digits;
   }
 
@@ -2099,13 +2113,12 @@
         }
       }
 
-      // Sincroniza pedidos de checkout com Meio Caminho
+      // Sincroniza pedidos pagos para marcar como recuperados no Meio Caminho caso existam na lista
       const currentOrders = window.allOrders || allOrders || [];
       currentOrders.forEach(o => {
         if (!o) return;
         const oCode = o.code || ('#NTE-' + String(o.id).slice(-4).toUpperCase());
         const isPaid = isOrderPaidOrConfirmed(o);
-        const isWpp = (o.channel === 'whatsapp') || (o.paymentMethod === 'whatsapp') || (o.source === 'whatsapp') || (typeof o.notes === 'string' && o.notes.includes('WhatsApp'));
         
         // Se o pedido de checkout já foi pago, marca como concluído no Meio Caminho caso exista
         if (isPaid) {
@@ -2114,46 +2127,6 @@
             match.recovered = true;
             match.finalizado = true;
             match.status = 'recuperado';
-          }
-          return;
-        }
-
-        // Se é um pedido de checkout (não WhatsApp) e AINDA NÃO FOI PAGO (status novo/pendente/aguardando compensação):
-        // Deve obrigatoriamente figurar no Meio Caminho como Pagamento Pendente
-        if (!isWpp) {
-          const existing = allMeioCaminho.find(c => (c.orderCode && (c.orderCode === oCode || c.orderCode === o.code)) || (c.id === o.id));
-          if (existing) {
-            if (!existing.recovered && existing.status !== 'recuperado') {
-              existing.status = 'pagamento_pendente';
-              existing.orderCode = oCode;
-              existing.paymentMethod = o.paymentMethod || existing.paymentMethod || 'pix';
-              if (o.value && !existing.total) existing.total = o.value;
-            }
-          } else {
-            const rawPhone = o.phone || (o.customer && o.customer.phone) || (o.raw_data && o.raw_data.phone) || '';
-            const rawEmail = o.email || (o.customer && o.customer.email) || (o.raw_data && o.raw_data.email) || '';
-            const rawClient = (o.client && o.client !== 'Cliente do site' && o.client !== 'Cliente') ? o.client : (o.clientName || (o.customer && o.customer.name) || 'Cliente do Checkout');
-            const rawCpf = o.cpf || (o.customer && o.customer.cpf) || '';
-
-            allMeioCaminho.push({
-              id: o.id || ('mc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
-              orderCode: oCode,
-              sessionId: o.id || '',
-              name: rawClient,
-              phone: rawPhone,
-              email: rawEmail,
-              cpf: rawCpf,
-              step: 3,
-              stepName: 'Pagamento Pendente (Pix/Cartão Gerado)',
-              status: 'pagamento_pendente',
-              paymentMethod: o.paymentMethod || 'pix',
-              items: o.items || [],
-              total: o.value || '0,00',
-              createdAt: o.createdAt || o.created_at || new Date().toISOString(),
-              updatedAt: o.updatedAt || o.updated_at || new Date().toISOString(),
-              recovered: false,
-              finalizado: false
-            });
           }
         }
       });

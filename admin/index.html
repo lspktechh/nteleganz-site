@@ -8,7 +8,7 @@
   <link rel="icon" type="image/webp" href="../assets/images/logonz.webp?v=20260930" />
   <link rel="apple-touch-icon" href="../assets/images/logonz-400.webp" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="../css/admin.css?v=20261109a" />
+  <link rel="stylesheet" href="../css/admin.css?v=20261109-final-fixes" />
 <script src="/js/image-compat.js" defer></script>
 <style>
 .admin-loader{position:fixed;inset:0;background:var(--bg-primary,#080808);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;opacity:1;transition:opacity .3s ease,visibility .3s ease;color:var(--text-primary,#f2efe9)}
@@ -541,14 +541,15 @@
                 <option value="whatsapp">WhatsApp</option>
               </select>
               <select class="admin-select" id="order-filter-status" onchange="filterOrders()">
-                <option value="pagos" selected>Pedidos Pagos / Confirmados (Padrão)</option>
-                <option value="todos">Todos os status (inclusive pendentes)</option>
+                <option value="todos" selected>Todos os status</option>
+                <option value="pagos">Pagos / Confirmados</option>
+                <option value="pendente">Pendentes</option>
+                <option value="novo">Novos</option>
                 <option value="pago">Pago</option>
                 <option value="confirmado">Confirmado</option>
                 <option value="enviado">Enviado</option>
                 <option value="entregue">Entregue</option>
                 <option value="cancelado">Cancelado</option>
-                <option value="pendente">Apenas Pendentes (Aguardando Pagamento)</option>
               </select>
               <button class="btn btn-primary" onclick="openOrderModal()" style="white-space:nowrap; flex-shrink:0;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1544,7 +1545,7 @@
 <!-- Scripts -->
 <script src="../js/auth.js?v=20261007c"></script>
 <script src="../js/db.js?v=20261107a"></script>
-<script src="../js/admin.js?v=20261109-white-orders"></script>
+<script src="../js/admin.js?v=20261109-final-fixes"></script>
 <script>
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');

@@ -55,19 +55,48 @@
       .trim();
   }
 
-  // ── Máscaras de Input ──
-  function maskPhone(v) {
-    let raw = String(v || '').trim();
-    raw = raw.replace(/^(\+?55|0055)/, '');
-    let digits = raw.replace(/\D/g, '');
-    if (digits.startsWith('55') && (digits.length >= 12 || (digits.length === 11 && digits[2] !== '9'))) {
+  // ── Sanitização e Máscaras de Telefone e Documentos BR ──
+  function cleanPhoneDigitsBR(value) {
+    let digits = String(value || '').replace(/\D/g, '');
+    if (!digits) return '';
+
+    // Se tem 12 ou 13 dígitos e começa com 55 (DDI do Brasil):
+    if ((digits.length === 12 || digits.length === 13) && digits.startsWith('55')) {
       digits = digits.slice(2);
     }
-    if (digits.length > 11) digits = digits.slice(0, 11);
+    // Se tem 11 dígitos, começa com 55 e os dígitos 2 e 3 são um DDD brasileiro válido (ex: 5575..., 5511..., 5521...):
+    else if (digits.length === 11 && digits.startsWith('55') && digits[2] !== '9') {
+      digits = digits.slice(2);
+    }
+    // Se o usuário digitou 55 seguido do DDD (4 dígitos ou mais, ex: 5575...):
+    else if (digits.length >= 4 && digits.startsWith('55') && parseInt(digits.slice(2, 4), 10) >= 11) {
+      digits = digits.slice(2);
+    }
+    // Se tem mais de 13 dígitos e começa com 55:
+    else if (digits.length > 13 && digits.startsWith('55')) {
+      digits = digits.slice(2);
+    }
+
+    return digits;
+  }
+
+  function maskPhone(v) {
+    let digits = cleanPhoneDigitsBR(v);
     if (!digits) return '';
-    if (digits.length > 10) return digits.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
-    if (digits.length > 6) return digits.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
-    if (digits.length > 2) return digits.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
+    if (digits.length > 11) digits = digits.slice(0, 11);
+
+    if (digits.length === 11) {
+      return digits.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+    }
+    if (digits.length === 10) {
+      return digits.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
+    }
+    if (digits.length > 6) {
+      return digits.replace(/^(\d{2})(\d{4,5})(\d{0,4})$/, '($1) $2-$3');
+    }
+    if (digits.length > 2) {
+      return digits.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
+    }
     return digits;
   }
 
@@ -380,18 +409,20 @@
         const curVal = select.value;
         select.innerHTML = data.payerCosts.slice(0, 12).map(c => {
           const totalParcelado = Number(c.total_amount) || (c.installment_amount * c.installments);
-          const diffJuros = totalParcelado - total;
+          const diffJuros = Math.max(0, totalParcelado - total);
           let msg;
           if (c.installments === 1 || diffJuros <= 0.05) {
             msg = `${c.installments}x de ${fmtMoney(c.installment_amount)} sem juros (Total: ${fmtMoney(totalParcelado)} à vista)`;
           } else {
             msg = `${c.installments}x de ${fmtMoney(c.installment_amount)} (+${fmtMoney(diffJuros)} de juros • Total: ${fmtMoney(totalParcelado)})`;
           }
-          return `<option value="${c.installments}">${escapeHtml(msg)}</option>`;
+          return `<option value="${c.installments}" data-total="${totalParcelado.toFixed(2)}" data-installment-amount="${Number(c.installment_amount).toFixed(2)}" data-interest="${diffJuros.toFixed(2)}">${escapeHtml(msg)}</option>`;
         }).join('');
         if (curVal && select.querySelector(`option[value="${curVal}"]`)) {
           select.value = curVal;
         }
+        populateReviewCard();
+        updatePaymentButtonText();
         return;
       }
     } catch (_) {}
@@ -403,16 +434,18 @@
       const rate = rates[i] || 0;
       const totalComTaxa = total * (1 + (rate / 100));
       const parcela = totalComTaxa / i;
-      const diffJuros = totalComTaxa - total;
+      const diffJuros = Math.max(0, totalComTaxa - total);
       let msg;
       if (i === 1 || diffJuros <= 0.05) {
         msg = `${i}x de ${fmtMoney(parcela)} sem juros (Total: ${fmtMoney(totalComTaxa)} à vista)`;
       } else {
         msg = `${i}x de ${fmtMoney(parcela)} (+${fmtMoney(diffJuros)} de juros • Total: ${fmtMoney(totalComTaxa)})`;
       }
-      opts.push(`<option value="${i}">${msg}</option>`);
+      opts.push(`<option value="${i}" data-total="${totalComTaxa.toFixed(2)}" data-installment-amount="${parcela.toFixed(2)}" data-interest="${diffJuros.toFixed(2)}">${msg}</option>`);
     }
     select.innerHTML = opts.join('');
+    populateReviewCard();
+    updatePaymentButtonText();
   }
 
   // ── Alternância de Método de Pagamento (Pix vs Cartão vs Apple Pay) ──
@@ -1115,7 +1148,7 @@
 
   // ── 1. FLUXO PIX TRANSPARENTE NA TELA ──
   async function submitPixPayment() {
-    const btn = document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
+    const btn = document.getElementById('chk-btn-finish-order') || document.getElementById('chk-card-btn-pix') || document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
     const originalContent = btn ? btn.innerHTML : '';
 
     if (btn) {
@@ -1317,7 +1350,7 @@
 
   // ── 2. FLUXO CARTÃO DE CRÉDITO TRANSPARENTE ──
   async function submitCardPayment() {
-    const btn = document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
+    const btn = document.getElementById('chk-btn-finish-order') || document.getElementById('chk-card-btn-card') || document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
     const originalContent = btn ? btn.innerHTML : '';
 
     if (btn) {
@@ -1838,29 +1871,39 @@
     const paySubEl = document.getElementById('chk-rev-payment-sub');
 
     if (selectedPaymentMethod === 'pix') {
-      if (payTitleEl) payTitleEl.innerHTML = '<span style="display:inline-flex; align-items:center; gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path fill="#32BCAD" d="M5.283 18.36a3.505 3.505 0 0 0 2.493-1.032l3.6-3.6a.684.684 0 0 1 .946 0l3.613 3.613a3.504 3.504 0 0 0 2.493 1.032h.71l-4.56 4.56a3.647 3.647 0 0 1-5.156 0L4.85 18.36ZM18.428 5.627a3.505 3.505 0 0 0-2.493 1.032l-3.613 3.614a.67.67 0 0 1-.946 0l-3.6-3.6A3.505 3.505 0 0 0 5.283 5.64h-.434l4.573-4.572a3.646 3.646 0 0 1 5.156 0l4.559 4.559ZM1.068 9.422 3.79 6.699h1.492a2.483 2.483 0 0 1 1.744.722l3.6 3.6a1.73 1.73 0 0 0 2.443 0l3.614-3.613a2.482 2.482 0 0 1 1.744-.723h1.767l2.737 2.737a3.646 3.646 0 0 1 0 5.156l-2.736 2.736h-1.768a2.482 2.482 0 0 1-1.744-.722l-3.613-3.613a1.77 1.77 0 0 0-2.444 0l-3.6 3.6a2.483 2.483 0 0 1-1.744.722H3.791l-2.723-2.723a3.646 3.646 0 0 1 0-5.156"/></svg> Pix Instantâneo (Aprovação Imediata)</span>';
-      if (paySubEl) paySubEl.textContent = 'O código Pix Copia e Cola e o QR Code serão exibidos ao clicar em Finalizar Compra.';
+      if (payTitleEl) {
+        payTitleEl.innerHTML = '<span style="display:inline-flex; align-items:center; gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path fill="#32BCAD" d="M5.283 18.36a3.505 3.505 0 0 0 2.493-1.032l3.6-3.6a.684.684 0 0 1 .946 0l3.613 3.613a3.504 3.504 0 0 0 2.493 1.032h.71l-4.56 4.56a3.647 3.647 0 0 1-5.156 0L4.85 18.36ZM18.428 5.627a3.505 3.505 0 0 0-2.493 1.032l-3.613 3.614a.67.67 0 0 1-.946 0l-3.6-3.6A3.505 3.505 0 0 0 5.283 5.64h-.434l4.573-4.572a3.646 3.646 0 0 1 5.156 0l4.559 4.559ZM1.068 9.422 3.79 6.699h1.492a2.483 2.483 0 0 1 1.744.722l3.6 3.6a1.73 1.73 0 0 0 2.443 0l3.614-3.613a2.482 2.482 0 0 1 1.744-.723h1.767l2.737 2.737a3.646 3.646 0 0 1 0 5.156l-2.736 2.736h-1.768a2.482 2.482 0 0 1-1.744-.722l-3.613-3.613a1.77 1.77 0 0 0-2.444 0l-3.6 3.6a2.483 2.483 0 0 1-1.744.722H3.791l-2.723-2.723a3.646 3.646 0 0 1 0-5.156"/></svg> Pix Instantâneo (Aprovação Imediata)</span>';
+      }
+      if (paySubEl) {
+        paySubEl.textContent = 'O código Pix Copia e Cola e o QR Code serão exibidos ao clicar em Finalizar Pedido.';
+      }
     } else if (selectedPaymentMethod === 'apple_pay') {
-      if (payTitleEl) payTitleEl.textContent = 'Apple Pay';
-      if (paySubEl) paySubEl.textContent = 'Aprovação biométrica com 1 toque.';
+      if (payTitleEl) {
+        payTitleEl.innerHTML = '<span style="display:inline-flex; align-items:center; gap:6px;"><svg width="16" height="16" viewBox="0 0 170 170" fill="currentColor"><path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.6-7.7-11.71-13.98-5.87-8.91-10.45-18.9-13.74-29.98-3.29-11.08-4.94-21.72-4.94-31.91 0-14.12 3.59-26.04 10.77-35.75 7.18-9.71 16.32-14.66 27.42-14.85 4.89 0 10.15 1.25 15.78 3.75 5.63 2.5 9.4 3.81 11.31 3.93 1.52-.12 5.51-1.5 11.97-4.14 6.46-2.64 12.01-3.85 16.65-3.64 12.61.65 22.75 5.14 30.43 13.48-11.08 6.74-16.52 16.03-16.33 27.87.19 9.35 3.79 17.27 10.8 23.76 7.01 6.49 15.35 10.18 25.02 11.07-2.18 6.52-4.8 12.83-7.86 18.93zM119.22 33.15c0-7.39 2.66-14.41 7.98-21.06 5.32-6.65 11.89-10.88 19.71-12.09.22 1.52.33 2.83.33 3.92 0 7.39-2.77 14.47-8.31 21.23-5.54 6.76-12.21 11-20.02 11.71-.22-1.3-.33-2.54-.33-3.71z"/></svg> Apple Pay Integrado</span>';
+      }
+      if (paySubEl) {
+        paySubEl.textContent = 'Aprovação biométrica com 1 toque (Touch ID / Face ID).';
+      }
     } else {
       const cardNum = getVal('chk-card-number').replace(/\D/g, '');
-      const last4 = cardNum.slice(-4) || '••••';
+      const last4 = cardNum.length >= 4 ? cardNum.slice(-4) : '';
       const brandData = detectCardBrand(cardNum);
-      const brandName = (brandData && brandData.brand !== 'unknown') ? brandData.brand.toUpperCase() : 'CRÉDITO';
+      const brandName = (brandData && brandData.brand && brandData.brand !== 'unknown') ? brandData.brand.toUpperCase() : 'CRÉDITO';
       const instSelect = document.getElementById('chk-card-installments');
-      const instCount = instSelect ? parseInt(instSelect.value, 10) || 1 : 1;
-      const baseTotal = subtotal + (selectedShipping ? (selectedShipping.price || 0) : 0);
-      const instList = calculateInstallments(baseTotal);
-      const instData = instList.find(i => i.installment === instCount) || { total: baseTotal, value: baseTotal, interestAmount: 0 };
+      const selectedOption = instSelect && instSelect.selectedOptions ? instSelect.selectedOptions[0] : null;
+      const instCount = selectedOption ? parseInt(selectedOption.value, 10) || 1 : 1;
+      const instText = selectedOption ? selectedOption.textContent.trim() : `${instCount}x no cartão`;
 
-      if (payTitleEl) payTitleEl.textContent = cardNum ? `Cartão ${brandName} final •••• ${last4}` : 'Cartão de Crédito';
+      const cardIconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>`;
+
+      if (cardNum.length >= 4) {
+        if (payTitleEl) payTitleEl.innerHTML = `<span style="display:inline-flex; align-items:center; gap:6px;">${cardIconSvg} Cartão ${brandName} final •••• ${last4}</span>`;
+      } else {
+        if (payTitleEl) payTitleEl.innerHTML = `<span style="display:inline-flex; align-items:center; gap:6px;">${cardIconSvg} Cartão de Crédito</span>`;
+      }
+
       if (paySubEl) {
-        if (instCount === 1) {
-          paySubEl.textContent = `1x de ${fmtMoney(instData.value)} à vista (Sem juros)`;
-        } else {
-          paySubEl.textContent = `${instCount}x de ${fmtMoney(instData.value)} (${instData.interestAmount > 0 ? '+ juros' : 'sem juros'})`;
-        }
+        paySubEl.textContent = instText;
       }
     }
 
@@ -1906,12 +1949,18 @@
 
     if (selectedPaymentMethod === 'card') {
       const instSelect = document.getElementById('chk-card-installments');
-      const instCount = instSelect ? parseInt(instSelect.value, 10) || 1 : 1;
-      const instList = calculateInstallments(baseSubtotal + shippingPrice);
-      const instData = instList.find(i => i.installment === instCount);
-      if (instData) {
-        finalOrderTotal = instData.total;
-        interestAmount = instData.interestAmount;
+      const selectedOption = instSelect && instSelect.selectedOptions ? instSelect.selectedOptions[0] : null;
+      if (selectedOption && selectedOption.dataset && selectedOption.dataset.total) {
+        finalOrderTotal = Number(selectedOption.dataset.total);
+        interestAmount = Math.max(0, Number(selectedOption.dataset.interest) || (finalOrderTotal - (baseSubtotal + shippingPrice)));
+      } else {
+        const instCount = instSelect ? parseInt(instSelect.value, 10) || 1 : 1;
+        const instList = calculateInstallments(baseSubtotal + shippingPrice);
+        const instData = instList.find(i => i.installment === instCount);
+        if (instData) {
+          finalOrderTotal = instData.total;
+          interestAmount = instData.interestAmount;
+        }
       }
     }
 
@@ -2021,7 +2070,7 @@
       });
     }
 
-    // Máscaras do Cartão
+    // Máscaras e Eventos do Cartão
     const cardNumInput = document.getElementById('chk-card-number');
     if (cardNumInput) {
       cardNumInput.addEventListener('input', e => {
@@ -2033,6 +2082,7 @@
           updateInstallmentsSimulation();
         }
         updateProgress();
+        populateReviewCard();
       });
     }
 
@@ -2052,9 +2102,22 @@
       });
     }
 
+    const cardInstSelect = document.getElementById('chk-card-installments');
+    if (cardInstSelect) {
+      cardInstSelect.addEventListener('change', () => {
+        populateReviewCard();
+        updatePaymentButtonText();
+      });
+    }
+
     ['chk-name', 'chk-email', 'chk-street', 'chk-number', 'chk-neighborhood', 'chk-city', 'chk-state', 'chk-card-name'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.addEventListener('input', updateProgress);
+      if (el) {
+        el.addEventListener('input', () => {
+          updateProgress();
+          populateReviewCard();
+        });
+      }
     });
 
     // ── Botões de Navegação dos Cards de Cada Etapa (Checkout em 3 Etapas) ──

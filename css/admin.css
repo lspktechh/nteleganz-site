@@ -838,6 +838,28 @@ input, select, textarea { font-family: inherit; }
   min-width: 0;
 }
 
+@media (max-width: 1200px) {
+  .data-card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .data-card-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .data-card-actions .admin-select {
+    flex: 1 1 150px;
+    min-width: 140px;
+  }
+  .data-card-actions .btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
 .data-card-title {
   font-size: 1rem;
   font-weight: 600;
