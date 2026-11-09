@@ -8,7 +8,7 @@
   <link rel="icon" type="image/webp" href="../assets/images/logonz.webp?v=20260930" />
   <link rel="apple-touch-icon" href="../assets/images/logonz-400.webp" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="../css/admin.css?v=20261109-order-items-layout-v3" />
+  <link rel="stylesheet" href="../css/admin.css?v=20261109-mobile-fix-v1" />
 <script src="/js/image-compat.js" defer></script>
 <style>
 .admin-loader{position:fixed;inset:0;background:var(--bg-primary,#080808);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;opacity:1;transition:opacity .3s ease,visibility .3s ease;color:var(--text-primary,#f2efe9)}
@@ -1277,6 +1277,22 @@
           </div>
           <input type="number" class="form-control" id="p-stock" min="0" step="1" placeholder="1" required oninput="if (window.updateStockHint) window.updateStockHint();" />
           <small class="form-hint" id="p-stock-hint">Estoque disponível para venda. Use 0 apenas se o produto estiver esgotado.</small>
+          
+          <div style="margin-top:10px; padding:10px 12px; background:var(--bg-hover, rgba(0,0,0,0.03)); border:1px solid var(--border); border-radius:8px; display:flex; align-items:center; gap:10px;">
+            <input type="checkbox" id="p-single-piece" style="width:18px;height:18px;accent-color:#0a0a0a;cursor:pointer;flex-shrink:0;" />
+            <label for="p-single-piece" style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; font-size:0.88rem; color:var(--text-primary); margin:0;">
+              <span class="badge" style="background:#000000; color:#ffffff; font-size:10px; font-weight:800; letter-spacing:0.06em; padding:3px 7px; border-radius:3px; text-transform:uppercase;">PEÇA ÚNICA</span>
+              <span>Marcar como Peça Única</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Disponibilidade na Loja</label>
+          <select class="form-control" id="p-availability-status" onchange="if (window.handleAvailabilityStatusChange) window.handleAvailabilityStatusChange();">
+            <option value="in_stock">Em Estoque (Disponível para venda)</option>
+            <option value="out_of_stock">Esgotado (Exibe selo ESGOTADO na loja)</option>
+          </select>
+          <input type="hidden" id="p-active" value="true" />
         </div>
         <div class="form-group">
           <label>Badge (opcional)</label>
@@ -1315,26 +1331,12 @@
           <img id="img-preview" class="img-preview" alt="Preview" hidden />
         </div>
 
-        <div class="form-group">
-          <label>Disponibilidade na Loja</label>
-          <select class="form-control" id="p-availability-status" onchange="if (window.handleAvailabilityStatusChange) window.handleAvailabilityStatusChange();">
-            <option value="in_stock">Em Estoque (Disponível para venda)</option>
-            <option value="out_of_stock">Esgotado (Exibe selo ESGOTADO na loja)</option>
-          </select>
-          <input type="hidden" id="p-active" value="true" />
-        </div>
-
         <div class="form-group form-col-full">
-          <label>Seções e Destaques no Site</label>
+          <label>Seções no Site</label>
           <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:8px;">
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:400; font-size:0.9rem;">
               <input type="checkbox" id="p-featured" style="width:16px;height:16px;accent-color:#0a0a0a;" />
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg> Mais Vendidos
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500; font-size:0.9rem;">
-              <input type="checkbox" id="p-single-piece" style="width:16px;height:16px;accent-color:#0a0a0a;" />
-              <span class="badge" style="background:#000000; color:#ffffff; font-size:10px; font-weight:800; letter-spacing:0.06em; padding:3px 7px; border-radius:3px; text-transform:uppercase;">PEÇA ÚNICA</span>
-              <span>Marcar como Peça Única (Exibe selo na loja)</span>
             </label>
           </div>
         </div>

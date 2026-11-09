@@ -549,18 +549,25 @@ input, select, textarea { font-family: inherit; }
 }
 
 @media (max-width: 768px) {
-  .mobile-menu-button { display:flex; }
+  .mobile-menu-button { display:flex !important; }
   .sidebar {
     transform: translateX(-100%);
     box-shadow: var(--shadow-lg);
     width: 280px;
+    z-index: 1000;
   }
   .sidebar.mobile-open {
     transform: translateX(0);
   }
   .mobile-sidebar-backdrop.open { display:block; }
-  .admin-main { margin-left: 0; }
-  .admin-main.sidebar-collapsed { margin-left: 0; }
+  .admin-main,
+  .admin-main.sidebar-collapsed {
+    margin-left: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 100% !important;
+  }
 }
 
 .topbar-right {
@@ -909,6 +916,24 @@ input, select, textarea { font-family: inherit; }
   .data-card-actions .btn {
     white-space: nowrap !important;
     flex-shrink: 0 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .data-card-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .data-card-actions .search-input-wrap,
+  .data-card-actions .admin-search,
+  .data-card-actions .admin-select,
+  .data-card-actions .btn {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 auto !important;
+    box-sizing: border-box !important;
   }
 }
 
@@ -1554,16 +1579,16 @@ select.form-control {
   .quick-action strong { font-size: 12px; }
   .quick-action small { font-size: 9px; }
   
-  .kpi-grid { grid-template-columns: 1fr; gap: 10px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
   .kpi-card { padding: 14px; gap: 8px; }
   .kpi-icon { width: 32px; height: 32px; }
   .kpi-value { font-size: 1.4rem; }
   .kpi-label { font-size: 10px; }
   
-  .catalog-summary { grid-template-columns: 1fr; gap: 8px; }
-  .catalog-summary__item { flex-direction: row; align-items: center; justify-content: space-between; padding: 12px 14px; }
-  .catalog-summary__item span { font-size: 11px; }
-  .catalog-summary__item strong { font-size: 18px; }
+  .catalog-summary { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+  .catalog-summary__item { display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: center !important; padding: 12px 14px !important; }
+  .catalog-summary__item span { font-size: 11px !important; color: var(--text-muted) !important; margin-bottom: 2px !important; }
+  .catalog-summary__item strong { font-size: 20px !important; font-weight: 700 !important; color: var(--text-primary) !important; }
   
   .chart-wrap { height: 180px; }
   .chart-card { padding: 16px; }
