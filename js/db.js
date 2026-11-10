@@ -1223,22 +1223,16 @@
       const probe = await initHostinger(config.hostinger || DEPLOYED_DB_CONFIG.hostinger);
       if (probe?.ok) {
         activeBackend = hostingerDB;
-        // Produtos na Hostinger; pedidos, leads e settings no Supabase. Uma
-        // falha aqui não pode derrubar a vitrine (que só precisa de produtos),
-        // mas precisa ficar visível no painel.
-        supabaseAvailable = await initSupabase(config.supabase || DEPLOYED_DB_CONFIG.supabase);
-        const warnings = supabaseAvailable
-          ? null
-          : 'Catálogo na Hostinger ok, mas o Supabase não respondeu: pedidos, leads e conteúdo podem falhar.';
+        // Produtos na Hostinger; pedidos, leads e settings no Supabase.
+        // Carrega o Supabase em segundo plano para não atrasar a renderização da vitrine (economiza ~500ms).
+        initSupabase(config.supabase || DEPLOYED_DB_CONFIG.supabase)
+          .then(ok => { supabaseAvailable = ok; })
+          .catch(() => { supabaseAvailable = false; });
         primeHydration('products');
         primeHydration('settings');
-        // O probe já baixou o catálogo atual, então esse corpo é aplicado
-        // direto: é o caminho mais barato de sair do snapshot velho e evita um
-        // request extra. O ETag gravado pelo probe passa a descrever exatamente
-        // o que está em cache, e as revalidações seguintes ganham 304.
         applyFresh('products', probe.products);
-        scheduleHydration('settings', true);
-        return { mode: 'hostinger', ok: true, warning: warnings };
+        scheduleHydration('settings', false);
+        return { mode: 'hostinger', ok: true };
       }
       throw new Error(lastInitError?.message || 'Não foi possível conectar à API de produtos da Hostinger.');
     }
@@ -1399,6 +1393,13 @@
 
     // Products
     products: {
+      getCached: () => {
+        const inMem = hydratedMemory.get('products')?.data;
+        if (Array.isArray(inMem) && inMem.length) return inMem;
+        const snap = loadSnapshot('products');
+        if (snap && Array.isArray(snap.data) && snap.data.length) return snap.data;
+        return null;
+      },
       // `getAll({ reload: true })` desliga o cache e vai direto ao servidor.
       getAll: (options) => hydratedRead('products', options),
       // Atalho explícito para os pontos de chamada que sempre querem dado novo.

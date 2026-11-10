@@ -66,10 +66,16 @@
         var loader = document.getElementById('page-loader');
         if (!loader) return;
         loader.classList.add('hidden');
-        setTimeout(function () { if (loader && loader.parentNode) loader.parentNode.removeChild(loader); }, 300);
+        loader.style.pointerEvents = 'none';
+        setTimeout(function () { if (loader && loader.parentNode) loader.parentNode.removeChild(loader); }, 250);
       };
+      if (document.readyState !== 'loading') {
+        setTimeout(hide, 80);
+      } else {
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(hide, 80); }, { once: true });
+      }
       window.addEventListener('load', hide, { once: true });
-      setTimeout(hide, 4000);
+      setTimeout(hide, 700);
     })();
   </script>
 
@@ -716,7 +722,7 @@
   <script src="js/checkout.js?v=20261006"></script>
   <script src="/js/dynamic-checkout.js?v=20261101"></script>
   <script src="js/menu.js?v=20260930"></script>
-  <script src="js/db.js?v=20261109-peca-unica-v3"></script>
+  <script src="js/db.js?v=20261110-perf-v1"></script>
   <script src="js/faq.js?v=20260930"></script>
   <script src="/js/search.js?v=20261109-peca-unica-v3"></script>
   <script src="js/main.js?v=20261109-peca-unica-v3"></script>

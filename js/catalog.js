@@ -723,10 +723,24 @@
   function hideLoader() {
     const loader = document.getElementById('page-loader');
     if (!loader) return;
+    loader.classList.add('hidden');
+    loader.style.pointerEvents = 'none';
     setTimeout(() => {
-      loader.classList.add('hidden');
-      setTimeout(() => loader.remove(), 300);
+      try { loader.remove(); } catch (_) {}
     }, 250);
+  }
+
+  function loadLocalCachedProducts() {
+    try {
+      const fromDB = window.ntDB?.products?.getCached?.();
+      if (Array.isArray(fromDB) && fromDB.length) return fromDB;
+      const raw = localStorage.getItem('nte_hydrated_products_v2') || localStorage.getItem('nte_hydrated_products');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length) return parsed;
+      if (parsed && Array.isArray(parsed.data) && parsed.data.length) return parsed.data;
+    } catch (_) {}
+    return null;
   }
 
   // ══════════════════════════════════════════
@@ -803,8 +817,7 @@
   // ══════════════════════════════════════════
   //  19. DOMContentLoaded — BOOTSTRAP
   // ══════════════════════════════════════════
-  document.addEventListener('DOMContentLoaded', async () => {
-    hideLoader();
+  function bootstrap() {
     initStickyHeader();
     initToolbarScroll();
     initSearch();
@@ -815,14 +828,41 @@
     initFilterDrawer();
     initGridToggle();
 
-    await loadProducts();
+    // 1. Instant Fast-Paint: renderiza na hora se já temos produtos em cache local (0ms de espera)
+    const cached = loadLocalCachedProducts();
+    if (Array.isArray(cached) && cached.length > 0) {
+      ALL_PRODUCTS = cached
+        .filter(p => p.active !== false)
+        .map(p => ({
+          ...p,
+          catalogCategory: rules.category(p),
+          priceNum: rules.price(p.price),
+        }));
+      harmonizeSelectedSizes();
+      buildFilterControls();
+      render();
+      hideLoader();
+    }
+
+    // 2. Revalidação assíncrona com o backend (atualiza sem travar a interface)
+    loadProducts().then(() => {
+      hideLoader();
+    }).catch(() => {
+      hideLoader();
+    });
 
     // WhatsApp settings
     try {
       const wpp = JSON.parse(localStorage.getItem('nte_wpp_settings') || '{}');
       if (wpp.number && window.ntWpp) window.ntWpp._number = wpp.number;
     } catch(e) {}
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrap);
+  } else {
+    bootstrap();
+  }
 
   window.ntCatalog = {
     setSearch: function (q) {

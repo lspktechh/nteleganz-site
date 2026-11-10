@@ -57,7 +57,7 @@ $productId = isset($_GET['id']) ? trim((string)$_GET['id']) : '';
 /**
  * Realiza requisição para a API do PostgreSQL na VPS (137.131.233.254)
  */
-function callVpsApi(string $method, string $path, ?array $body = null, ?string $token = null): ?array
+function callVpsApi(string $method, string $path, ?array $body = null, ?string $token = null, int $timeout = 3): ?array
 {
     $url = VPS_API_BASE . $path;
     $ch = curl_init($url);
@@ -78,8 +78,8 @@ function callVpsApi(string $method, string $path, ?array $body = null, ?string $
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(2, $timeout));
+    curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 
@@ -150,9 +150,32 @@ function differentiateProductName(string $rawName, array $catalogProducts, ?stri
 
 // ── Leitura pública (PostgreSQL na VPS + Fallback Cache) ──────────────
 if ($method === 'GET' || $method === 'HEAD') {
-    // 1. Consulta o PostgreSQL na VPS (Fonte de Verdade Primária)
+    // 1. Fast ETag Check: se o cliente enviou If-None-Match e o cache local existe,
+    // confere instantaneamente em ~1ms sem precisar fazer round-trip na VPS!
+    $localCat = readCatalog();
+    if ($localCat !== null && !empty($localCat['etag'])) {
+        $clientEtag = trim($_SERVER['HTTP_IF_NONE_MATCH'] ?? '');
+        if ($clientEtag !== '' && ($clientEtag === $localCat['etag'] || $clientEtag === 'W/' . $localCat['etag'])) {
+            header('ETag: ' . $localCat['etag']);
+            header('X-Catalog-Source: cache-etag-hit');
+            http_response_code(304);
+            exit;
+        }
+    }
+
+    // 2. Se temos cache local atualizado recentemente (< 30s) e listagem geral,
+    // responde IMEDIATAMENTE do cache local de alta velocidade!
+    $cacheFile = PRODUCTS_FILE;
+    $cacheAge = file_exists($cacheFile) ? (time() - filemtime($cacheFile)) : 999999;
+    if ($localCat !== null && $cacheAge < 30 && $productId === '') {
+        etag($localCat['etag']);
+        header('X-Catalog-Source: local-fast-cache');
+        respond(200, null, ['products' => $localCat['products'], 'version' => $localCat['version']]);
+    }
+
+    // 3. Consulta o PostgreSQL na VPS com timeout ágil (2s máx)
     $path = '/products' . ($productId !== '' ? '?id=' . urlencode($productId) : '');
-    $vps = callVpsApi('GET', $path);
+    $vps = callVpsApi('GET', $path, null, null, 2);
 
     if ($vps !== null) {
         $version = (int)($vps['version'] ?? 45);
@@ -163,40 +186,39 @@ if ($method === 'GET' || $method === 'HEAD') {
             respond(200, null, ['product' => $vps['product'], 'version' => $version]);
         }
         if (isset($vps['products']) && is_array($vps['products'])) {
-            // O cache local nunca é simplesmente substituído pela lista da VPS: produto que exista só
-            // localmente (gravado enquanto a VPS estava fora do ar) é preservado. Um produto só deixa
-            // de existir quando o gestor o exclui pelo painel.
-            $localCat = readCatalog();
+            if ($localCat === null) {
+                $localCat = readCatalog();
+            }
             $merged = mergeCatalogs($vps['products'], $localCat['products'] ?? []);
 
-            // Só regrava o cache se algo mudou (evita reescrever o arquivo a cada visita)
             if ($localCat === null || ($localCat['etag'] ?? '') !== catalogEtag($merged)) {
                 cacheCatalog($merged, $version);
             }
 
-            // Responde e depois faz a auto-cura de fotos (copia da VPS o que faltar na Hostinger)
             respondThenHeal($merged, $version);
         }
     }
 
-    // 2. Fallback de Segurança: se a VPS estiver momentaneamente inacessível, lê do cache local
-    $catalog = readCatalog();
-    if ($catalog === null) {
+    // 4. Fallback de Segurança: lê do cache local
+    if ($localCat === null) {
+        $localCat = readCatalog();
+    }
+    if ($localCat === null) {
         respond(500, 'Catálogo indisponível: não foi possível conectar ao banco de dados nem ler cache local.');
     }
 
-    etag($catalog['etag']);
+    etag($localCat['etag']);
 
     if ($productId !== '') {
-        foreach ($catalog['products'] as $product) {
+        foreach ($localCat['products'] as $product) {
             if (($product['id'] ?? '') === $productId) {
-                respond(200, null, ['product' => $product, 'version' => $catalog['version']]);
+                respond(200, null, ['product' => $product, 'version' => $localCat['version']]);
             }
         }
         respond(404, 'Produto não encontrado.');
     }
 
-    respond(200, null, ['products' => $catalog['products'], 'version' => $catalog['version']]);
+    respond(200, null, ['products' => $localCat['products'], 'version' => $localCat['version']]);
 }
 
 // ── Demais métodos exigem admin ─────────────────────────────────────
@@ -632,7 +654,6 @@ function respondThenHeal(array $products, int $version): void
     $finish = function_exists('fastcgi_finish_request') ? 'fastcgi_finish_request'
         : (function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : null);
     if ($finish === null) {
-        healCatalogImages($products);
         respond(200, null, ['products' => $products, 'version' => $version]);
     }
 
