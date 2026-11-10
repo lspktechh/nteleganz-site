@@ -229,7 +229,12 @@
       <div class="search-results-grid" role="listbox" aria-label="Resultados da pesquisa">
         ${itemsToShow.map((p, idx) => {
           const out = isOutOfStock(p);
-          const isSingle = !!(p.singlePiece || p.pecaUnica || p.peca_unica);
+          const isSingle = Boolean(
+            (p.singlePiece === true || p.singlePiece === 'true' || p.singlePiece === 1) ||
+            (p.pecaUnica === true || p.pecaUnica === 'true' || p.pecaUnica === 1) ||
+            (p.peca_unica === true || p.peca_unica === 'true' || p.peca_unica === 1) ||
+            (p.single_piece === true || p.single_piece === 'true' || p.single_piece === 1)
+          );
           const imgUrl = resolveImg(p);
           const link = getProductUrl(p);
           const price = String(p.price || '').startsWith('R$') ? p.price : `R$ ${p.price || ''}`;

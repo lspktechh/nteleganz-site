@@ -70,10 +70,19 @@
       if (!record.imageUrl && (first.image || first.imageUrl)) record.imageUrl = first.image || first.imageUrl;
     }
 
-    if (record.singlePiece !== undefined || record.pecaUnica !== undefined || record.peca_unica !== undefined) {
-      const isSingle = !!(record.singlePiece || record.pecaUnica || record.peca_unica);
+    if (record.singlePiece !== undefined || record.pecaUnica !== undefined || record.peca_unica !== undefined || record.single_piece !== undefined) {
+      const isTruthy = v => v === true || v === 'true' || v === 1 || v === '1';
+      const isExplicitFalse = record.singlePiece === false || record.pecaUnica === false || record.peca_unica === false || record.single_piece === false;
+      const isSingle = !isExplicitFalse && (
+        isTruthy(record.singlePiece) ||
+        isTruthy(record.pecaUnica) ||
+        isTruthy(record.peca_unica) ||
+        isTruthy(record.single_piece)
+      );
       record.singlePiece = isSingle;
       record.pecaUnica = isSingle;
+      record.peca_unica = isSingle;
+      record.single_piece = isSingle;
     }
 
     return record;
@@ -964,7 +973,8 @@
     }
     const products = Array.isArray(result) ? result : (result?.data || []);
     const localProducts = activeBackend === localDB ? await migrateLocalProductAssets(products) : products;
-    return activeBackend === localDB ? Promise.all(localProducts.map(hydrateLocalProduct)) : localProducts;
+    const resolved = activeBackend === localDB ? await Promise.all(localProducts.map(hydrateLocalProduct)) : localProducts;
+    return resolved.map(normalizeRecord);
   }
 
   async function fetchFinalCollection(name, options = {}) {
@@ -1146,7 +1156,7 @@
           if (!Array.isArray(newProducts)) {
             throw new Error('Formato de resposta inválido da API da Hostinger');
           }
-          products = newProducts;
+          products = newProducts.map(normalizeRecord);
           if (retryFreshETag) {
             hostingerETags.set('products', retryFreshETag);
           } else {
@@ -1170,7 +1180,7 @@
       if (!Array.isArray(newProducts)) {
         throw new Error('Formato de resposta inválido da API da Hostinger');
       }
-      products = newProducts;
+      products = newProducts.map(normalizeRecord);
       if (freshETag) {
         hostingerETags.set('products', freshETag);
       } else {

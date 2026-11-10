@@ -37,7 +37,7 @@
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/reset.css" />
   <link rel="stylesheet" href="css/animations.css" />
-  <link rel="stylesheet" href="css/components.css?v=20261109-peca-unica-v1" />
+  <link rel="stylesheet" href="css/components.css?v=20261109-peca-unica-v2" />
   <link rel="stylesheet" href="css/main.css" />
 
   <style>
@@ -117,7 +117,7 @@
     @media (max-width: 700px) { .product-page { padding-top: 1rem; } .product-meta, .related-section .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .related-section { padding: 3rem var(--gutter); } .related-box { border-radius: 16px; } }
     @media (max-width: 420px) { .breadcrumb { overflow: hidden; white-space: nowrap; } .product-name { font-size: 1.55rem; } .gallery-main-swiper { border-radius: 7px; } .gallery-main-swiper img { padding: 1rem; } .size-btn { width: 3.65rem; } .related-section .products-grid { gap: .7rem; } .related-box { padding: 1.15rem; } }
   </style>
-  <link rel="stylesheet" href="css/mysupplies.css?v=20261109-peca-unica-v1" />
+  <link rel="stylesheet" href="css/mysupplies.css?v=20261109-peca-unica-v2" />
 <script src="/js/image-compat.js" defer></script>
 </head>
 <body>
@@ -535,9 +535,9 @@
 <script src="js/checkout.js?v=20261006"></script>
 <script src="/js/dynamic-checkout.js?v=20261101"></script>
 <script src="js/menu.js?v=20260930"></script>
-<script src="js/db.js?v=20261109-peca-unica-v1"></script>
-<script src="/js/search.js?v=20261109-peca-unica-v1"></script>
-<script src="js/main.js?v=20261109-peca-unica-v1"></script>
+<script src="js/db.js?v=20261109-peca-unica-v2"></script>
+<script src="/js/search.js?v=20261109-peca-unica-v2"></script>
+<script src="js/main.js?v=20261109-peca-unica-v2"></script>
 <script src="/js/tracking.js?v=20261107-dedup"></script>
 
 <script>
@@ -625,6 +625,17 @@
   // Resolução e recuperação das fotos de produto: js/image-loader.js (fonte única)
   const resolveProductImg = window.NTImages.resolve;
 
+  function isProductSinglePiece(p) {
+    if (!p) return false;
+    const isTruthy = v => v === true || v === 'true' || v === 1 || v === '1';
+    return Boolean(
+      isTruthy(p.singlePiece) ||
+      isTruthy(p.pecaUnica) ||
+      isTruthy(p.peca_unica) ||
+      isTruthy(p.single_piece)
+    );
+  }
+
   function renderGallery(product) {
     const slides = document.getElementById('gallery-slides');
     const thumbs = document.getElementById('thumb-slides');
@@ -639,7 +650,7 @@
       : [product.image]).filter(Boolean))];
     document.getElementById('gallery-thumbs').hidden = images.length < 2;
 
-    const isSinglePiece = !!(product.singlePiece || product.pecaUnica || product.peca_unica);
+    const isSinglePiece = isProductSinglePiece(product);
     const outBadge = document.getElementById('product-out-badge');
     if (outBadge) {
       outBadge.style.display = isOutOfStock ? 'inline-flex' : 'none';
@@ -707,7 +718,7 @@
     document.getElementById('product-price').textContent = product.price;
     document.getElementById('product-desc').textContent = product.desc || '';
     document.getElementById('product-details').textContent = product.desc || 'Produto original, selecionado e autenticado pela NT Eleganz.';
-    const isSinglePiece = !!(product.singlePiece || product.pecaUnica || product.peca_unica);
+    const isSinglePiece = isProductSinglePiece(product);
     const singleTag = document.getElementById('product-single-piece-tag');
     if (singleTag) {
       singleTag.style.display = isSinglePiece ? 'inline-block' : 'none';
@@ -803,7 +814,7 @@
       const cardUrl = window.ntWpp?.getProductUrl ? window.ntWpp.getProductUrl(p) : `/products/?id=${escapeAttr(p.id)}`;
       const vpsRelated = resolveProductImg(relatedImg);
       const isRelOut = (p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false;
-      const isRelSingle = !!(p.singlePiece || p.pecaUnica || p.peca_unica);
+      const isRelSingle = isProductSinglePiece(p);
       const relBadges = [
         isRelOut ? '<span class="product-card__badge badge-out-of-stock" style="display:inline-flex !important; position:absolute; top:12px; left:12px; background:#dc2626 !important; color:#ffffff !important; font-size:11px !important; font-weight:700 !important; letter-spacing:0.8px !important; padding:4px 10px !important; border-radius:4px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.3) !important;">ESGOTADO</span>' : '',
         isRelSingle ? `<span class="product-card__badge badge-peca-unica" style="display:inline-flex !important; position:absolute; ${isRelOut ? 'top:42px !important;' : 'top:12px !important;'} left:12px; background:#000000 !important; color:#ffffff !important; font-size:10.5px !important; font-weight:700 !important; letter-spacing:0.08em !important; padding:4px 9px !important; border-radius:2px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.4) !important; line-height:1.2 !important; pointer-events:none !important;">PEÇA ÚNICA</span>` : (!isRelOut && p.badge ? `<span class="product-card__badge">${escapeAttr(p.badge)}</span>` : '')

@@ -869,6 +869,17 @@
   //  PRODUCTS TABLE
   // ══════════════════════════════════════════
 
+  function isProductSinglePiece(p) {
+    if (!p) return false;
+    const isTruthy = v => v === true || v === 'true' || v === 1 || v === '1';
+    return Boolean(
+      isTruthy(p.singlePiece) ||
+      isTruthy(p.pecaUnica) ||
+      isTruthy(p.peca_unica) ||
+      isTruthy(p.single_piece)
+    );
+  }
+
   window.filterProducts = function () {
     const search = (document.getElementById('product-search')?.value || '').toLowerCase();
     const brand = document.getElementById('product-filter-brand')?.value || '';
@@ -880,11 +891,12 @@
       const matchBrand = !brand || p.brand === brand;
       const matchCat = !cat || productCategory(p) === cat;
       const isOutOfStock = (p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false;
+      const isSingle = isProductSinglePiece(p);
       const matchStatus = !status
         || ((status === 'in_stock' || status === 'active') && !isOutOfStock)
         || ((status === 'out_of_stock' || status === 'inactive') && isOutOfStock)
         || (status === 'featured' && (p.featured || p.destaque))
-        || (status === 'single_piece' && (p.singlePiece || p.pecaUnica || p.peca_unica));
+        || (status === 'single_piece' && isSingle);
       return matchSearch && matchBrand && matchCat && matchStatus;
     });
 
@@ -1053,6 +1065,7 @@
 
     tbody.innerHTML = pageProducts.map(p => {
       const isOutOfStock = (p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false;
+      const isSingle = isProductSinglePiece(p);
       const imgSrc = resolveAdminProductImg(p.image);
       return `
       <tr data-id="${p.id}">
@@ -1062,7 +1075,7 @@
               style="${isOutOfStock ? 'filter: grayscale(100%); opacity: 0.55;' : ''}"
               onerror="window.handleAdminThumbError(this);" />
             ${isOutOfStock ? '<span style="position:absolute; bottom:2px; left:50%; transform:translateX(-50%); background:#dc2626; color:#fff; font-size:8px; font-weight:800; padding:1px 4px; border-radius:3px; letter-spacing:0.5px; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,0.4); text-transform:uppercase;">ESGOTADO</span>' : ''}
-            ${(p.singlePiece || p.pecaUnica || p.peca_unica) ? `<span style="position:absolute; ${isOutOfStock ? 'top:2px;' : 'bottom:2px;'} left:50%; transform:translateX(-50%); background:#000000; color:#fff; font-size:7.5px; font-weight:800; padding:1px 4px; border-radius:2px; letter-spacing:0.4px; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,0.5); text-transform:uppercase;">ÚNICA</span>` : ''}
+            ${isSingle ? `<span style="position:absolute; ${isOutOfStock ? 'top:2px;' : 'bottom:2px;'} left:50%; transform:translateX(-50%); background:#000000; color:#fff; font-size:7.5px; font-weight:800; padding:1px 4px; border-radius:2px; letter-spacing:0.4px; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,0.5); text-transform:uppercase;">ÚNICA</span>` : ''}
           </div>
         </td>
         <td>
@@ -1075,10 +1088,10 @@
         </td>
         <td>${escHtml(categoryLabel(productCategory(p)))}</td>
         <td>
-          ${(p.singlePiece || p.pecaUnica || p.peca_unica) ? '<span class="badge" style="background:#0a0a0a; color:#fff; font-size:10px; font-weight:800; letter-spacing:0.04em; padding:2px 7px; border-radius:3px; margin-right:4px;">ÚNICA</span>' : ''}
+          ${isSingle ? '<span class="badge" style="background:#0a0a0a; color:#fff; font-size:10px; font-weight:800; letter-spacing:0.04em; padding:2px 7px; border-radius:3px; margin-right:4px;">ÚNICA</span>' : ''}
           ${p.featured ? '<span class="badge badge-gold" title="Mais Vendidos"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:middle;margin-right:2px;"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>Mais</span> ' : ''}
           ${p.destaque ? '<span class="badge badge-gold" title="Destaque"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:middle;margin-right:2px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Dest.</span>' : ''}
-          ${!p.featured && !p.destaque && !p.singlePiece && !p.pecaUnica && !p.peca_unica ? '<span style="color:var(--text-muted);font-size:11px;">—</span>' : ''}
+          ${!p.featured && !p.destaque && !isSingle ? '<span style="color:var(--text-muted);font-size:11px;">—</span>' : ''}
         </td>
         <td>
           ${isOutOfStock
@@ -1459,7 +1472,7 @@
     const pSingle = document.getElementById('p-single-piece');
     if (pFeat) pFeat.checked = !!p.featured;
     if (pDest) pDest.checked = !!p.destaque;
-    if (pSingle) pSingle.checked = !!(p.singlePiece || p.pecaUnica || p.peca_unica);
+    if (pSingle) pSingle.checked = isProductSinglePiece(p);
 
     if (window.updateStockHint) window.updateStockHint();
   }
@@ -1547,6 +1560,7 @@
       singlePiece: !!document.getElementById('p-single-piece')?.checked,
       pecaUnica: !!document.getElementById('p-single-piece')?.checked,
       peca_unica: !!document.getElementById('p-single-piece')?.checked,
+      single_piece: !!document.getElementById('p-single-piece')?.checked,
     };
 
     if (!productData.brand || !productData.name || !productData.price || getVal('p-stock') === '' || !Number.isInteger(productData.stock) || productData.stock < 0) {

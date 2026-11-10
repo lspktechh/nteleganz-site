@@ -514,6 +514,16 @@ function mergeCatalogs(array $vpsProducts, array $localProducts): array
         $stk = (int)($p['stock'] ?? 0);
         $p['inStock'] = $stk > 0;
         $p['available'] = $stk > 0;
+        $isSingle = (
+            (!empty($p['singlePiece']) && $p['singlePiece'] !== 'false') ||
+            (!empty($p['pecaUnica']) && $p['pecaUnica'] !== 'false') ||
+            (!empty($p['peca_unica']) && $p['peca_unica'] !== 'false') ||
+            (!empty($p['single_piece']) && $p['single_piece'] !== 'false')
+        );
+        $p['singlePiece'] = $isSingle;
+        $p['pecaUnica'] = $isSingle;
+        $p['peca_unica'] = $isSingle;
+        $p['single_piece'] = $isSingle;
         return $p;
     };
 
@@ -844,10 +854,34 @@ function sanitizeProduct(array $input, bool $partial = false): ?array
         $record[$field] = $value === null ? $default : max(0, $value);
     }
 
-    foreach (['featured', 'destaque', 'singlePiece', 'pecaUnica', 'peca_unica'] as $flag) {
+    foreach (['featured', 'destaque'] as $flag) {
         if (array_key_exists($flag, $input)) {
             $record[$flag] = $bool($input[$flag]);
         }
+    }
+
+    $hasSinglePiece = array_key_exists('singlePiece', $input)
+        || array_key_exists('pecaUnica', $input)
+        || array_key_exists('peca_unica', $input)
+        || array_key_exists('single_piece', $input);
+    if ($hasSinglePiece) {
+        $singleVal = false;
+        foreach (['singlePiece', 'pecaUnica', 'peca_unica', 'single_piece'] as $flag) {
+            if (array_key_exists($flag, $input)) {
+                $val = $input[$flag];
+                $singleVal = ($val === true || $val === 'true' || $val === 1 || $val === '1');
+                break;
+            }
+        }
+        $record['singlePiece'] = $singleVal;
+        $record['pecaUnica'] = $singleVal;
+        $record['peca_unica'] = $singleVal;
+        $record['single_piece'] = $singleVal;
+    } elseif (!$partial) {
+        $record['singlePiece'] = false;
+        $record['pecaUnica'] = false;
+        $record['peca_unica'] = false;
+        $record['single_piece'] = false;
     }
 
     // Produtos NUNCA são inativados: sempre ativos, apenas esgotados via estoque
