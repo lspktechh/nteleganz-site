@@ -70,21 +70,12 @@
       if (!record.imageUrl && (first.image || first.imageUrl)) record.imageUrl = first.image || first.imageUrl;
     }
 
-    if (record.singlePiece !== undefined || record.pecaUnica !== undefined || record.peca_unica !== undefined || record.single_piece !== undefined) {
-      const isTruthy = v => v === true || v === 'true' || v === 1 || v === '1';
-      const isExplicitFalse = record.singlePiece === false || record.pecaUnica === false || record.peca_unica === false || record.single_piece === false;
-      const stock = Number(record.stock);
-      const isSingle = !isExplicitFalse && (
-        isTruthy(record.singlePiece) ||
-        isTruthy(record.pecaUnica) ||
-        isTruthy(record.peca_unica) ||
-        isTruthy(record.single_piece)
-      ) && Number.isFinite(stock) && stock === 1;
-      record.singlePiece = isSingle;
-      record.pecaUnica = isSingle;
-      record.peca_unica = isSingle;
-      record.single_piece = isSingle;
-    }
+    const stk = Number(record.stock);
+    const isSingle = Number.isFinite(stk) && stk === 1 && record.available !== false && record.active !== false;
+    record.singlePiece = isSingle;
+    record.pecaUnica = isSingle;
+    record.peca_unica = isSingle;
+    record.single_piece = isSingle;
 
     return record;
   }

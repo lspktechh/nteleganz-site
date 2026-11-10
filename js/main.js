@@ -181,18 +181,8 @@
 
   function renderProductCard(product, index = 0) {
     const isOutOfStock = (product.stock !== undefined && Number(product.stock) <= 0) || product.inStock === false || product.available === false;
-    const isExplicitFalse = product.singlePiece === false || product.singlePiece === 'false' ||
-                            product.pecaUnica === false || product.pecaUnica === 'false' ||
-                            product.peca_unica === false || product.peca_unica === 'false' ||
-                            product.single_piece === false || product.single_piece === 'false';
-    const isMarkedSingle = !isExplicitFalse && Boolean(
-      (product.singlePiece === true || product.singlePiece === 'true' || product.singlePiece === 1) ||
-      (product.pecaUnica === true || product.pecaUnica === 'true' || product.pecaUnica === 1) ||
-      (product.peca_unica === true || product.peca_unica === 'true' || product.peca_unica === 1) ||
-      (product.single_piece === true || product.single_piece === 'true' || product.single_piece === 1)
-    );
     const stock = Number(product.stock);
-    const isSinglePiece = isMarkedSingle && Number.isFinite(stock) && stock === 1;
+    const isSinglePiece = !isOutOfStock && Number.isFinite(stock) && stock === 1;
     const rawImage = product.image || (Array.isArray(product.images) && product.images[0]) || '';
     const vpsUrl = resolveProductImg(rawImage);
     const image = escHtml(vpsUrl);

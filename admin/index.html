@@ -1277,14 +1277,6 @@
           </div>
           <input type="number" class="form-control" id="p-stock" min="0" step="1" placeholder="1" required oninput="if (window.updateStockHint) window.updateStockHint();" />
           <small class="form-hint" id="p-stock-hint">Estoque disponível para venda. Use 0 apenas se o produto estiver esgotado.</small>
-          
-          <div style="margin-top:10px; padding:10px 12px; background:var(--bg-hover, rgba(0,0,0,0.03)); border:1px solid var(--border); border-radius:8px; display:flex; align-items:center; gap:10px;">
-            <input type="checkbox" id="p-single-piece" onchange="if (window.handleSinglePieceChange) window.handleSinglePieceChange();" style="width:18px;height:18px;accent-color:#0a0a0a;cursor:pointer;flex-shrink:0;" />
-            <label for="p-single-piece" style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; font-size:0.88rem; color:var(--text-primary); margin:0;">
-              <span class="badge" style="background:#000000; color:#ffffff; font-size:10px; font-weight:800; letter-spacing:0.06em; padding:3px 7px; border-radius:3px; text-transform:uppercase;">PEÇA ÚNICA</span>
-              <span>Marcar como Peça Única</span>
-            </label>
-          </div>
         </div>
         <div class="form-group">
           <label>Disponibilidade na Loja</label>
@@ -1552,8 +1544,8 @@
 
 <!-- Scripts -->
 <script src="../js/auth.js?v=20261007c"></script>
-<script src="../js/db.js?v=20261110-peca-v4"></script>
-<script src="../js/admin.js?v=20261110-peca-v4"></script>
+<script src="../js/db.js?v=20261110-peca-auto-v1"></script>
+<script src="../js/admin.js?v=20261110-peca-auto-v1"></script>
 <script>
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');

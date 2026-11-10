@@ -536,18 +536,7 @@ function mergeCatalogs(array $vpsProducts, array $localProducts): array
         $stk = (int)($p['stock'] ?? 0);
         $p['inStock'] = $stk > 0;
         $p['available'] = $stk > 0;
-        $isExplicitFalse = (
-            (isset($p['singlePiece']) && ($p['singlePiece'] === false || $p['singlePiece'] === 'false')) ||
-            (isset($p['pecaUnica']) && ($p['pecaUnica'] === false || $p['pecaUnica'] === 'false')) ||
-            (isset($p['peca_unica']) && ($p['peca_unica'] === false || $p['peca_unica'] === 'false')) ||
-            (isset($p['single_piece']) && ($p['single_piece'] === false || $p['single_piece'] === 'false'))
-        );
-        $isSingle = !$isExplicitFalse && ($stk === 1) && (
-            (!empty($p['singlePiece']) && $p['singlePiece'] !== 'false') ||
-            (!empty($p['pecaUnica']) && $p['pecaUnica'] !== 'false') ||
-            (!empty($p['peca_unica']) && $p['peca_unica'] !== 'false') ||
-            (!empty($p['single_piece']) && $p['single_piece'] !== 'false')
-        );
+        $isSingle = ($stk === 1) && ($p['active'] !== false) && ($p['available'] !== false);
         $p['singlePiece'] = $isSingle;
         $p['pecaUnica'] = $isSingle;
         $p['peca_unica'] = $isSingle;
@@ -887,31 +876,12 @@ function sanitizeProduct(array $input, bool $partial = false): ?array
         }
     }
 
-    $hasSinglePiece = array_key_exists('singlePiece', $input)
-        || array_key_exists('pecaUnica', $input)
-        || array_key_exists('peca_unica', $input)
-        || array_key_exists('single_piece', $input);
-    if ($hasSinglePiece) {
-        $singleVal = false;
-        foreach (['singlePiece', 'pecaUnica', 'peca_unica', 'single_piece'] as $flag) {
-            if (array_key_exists($flag, $input)) {
-                $val = $input[$flag];
-                $singleVal = ($val === true || $val === 'true' || $val === 1 || $val === '1');
-                break;
-            }
-        }
-        $stkInput = (int)($input['stock'] ?? $record['stock'] ?? 0);
-        $singleVal = $singleVal && ($stkInput === 1);
-        $record['singlePiece'] = $singleVal;
-        $record['pecaUnica'] = $singleVal;
-        $record['peca_unica'] = $singleVal;
-        $record['single_piece'] = $singleVal;
-    } elseif (!$partial) {
-        $record['singlePiece'] = false;
-        $record['pecaUnica'] = false;
-        $record['peca_unica'] = false;
-        $record['single_piece'] = false;
-    }
+    $stkInput = (int)($input['stock'] ?? $record['stock'] ?? 0);
+    $singleVal = ($stkInput === 1);
+    $record['singlePiece'] = $singleVal;
+    $record['pecaUnica'] = $singleVal;
+    $record['peca_unica'] = $singleVal;
+    $record['single_piece'] = $singleVal;
 
     // Produtos NUNCA são inativados: sempre ativos, apenas esgotados via estoque
     $record['active'] = true;

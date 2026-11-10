@@ -542,9 +542,9 @@
 <script src="js/checkout.js?v=20261006"></script>
 <script src="/js/dynamic-checkout.js?v=20261101"></script>
 <script src="js/menu.js?v=20260930"></script>
-<script src="js/db.js?v=20261110-peca-v4"></script>
-<script src="/js/search.js?v=20261110-peca-v4"></script>
-<script src="js/main.js?v=20261110-peca-v4"></script>
+<script src="js/db.js?v=20261110-peca-auto-v1"></script>
+<script src="/js/search.js?v=20261110-peca-auto-v1"></script>
+<script src="js/main.js?v=20261110-peca-auto-v1"></script>
 <script src="/js/tracking.js?v=20261107-dedup"></script>
 
 <script>
@@ -634,21 +634,9 @@
 
   function isProductSinglePiece(p) {
     if (!p) return false;
-    const isExplicitFalse = p.singlePiece === false || p.singlePiece === 'false' ||
-                            p.pecaUnica === false || p.pecaUnica === 'false' ||
-                            p.peca_unica === false || p.peca_unica === 'false' ||
-                            p.single_piece === false || p.single_piece === 'false';
-    if (isExplicitFalse) return false;
-    const isTruthy = v => v === true || v === 'true' || v === 1 || v === '1';
-    const isMarked = Boolean(
-      isTruthy(p.singlePiece) ||
-      isTruthy(p.pecaUnica) ||
-      isTruthy(p.peca_unica) ||
-      isTruthy(p.single_piece)
-    );
-    if (!isMarked) return false;
     const stock = Number(p.stock);
-    return Number.isFinite(stock) && stock === 1;
+    const available = p.active !== false && p.available !== false && p.inStock !== false;
+    return available && Number.isFinite(stock) && stock === 1;
   }
 
   function renderGallery(product) {
