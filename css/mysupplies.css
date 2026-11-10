@@ -2880,8 +2880,8 @@ img.is-out-of-stock,
 .badge-peca-unica.is-hidden,
 #product-single-piece-badge[hidden],
 #product-single-piece-badge.is-hidden,
-#product-single-piece-tag[hidden],
-#product-single-piece-tag.is-hidden {
+.badge-peca-unica-tag,
+#product-single-piece-tag {
   display: none !important;
 }
 

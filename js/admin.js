@@ -877,12 +877,15 @@
                             p.single_piece === false || p.single_piece === 'false';
     if (isExplicitFalse) return false;
     const isTruthy = v => v === true || v === 'true' || v === 1 || v === '1';
-    return Boolean(
+    const isMarked = Boolean(
       isTruthy(p.singlePiece) ||
       isTruthy(p.pecaUnica) ||
       isTruthy(p.peca_unica) ||
       isTruthy(p.single_piece)
     );
+    if (!isMarked) return false;
+    const stock = Number(p.stock);
+    return Number.isFinite(stock) && stock === 1;
   }
 
   window.filterProducts = function () {
@@ -1024,10 +1027,28 @@
       hint.innerHTML = `<span style="color:#ef4444; font-weight:600;">⚠️ Produto ESGOTADO: Será exibido na loja com selo de ESGOTADO (não permite compras).</span>`;
     } else if (val > 0) {
       if (availSelect) availSelect.value = 'in_stock';
+      const singleCheck = document.getElementById('p-single-piece');
+      if (singleCheck && singleCheck.checked && val > 1) {
+        singleCheck.checked = false;
+      }
       hint.innerHTML = `<span style="color:#22c55e; font-weight:600;">✅ Em estoque (${val} ${val === 1 ? 'unidade' : 'unidades'}) — Disponível para compra imediata.</span>`;
     } else {
       hint.textContent = 'Estoque disponível para venda. Use 0 para marcar como esgotado.';
     }
+  };
+
+  window.handleSinglePieceChange = function () {
+    const singleCheck = document.getElementById('p-single-piece');
+    const stockInput = document.getElementById('p-stock');
+    if (!singleCheck || !stockInput) return;
+    if (singleCheck.checked) {
+      if (Number(stockInput.value) !== 1) {
+        stockInput.value = '1';
+        stockInput.style.borderColor = '#000000';
+        setTimeout(() => { if (stockInput) stockInput.style.borderColor = ''; }, 1200);
+      }
+    }
+    if (window.updateStockHint) window.updateStockHint();
   };
 
   window.handleAvailabilityStatusChange = function () {
@@ -1562,10 +1583,10 @@
       slug: finalSlug,
       featured: document.getElementById('p-featured')?.checked || false,
       destaque: document.getElementById('p-destaque')?.checked || false,
-      singlePiece: !!document.getElementById('p-single-piece')?.checked,
-      pecaUnica: !!document.getElementById('p-single-piece')?.checked,
-      peca_unica: !!document.getElementById('p-single-piece')?.checked,
-      single_piece: !!document.getElementById('p-single-piece')?.checked,
+      singlePiece: !!document.getElementById('p-single-piece')?.checked && Number(productData.stock) === 1,
+      pecaUnica: !!document.getElementById('p-single-piece')?.checked && Number(productData.stock) === 1,
+      peca_unica: !!document.getElementById('p-single-piece')?.checked && Number(productData.stock) === 1,
+      single_piece: !!document.getElementById('p-single-piece')?.checked && Number(productData.stock) === 1,
     };
 
     if (!productData.brand || !productData.name || !productData.price || getVal('p-stock') === '' || !Number.isInteger(productData.stock) || productData.stock < 0) {

@@ -37,7 +37,7 @@
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/reset.css" />
   <link rel="stylesheet" href="css/animations.css" />
-  <link rel="stylesheet" href="css/components.css?v=20261109-peca-unica-v3" />
+  <link rel="stylesheet" href="css/components.css?v=20261110-peca-v4" />
   <link rel="stylesheet" href="css/main.css" />
 
   <style>
@@ -79,7 +79,9 @@
     .stock-line { color: #4da96a; letter-spacing: .04em; text-transform: none; font-size: .82rem; display: flex; gap: .5rem; align-items: center; }
     .stock-line.stock-line--out { color: #b44b4b; }
     .stock-line.stock-line--low { color: #b8860b; }
-    .stock-line::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .stock-line.stock-line--single { color: var(--text-primary, #000000); font-weight: 600; }
+    .stock-line::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .stock-line.stock-line--single::before { background: #000000; }
     .selector-label { font-size: .64rem; }
     .size-btn { width: 4.2rem; height: 2.45rem; font-size: .78rem; }
     .color-btn { width: 2rem; height: 2rem; }
@@ -117,7 +119,7 @@
     @media (max-width: 700px) { .product-page { padding-top: 1rem; } .product-meta, .related-section .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .related-section { padding: 3rem var(--gutter); } .related-box { border-radius: 16px; } }
     @media (max-width: 420px) { .breadcrumb { overflow: hidden; white-space: nowrap; } .product-name { font-size: 1.55rem; } .gallery-main-swiper { border-radius: 7px; } .gallery-main-swiper img { padding: 1rem; } .size-btn { width: 3.65rem; } .related-section .products-grid { gap: .7rem; } .related-box { padding: 1.15rem; } }
   </style>
-  <link rel="stylesheet" href="css/mysupplies.css?v=20261109-peca-unica-v3" />
+  <link rel="stylesheet" href="css/mysupplies.css?v=20261110-peca-v4" />
 <script src="/js/image-compat.js" defer></script>
 </head>
 <body>
@@ -334,7 +336,6 @@
           <span class="product-price-main" id="product-price">—</span>
           <span class="product-price-old" id="product-old-price" style="display:none;"></span>
           <span class="product-price-badge" id="product-badge" style="display:none;"></span>
-          <span id="product-single-piece-tag" class="badge-peca-unica-tag is-hidden" style="display:none !important; background:#000000; color:#ffffff; font-size:11px; font-weight:700; letter-spacing:0.06em; padding:4px 9px; border-radius:2px; text-transform:uppercase; vertical-align:middle; margin-left:8px;" hidden>PEÇA ÚNICA</span>
         </div>
 
         <div class="stock-line" id="stock-line" aria-live="polite">Verificando estoque...</div>
@@ -541,9 +542,9 @@
 <script src="js/checkout.js?v=20261006"></script>
 <script src="/js/dynamic-checkout.js?v=20261101"></script>
 <script src="js/menu.js?v=20260930"></script>
-<script src="js/db.js?v=20261110-perf-v1"></script>
-<script src="/js/search.js?v=20261109-peca-unica-v3"></script>
-<script src="js/main.js?v=20261109-peca-unica-v3"></script>
+<script src="js/db.js?v=20261110-peca-v4"></script>
+<script src="/js/search.js?v=20261110-peca-v4"></script>
+<script src="js/main.js?v=20261110-peca-v4"></script>
 <script src="/js/tracking.js?v=20261107-dedup"></script>
 
 <script>
@@ -639,12 +640,15 @@
                             p.single_piece === false || p.single_piece === 'false';
     if (isExplicitFalse) return false;
     const isTruthy = v => v === true || v === 'true' || v === 1 || v === '1';
-    return Boolean(
+    const isMarked = Boolean(
       isTruthy(p.singlePiece) ||
       isTruthy(p.pecaUnica) ||
       isTruthy(p.peca_unica) ||
       isTruthy(p.single_piece)
     );
+    if (!isMarked) return false;
+    const stock = Number(p.stock);
+    return Number.isFinite(stock) && stock === 1;
   }
 
   function renderGallery(product) {
@@ -669,7 +673,7 @@
 
     const singleBadge = document.getElementById('product-single-piece-badge');
     if (singleBadge) {
-      if (isSinglePiece) {
+      if (isSinglePiece && !isOutOfStock) {
         singleBadge.hidden = false;
         singleBadge.classList.remove('is-hidden');
         singleBadge.style.setProperty('display', 'inline-flex', 'important');
@@ -678,7 +682,7 @@
         singleBadge.classList.add('is-hidden');
         singleBadge.style.setProperty('display', 'none', 'important');
       }
-      singleBadge.style.top = isOutOfStock ? '52px' : '16px';
+      singleBadge.style.top = '16px';
     }
 
     const imgStyle = isOutOfStock ? 'style="filter: grayscale(100%); opacity: 0.65;"' : '';
@@ -740,26 +744,19 @@
     const isSinglePiece = isProductSinglePiece(product);
     const singleTag = document.getElementById('product-single-piece-tag');
     if (singleTag) {
-      if (isSinglePiece) {
-        singleTag.hidden = false;
-        singleTag.classList.remove('is-hidden');
-        singleTag.style.setProperty('display', 'inline-block', 'important');
-      } else {
-        singleTag.hidden = true;
-        singleTag.classList.add('is-hidden');
-        singleTag.style.setProperty('display', 'none', 'important');
-      }
+      singleTag.remove();
     }
     const stockLine = document.getElementById('stock-line');
     const stock = Number(product.stock);
     const available = product.active !== false && product.available !== false && Number.isFinite(stock) && stock > 0;
     if (stockLine) {
       stockLine.classList.toggle('stock-line--out', !available);
-      stockLine.classList.toggle('stock-line--low', available && stock <= LAST_PIECES_THRESHOLD);
+      stockLine.classList.toggle('stock-line--low', available && stock <= LAST_PIECES_THRESHOLD && !isSinglePiece);
+      stockLine.classList.toggle('stock-line--single', available && isSinglePiece);
       if (!available) {
-        stockLine.innerHTML = '<span style="color:#dc2626; font-weight:700;">● ESGOTADO</span>';
+        stockLine.textContent = 'ESGOTADO';
       } else if (isSinglePiece) {
-        stockLine.innerHTML = '<span style="color:var(--text-primary); font-weight:600;"><span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#000; margin-right:5px; vertical-align:middle;"></span>Peça única exclusiva em estoque</span>';
+        stockLine.textContent = 'Peça única, exclusiva e 100% original em estoque.';
       } else {
         stockLine.textContent = stock > LAST_PIECES_THRESHOLD ? 'Em estoque' : 'Últimas peças';
       }

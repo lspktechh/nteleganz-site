@@ -474,12 +474,14 @@
                             p.pecaUnica === false || p.pecaUnica === 'false' ||
                             p.peca_unica === false || p.peca_unica === 'false' ||
                             p.single_piece === false || p.single_piece === 'false';
-    const isSinglePiece = !isExplicitFalse && Boolean(
+    const isMarkedSingle = !isExplicitFalse && Boolean(
       (p.singlePiece === true || p.singlePiece === 'true' || p.singlePiece === 1) ||
       (p.pecaUnica === true || p.pecaUnica === 'true' || p.pecaUnica === 1) ||
       (p.peca_unica === true || p.peca_unica === 'true' || p.peca_unica === 1) ||
       (p.single_piece === true || p.single_piece === 'true' || p.single_piece === 1)
     );
+    const stock = Number(p.stock);
+    const isSinglePiece = isMarkedSingle && Number.isFinite(stock) && stock === 1;
     const badgeClass = p.badge === 'OFERTA' ? 'catalog-card__badge--sale' : p.badge === 'LUXO' ? 'catalog-card__badge--new' : '';
     const brand = esc(p.brand || '');
     const name = esc(p.name || '');

@@ -233,12 +233,14 @@
                                   p.pecaUnica === false || p.pecaUnica === 'false' ||
                                   p.peca_unica === false || p.peca_unica === 'false' ||
                                   p.single_piece === false || p.single_piece === 'false';
-          const isSingle = !isExplicitFalse && Boolean(
+          const isMarkedSingle = !isExplicitFalse && Boolean(
             (p.singlePiece === true || p.singlePiece === 'true' || p.singlePiece === 1) ||
             (p.pecaUnica === true || p.pecaUnica === 'true' || p.pecaUnica === 1) ||
             (p.peca_unica === true || p.peca_unica === 'true' || p.peca_unica === 1) ||
             (p.single_piece === true || p.single_piece === 'true' || p.single_piece === 1)
           );
+          const stock = Number(p.stock);
+          const isSingle = isMarkedSingle && Number.isFinite(stock) && stock === 1;
           const imgUrl = resolveImg(p);
           const link = getProductUrl(p);
           const price = String(p.price || '').startsWith('R$') ? p.price : `R$ ${p.price || ''}`;

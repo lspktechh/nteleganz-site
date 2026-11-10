@@ -141,7 +141,7 @@ if (strpos($firstItemImg, 'http') !== 0) {
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/reset.css" />
   <link rel="stylesheet" href="css/animations.css" />
-  <link rel="stylesheet" href="css/components.css?v=20261002" />
+  <link rel="stylesheet" href="css/components.css?v=20261110-peca-v4" />
 
   <style>
     :root {

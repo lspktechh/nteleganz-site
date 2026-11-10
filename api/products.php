@@ -542,7 +542,7 @@ function mergeCatalogs(array $vpsProducts, array $localProducts): array
             (isset($p['peca_unica']) && ($p['peca_unica'] === false || $p['peca_unica'] === 'false')) ||
             (isset($p['single_piece']) && ($p['single_piece'] === false || $p['single_piece'] === 'false'))
         );
-        $isSingle = !$isExplicitFalse && (
+        $isSingle = !$isExplicitFalse && ($stk === 1) && (
             (!empty($p['singlePiece']) && $p['singlePiece'] !== 'false') ||
             (!empty($p['pecaUnica']) && $p['pecaUnica'] !== 'false') ||
             (!empty($p['peca_unica']) && $p['peca_unica'] !== 'false') ||
@@ -900,6 +900,8 @@ function sanitizeProduct(array $input, bool $partial = false): ?array
                 break;
             }
         }
+        $stkInput = (int)($input['stock'] ?? $record['stock'] ?? 0);
+        $singleVal = $singleVal && ($stkInput === 1);
         $record['singlePiece'] = $singleVal;
         $record['pecaUnica'] = $singleVal;
         $record['peca_unica'] = $singleVal;
