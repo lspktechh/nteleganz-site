@@ -163,7 +163,8 @@ fieldset .sidebar-section__title { padding: 0; margin-bottom: 15px; }
   .catalog-toolbar__left .toolbar-btn { width:100%!important; justify-content:center!important; }
   .catalog-toolbar__right { width:100%!important; display:flex!important; gap:8px!important; }
   .catalog-toolbar__right .toolbar-btn,
-  .catalog-toolbar__right .sort-select { flex:1 1 0!important; min-width:0!important; justify-content:center!important; padding:0 10px!important; font-size:10.5px!important; letter-spacing:.05em!important; text-align:center!important; }
+  .catalog-toolbar__right .sort-select { flex:1 1 0!important; min-width:0!important; justify-content:center!important; padding:0 8px!important; font-size:10.5px!important; letter-spacing:.03em!important; text-align:center!important; }
+  .catalog-toolbar__right .toolbar-btn--copy { font-size:10px!important; letter-spacing:.02em!important; }
   .catalog-toolbar__right .sort-select { padding-right:24px!important; }
   .catalog-toolbar__right .toolbar-btn--copy span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .toolbar-count { display:none; }

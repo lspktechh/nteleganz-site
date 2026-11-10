@@ -172,7 +172,10 @@
       const hasActive = (selected.brands.length + selected.sizes.length + Number(selected.stock) + Number(selected.sale) + Number(priceMin > 0 || (Number.isFinite(priceMax) && priceMax < 999999)) + Number(Boolean(searchQuery))) > 0;
       const span = toolbarCopyBtn.querySelector('span');
       if (span && !toolbarCopyBtn.classList.contains('copied')) {
-        span.textContent = hasActive ? 'Copiar link filtrado' : 'Copiar link';
+        const label = hasActive
+          ? (window.innerWidth < 420 ? 'Copiar link' : 'Copiar link filtrado')
+          : 'Copiar link';
+        span.textContent = label;
       }
     }
 
