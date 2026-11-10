@@ -36,21 +36,224 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   priceMax = Infinity;
   const pathCategory = location.pathname.match(/\/collections\/([^/]+)(?:\/|$)/)?.[1];
-  const categoryParam = (pathCategory && pathCategory !== 'index.html' ? pathCategory : null) || new URLSearchParams(location.search).get('categoria');
-  if (categoryParam && categoryParam !== 'todos') activeCategory = categoryParam;
 
-  const urlSearchParam = new URLSearchParams(location.search).get('q')
-    || new URLSearchParams(location.search).get('busca')
-    || new URLSearchParams(location.search).get('search');
-  if (urlSearchParam) {
-    searchQuery = urlSearchParam.trim().toLocaleLowerCase('pt-BR');
+  function loadFiltersFromUrl() {
+    const sp = new URLSearchParams(window.location.search);
+
+    // Categoria
+    const cat = (pathCategory && pathCategory !== 'index.html' ? pathCategory : null)
+      || sp.get('categoria') || sp.get('category') || sp.get('cat');
+    if (cat && cat !== 'todos') activeCategory = cat;
+
+    const getParamValues = (...keys) => keys
+      .flatMap(k => sp.getAll(k))
+      .flatMap(v => v.split(','))
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    // Marcas (aceita "Sundek", "sundek", "polo-ralph-lauren")
+    const brandParams = getParamValues('marca', 'marcas', 'brand', 'brands');
+    if (brandParams.length > 0) {
+      selected.brands = [...new Set(brandParams.map(b => rules.normalize(b.replace(/-/g, ' '))))];
+    }
+
+    // Tamanhos (aceita "M", "m", "P,M,G")
+    const sizeParams = getParamValues('tamanho', 'tamanhos', 'size', 'sizes');
+    if (sizeParams.length > 0) {
+      selected.sizes = [...new Set(sizeParams.map(s => s.trim()))];
+    }
+
+    // Disponibilidade
+    const stockParam = sp.get('estoque') || sp.get('stock');
+    if (stockParam === '1' || stockParam === 'true' || stockParam === 'sim') {
+      selected.stock = true;
+    }
+
+    const saleParam = sp.get('oferta') || sp.get('sale') || sp.get('promocao');
+    if (saleParam === '1' || saleParam === 'true' || saleParam === 'sim') {
+      selected.sale = true;
+    }
+
+    // Preços
+    const minParam = sp.get('min') || sp.get('preco_min') || sp.get('precoMin');
+    if (minParam && !isNaN(parseFloat(minParam))) {
+      priceMin = Math.max(0, parseFloat(minParam));
+    }
+    const maxParam = sp.get('max') || sp.get('preco_max') || sp.get('precoMax');
+    if (maxParam && !isNaN(parseFloat(maxParam))) {
+      priceMax = Math.max(0, parseFloat(maxParam));
+    }
+
+    // Busca
+    const qParam = sp.get('q') || sp.get('busca') || sp.get('search');
+    if (qParam) {
+      searchQuery = qParam.trim().toLocaleLowerCase('pt-BR');
+    }
+
+    // Ordenação
+    const sortParam = sp.get('ordem') || sp.get('sort');
+    if (sortParam) {
+      activeSort = sortParam;
+      const sortSelect = document.getElementById('sort-select');
+      if (sortSelect) sortSelect.value = sortParam;
+    }
+  }
+
+  loadFiltersFromUrl();
+
+  function harmonizeSelectedSizes() {
+    if (!selected.sizes || selected.sizes.length === 0 || ALL_PRODUCTS.length === 0) return;
+    const availableSizes = [...new Set(ALL_PRODUCTS.flatMap(p => (p.sizes || []).map(String)))];
+    selected.sizes = selected.sizes.map(s => {
+      const match = availableSizes.find(as => as.trim().toUpperCase() === s.trim().toUpperCase());
+      return match || s.trim().toUpperCase();
+    });
   }
 
   function filterState() { return { ...selected, category: activeCategory, sort: activeSort, min: priceMin, max: priceMax, query: searchQuery }; }
+
+  function updateUrlState() {
+    const params = new URLSearchParams();
+
+    const isDedicatedCategoryPath = Boolean(pathCategory && pathCategory !== 'index.html' && pathCategory !== 'todos');
+    if (!isDedicatedCategoryPath && activeCategory && activeCategory !== 'todos') {
+      params.set('categoria', activeCategory);
+    }
+
+    if (selected.brands && selected.brands.length > 0) {
+      const brandNames = selected.brands.map(bNorm => {
+        const match = ALL_PRODUCTS.find(p => rules.normalize(p.brand) === bNorm);
+        return match ? match.brand : bNorm;
+      });
+      params.set('marca', brandNames.join(','));
+    }
+
+    if (selected.sizes && selected.sizes.length > 0) {
+      params.set('tamanho', selected.sizes.join(','));
+    }
+
+    if (selected.stock) {
+      params.set('estoque', '1');
+    }
+
+    if (selected.sale) {
+      params.set('oferta', '1');
+    }
+
+    if (priceMin > 0) {
+      params.set('min', String(Math.round(priceMin)));
+    }
+    if (Number.isFinite(priceMax) && priceMax < 999999) {
+      params.set('max', String(Math.round(priceMax)));
+    }
+
+    if (searchQuery) {
+      params.set('q', searchQuery);
+    }
+
+    if (activeSort && activeSort !== 'default') {
+      params.set('ordem', activeSort);
+    }
+
+    const basePath = isDedicatedCategoryPath
+      ? `/collections/${pathCategory}/`
+      : (activeCategory && activeCategory !== 'todos' ? `/collections/${activeCategory}/` : '/collections/');
+    const queryString = params.toString();
+    const newUrl = queryString ? `${basePath}?${queryString}` : basePath;
+
+    const currentFull = window.location.pathname + window.location.search;
+    if (currentFull !== newUrl) {
+      history.replaceState({ ...filterState() }, '', newUrl);
+    }
+
+    // Atualiza estado do botão de copiar na toolbar (se existir)
+    const toolbarCopyBtn = document.getElementById('toolbar-copy-link-btn');
+    if (toolbarCopyBtn) {
+      const hasActive = (selected.brands.length + selected.sizes.length + Number(selected.stock) + Number(selected.sale) + Number(priceMin > 0 || (Number.isFinite(priceMax) && priceMax < 999999)) + Number(Boolean(searchQuery))) > 0;
+      const span = toolbarCopyBtn.querySelector('span');
+      if (span && !toolbarCopyBtn.classList.contains('copied')) {
+        span.textContent = hasActive ? 'Copiar link filtrado' : 'Copiar link';
+      }
+    }
+
+    return newUrl;
+  }
+
+  window.copyFilteredCatalogUrl = function (buttonEl) {
+    updateUrlState();
+    const fullUrl = window.location.href;
+
+    const onSuccess = () => {
+      if (buttonEl) {
+        buttonEl.classList.add('copied');
+        const textSpan = buttonEl.querySelector('span');
+        const origText = textSpan ? textSpan.textContent : '';
+        if (textSpan) textSpan.textContent = 'Link copiado!';
+
+        setTimeout(() => {
+          buttonEl.classList.remove('copied');
+          if (textSpan) textSpan.textContent = origText;
+        }, 2500);
+      }
+
+      showCopyToast('Link com filtros copiado! Pronto para enviar no WhatsApp.');
+    };
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(fullUrl).then(onSuccess).catch(() => fallbackCopy(fullUrl, onSuccess));
+    } else {
+      fallbackCopy(fullUrl, onSuccess);
+    }
+  };
+
+  function fallbackCopy(text, callback) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const success = document.execCommand('copy');
+      ta.remove();
+      if (success && callback) {
+        callback();
+        return;
+      }
+    } catch (_) {}
+    if (callback) callback();
+  }
+
+  function showCopyToast(msg) {
+    let toast = document.getElementById('filter-copy-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'filter-copy-toast';
+      toast.className = 'filter-copy-toast';
+      document.body.appendChild(toast);
+    }
+    toast.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <span>${esc(msg)}</span>
+    `;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2800);
+  }
+
   function resetFilters() {
     selected.brands = []; selected.sizes = []; selected.stock = false; selected.sale = false;
-    priceMin = 0; priceMax = Infinity; searchQuery = ''; activeCategory = 'todos'; page = 1;
-    history.pushState({}, '', '/collections/');
+    priceMin = 0; priceMax = Infinity; searchQuery = ''; page = 1;
+    const isDedicatedCategoryPath = Boolean(pathCategory && pathCategory !== 'index.html' && pathCategory !== 'todos');
+    const basePath = isDedicatedCategoryPath ? `/collections/${pathCategory}/` : '/collections/';
+    history.replaceState({}, '', basePath);
     document.querySelectorAll('#search-input, #catalog-search').forEach(input => input.value = '');
     syncControls(); render();
   }
@@ -62,7 +265,16 @@
     }
     document.querySelectorAll('[data-filter-group]').forEach(input => {
       const group = input.dataset.filterGroup;
-      input.checked = Array.isArray(selected[group]) ? selected[group].includes(input.value) : selected[group];
+      if (Array.isArray(selected[group])) {
+        if (group === 'sizes') {
+          const normVal = String(input.value).trim().toUpperCase();
+          input.checked = selected.sizes.some(s => String(s).trim().toUpperCase() === normVal);
+        } else {
+          input.checked = selected[group].includes(input.value);
+        }
+      } else {
+        input.checked = Boolean(selected[group]);
+      }
     });
     document.querySelectorAll('[data-price]').forEach(input => input.value = input.dataset.price === 'min' ? priceMin || '' : Number.isFinite(priceMax) ? priceMax : '');
     document.querySelectorAll('.cat-pill').forEach(button => {
@@ -346,6 +558,7 @@
     loadWrap.style.display = slice.length < total ? 'block' : 'none';
     updateFilterBadge();
     syncControls();
+    updateUrlState();
     document.getElementById('filter-apply-btn').textContent = `Ver ${total} produto${total !== 1 ? 's' : ''}`;
     const chips = [];
     const chip = (label, group, value = '') => chips.push(`<button class="filter-chip" data-remove-group="${group}" data-remove-value="${esc(value)}" aria-label="Remover filtro ${esc(label)}">${esc(label)} <span aria-hidden="true">×</span></button>`);
@@ -354,10 +567,21 @@
     if (selected.stock) chip('Em estoque', 'stock');
     if (selected.sale) chip('Em oferta', 'sale');
     if (searchQuery) chip(`Busca: ${searchQuery}`, 'query');
-    if (priceMin > 0 || Number.isFinite(priceMax)) chip(`R$ ${priceMin.toLocaleString('pt-BR')} — ${Number.isFinite(priceMax) ? 'R$ ' + priceMax.toLocaleString('pt-BR') : 'sem limite'}`, 'price');
+    if (priceMin > 0 || (Number.isFinite(priceMax) && priceMax < 999999)) chip(`R$ ${priceMin.toLocaleString('pt-BR')} — ${Number.isFinite(priceMax) ? 'R$ ' + priceMax.toLocaleString('pt-BR') : 'sem limite'}`, 'price');
     const bar = document.getElementById('active-filters-bar');
-    bar.innerHTML = chips.join('') + (chips.length ? '<button class="filter-reset" data-clear-filters>Limpar tudo</button>' : '');
-    bar.style.display = chips.length ? 'flex' : 'none';
+    if (bar) {
+      const copyBtn = chips.length ? `
+        <button class="filter-copy-link-btn" type="button" onclick="window.copyFilteredCatalogUrl(this)" title="Copiar link com filtros para WhatsApp" aria-label="Copiar link filtrado">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span>Copiar link filtrado</span>
+        </button>
+      ` : '';
+      bar.innerHTML = chips.join('') + copyBtn + (chips.length ? '<button class="filter-reset" data-clear-filters>Limpar tudo</button>' : '');
+      bar.style.display = chips.length ? 'flex' : 'none';
+    }
   }
 
   // ══════════════════════════════════════════
@@ -370,8 +594,8 @@
         if (prev) prev.classList.remove('active');
         btn.classList.add('active');
         activeCategory = btn.dataset.cat;
-        history.pushState({}, '', activeCategory === 'todos' ? '/collections/' : `/collections/${activeCategory}/`);
         page = 1;
+        updateUrlState();
         render();
       });
     });
@@ -552,6 +776,7 @@
         if (requestedMode !== 'local') ALL_PRODUCTS = [];
       }
     }
+    harmonizeSelectedSizes();
     buildFilterControls();
     render();
   }
@@ -607,6 +832,11 @@
     render: render
   };
 
-  window.addEventListener('popstate', () => location.reload());
+  window.addEventListener('popstate', () => {
+    loadFiltersFromUrl();
+    harmonizeSelectedSizes();
+    syncControls();
+    render();
+  });
 
 })();

@@ -997,7 +997,7 @@
       opacity: 1;
     }
   </style>
-  <link rel="stylesheet" href="css/catalog-filters.css?v=20260930" />
+  <link rel="stylesheet" href="css/catalog-filters.css?v=20261109-share-filter-v1" />
 <link rel="stylesheet" href="css/mysupplies.css?v=20261109-peca-unica-v2" />
 <script src="/js/image-compat.js" defer></script>
 </head>
@@ -1201,6 +1201,13 @@
       <span class="toolbar-count" id="showing-count" role="status" aria-live="polite">— produtos</span>
     </div>
     <div class="catalog-toolbar__right">
+      <button class="toolbar-btn toolbar-btn--copy" id="toolbar-copy-link-btn" type="button" onclick="window.copyFilteredCatalogUrl(this)" title="Copiar link com filtros para WhatsApp" aria-label="Copiar link filtrado">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        <span>Copiar link</span>
+      </button>
       <select id="sort-select" class="sort-select" aria-label="Ordenar produtos">
         <option value="default">Ordenar por</option>
         <option value="price-asc">Menor Preço</option>
@@ -1380,9 +1387,9 @@
 <script src="js/menu.js?v=20260930"></script>
 <script src="js/db.js?v=20261109-peca-unica-v2"></script>
 
-<script src="js/catalog-filters.js?v=20260930"></script>
+<script src="js/catalog-filters.js?v=20261109-share-filter-v1"></script>
 <script src="/js/search.js?v=20261109-peca-unica-v2"></script>
-<script src="js/catalog.js?v=20261109-peca-unica-v2"></script>
+<script src="js/catalog.js?v=20261109-share-filter-v1"></script>
 <script src="/js/tracking.js?v=20261107-dedup"></script>
 
 </body>

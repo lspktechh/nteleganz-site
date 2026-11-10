@@ -1,6 +1,7 @@
 /* Shared catalog rules, independent of desktop/mobile controls. */
 (() => {
   const normalize = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const normalizeSize = value => String(value ?? '').trim().toUpperCase();
   const price = value => {
     if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
     let text = String(value ?? '').replace(/[^\d,.-]/g, '');
@@ -25,7 +26,10 @@
       const amount = price(p.price);
       if (amount < state.min || amount > state.max) return false;
       if (state.brands.length && !state.brands.includes(normalize(p.brand))) return false;
-      if (state.sizes.length && !state.sizes.some(size => (p.sizes || []).map(String).includes(size))) return false;
+      if (state.sizes.length && !state.sizes.some(size => {
+        const target = normalizeSize(size);
+        return (p.sizes || []).some(s => normalizeSize(s) === target);
+      })) return false;
       if (state.stock && !inStock(p)) return false;
       if (state.sale && !onSale(p)) return false;
       return normalize(`${p.brand} ${p.name} ${p.category} ${category(p)}`).includes(normalize(state.query));
@@ -36,5 +40,5 @@
       return Number(Boolean(b.featured)) - Number(Boolean(a.featured));
     });
   }
-  window.NTCatalogFilters = { normalize, price, filter, inStock, onSale, category };
+  window.NTCatalogFilters = { normalize, normalizeSize, price, filter, inStock, onSale, category };
 })();

@@ -17,11 +17,95 @@ fieldset .sidebar-section__title { padding: 0; margin-bottom: 15px; }
 .filter-price-inputs input { display: block; width: 100%; min-width: 0; padding: 10px 8px; margin-top: 7px; background: #fff; border: 1px solid #d7d3cc; border-radius: 5px; font-size: 13px; }
 .filter-price-inputs input:focus { border-color: #111; }
 .filter-hint { margin-top: 12px; font-size: 11px; color: #777; line-height: 1.6; }
-.filter-reset { font-size: 12px; text-decoration: underline; text-underline-offset: 4px; padding: 8px 0; }
-.filter-chip { display: inline-flex; align-items: center; gap: 13px; border: 1px solid #d6d1c9; border-radius: 999px; padding: 8px 13px; background: #fff; font-size: 11px; }
+.filter-reset { font-size: 12px; text-decoration: underline; text-underline-offset: 4px; padding: 8px 0; background: none; border: none; cursor: pointer; color: #111; }
+.filter-chip { display: inline-flex; align-items: center; gap: 13px; border: 1px solid #d6d1c9; border-radius: 999px; padding: 8px 13px; background: #fff; font-size: 11px; cursor: pointer; }
 .filter-chip:hover { border-color: #111; }
 .filter-chip span { font-size: 18px; line-height: 1; }
-.active-filters-bar { flex-wrap: wrap; gap: 8px; }
+.active-filters-bar { flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ── Botão Copiar Link Filtrado ── */
+.filter-copy-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #000;
+  color: #fff;
+  border: 1px solid #000;
+  border-radius: 999px;
+  padding: 7px 15px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .2s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.filter-copy-link-btn:hover {
+  background: #222;
+  border-color: #222;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.filter-copy-link-btn.copied,
+.toolbar-btn--copy.copied {
+  background: #15803d !important;
+  border-color: #15803d !important;
+  color: #fff !important;
+}
+.filter-copy-link-btn:active,
+.toolbar-btn--copy:active {
+  transform: scale(0.97);
+}
+.filter-copy-link-btn svg,
+.toolbar-btn--copy svg {
+  flex-shrink: 0;
+}
+
+.toolbar-btn--copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── Toast de Feedback ao Copiar Link ── */
+.filter-copy-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #111111f2;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  padding: 11px 22px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all .28s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(255,255,255,0.18);
+  max-width: 90vw;
+  text-align: center;
+}
+.filter-copy-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.filter-copy-toast svg {
+  color: #22c55e;
+  flex-shrink: 0;
+}
 
 /* Catálogo minimalista: conteúdo em largura total e filtros sob demanda */
 .catalog-page { background:#fff; padding-top:0!important; }
@@ -74,8 +158,14 @@ fieldset .sidebar-section__title { padding: 0; margin-bottom: 15px; }
   .catalog-hero img { height:62svh; min-height:440px; object-position:48% center; }
   .catalog-products-panel { margin-top:-58px; padding-top:46px; border-radius:24px 24px 0 0; box-shadow:0 -14px 34px rgba(0,0,0,.14); }
   .catalog-hero[hidden] + .catalog-products-panel { margin-top:0; padding-top:8px; border-radius:0; box-shadow:none; }
-  .catalog-toolbar { align-items:stretch; flex-wrap:wrap; padding:18px 16px 8px; }
-  .catalog-toolbar__left { flex:1; }
+  .catalog-toolbar { display:flex!important; flex-direction:column!important; gap:8px!important; padding:14px 16px 8px!important; align-items:stretch!important; }
+  .catalog-toolbar__left { width:100%!important; display:flex!important; }
+  .catalog-toolbar__left .toolbar-btn { width:100%!important; justify-content:center!important; }
+  .catalog-toolbar__right { width:100%!important; display:flex!important; gap:8px!important; }
+  .catalog-toolbar__right .toolbar-btn,
+  .catalog-toolbar__right .sort-select { flex:1 1 0!important; min-width:0!important; justify-content:center!important; padding:0 10px!important; font-size:10.5px!important; letter-spacing:.05em!important; text-align:center!important; }
+  .catalog-toolbar__right .sort-select { padding-right:24px!important; }
+  .catalog-toolbar__right .toolbar-btn--copy span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .toolbar-count { display:none; }
   .toolbar-btn,.sort-select { min-height:42px; }
   .catalog-products-area { padding:10px 0 48px; }
