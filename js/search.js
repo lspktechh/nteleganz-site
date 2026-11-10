@@ -229,7 +229,11 @@
       <div class="search-results-grid" role="listbox" aria-label="Resultados da pesquisa">
         ${itemsToShow.map((p, idx) => {
           const out = isOutOfStock(p);
-          const isSingle = Boolean(
+          const isExplicitFalse = p.singlePiece === false || p.singlePiece === 'false' ||
+                                  p.pecaUnica === false || p.pecaUnica === 'false' ||
+                                  p.peca_unica === false || p.peca_unica === 'false' ||
+                                  p.single_piece === false || p.single_piece === 'false';
+          const isSingle = !isExplicitFalse && Boolean(
             (p.singlePiece === true || p.singlePiece === 'true' || p.singlePiece === 1) ||
             (p.pecaUnica === true || p.pecaUnica === 'true' || p.pecaUnica === 1) ||
             (p.peca_unica === true || p.peca_unica === 'true' || p.peca_unica === 1) ||

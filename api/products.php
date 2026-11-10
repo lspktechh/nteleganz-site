@@ -514,7 +514,13 @@ function mergeCatalogs(array $vpsProducts, array $localProducts): array
         $stk = (int)($p['stock'] ?? 0);
         $p['inStock'] = $stk > 0;
         $p['available'] = $stk > 0;
-        $isSingle = (
+        $isExplicitFalse = (
+            (isset($p['singlePiece']) && ($p['singlePiece'] === false || $p['singlePiece'] === 'false')) ||
+            (isset($p['pecaUnica']) && ($p['pecaUnica'] === false || $p['pecaUnica'] === 'false')) ||
+            (isset($p['peca_unica']) && ($p['peca_unica'] === false || $p['peca_unica'] === 'false')) ||
+            (isset($p['single_piece']) && ($p['single_piece'] === false || $p['single_piece'] === 'false'))
+        );
+        $isSingle = !$isExplicitFalse && (
             (!empty($p['singlePiece']) && $p['singlePiece'] !== 'false') ||
             (!empty($p['pecaUnica']) && $p['pecaUnica'] !== 'false') ||
             (!empty($p['peca_unica']) && $p['peca_unica'] !== 'false') ||

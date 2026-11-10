@@ -467,7 +467,11 @@
 
   function renderCard(p, index = 0) {
     const isOutOfStock = (p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false;
-    const isSinglePiece = Boolean(
+    const isExplicitFalse = p.singlePiece === false || p.singlePiece === 'false' ||
+                            p.pecaUnica === false || p.pecaUnica === 'false' ||
+                            p.peca_unica === false || p.peca_unica === 'false' ||
+                            p.single_piece === false || p.single_piece === 'false';
+    const isSinglePiece = !isExplicitFalse && Boolean(
       (p.singlePiece === true || p.singlePiece === 'true' || p.singlePiece === 1) ||
       (p.pecaUnica === true || p.pecaUnica === 'true' || p.pecaUnica === 1) ||
       (p.peca_unica === true || p.peca_unica === 'true' || p.peca_unica === 1) ||

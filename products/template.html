@@ -37,7 +37,7 @@
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/reset.css" />
   <link rel="stylesheet" href="css/animations.css" />
-  <link rel="stylesheet" href="css/components.css?v=20261109-peca-unica-v2" />
+  <link rel="stylesheet" href="css/components.css?v=20261109-peca-unica-v3" />
   <link rel="stylesheet" href="css/main.css" />
 
   <style>
@@ -117,7 +117,7 @@
     @media (max-width: 700px) { .product-page { padding-top: 1rem; } .product-meta, .related-section .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .related-section { padding: 3rem var(--gutter); } .related-box { border-radius: 16px; } }
     @media (max-width: 420px) { .breadcrumb { overflow: hidden; white-space: nowrap; } .product-name { font-size: 1.55rem; } .gallery-main-swiper { border-radius: 7px; } .gallery-main-swiper img { padding: 1rem; } .size-btn { width: 3.65rem; } .related-section .products-grid { gap: .7rem; } .related-box { padding: 1.15rem; } }
   </style>
-  <link rel="stylesheet" href="css/mysupplies.css?v=20261109-peca-unica-v2" />
+  <link rel="stylesheet" href="css/mysupplies.css?v=20261109-peca-unica-v3" />
 <script src="/js/image-compat.js" defer></script>
 </head>
 <body>
@@ -307,7 +307,7 @@
       <div class="product-gallery">
         <div class="swiper gallery-main-swiper" id="gallery-main" style="position:relative;">
           <span id="product-out-badge" style="display:none; position:absolute; top:16px; left:16px; z-index:10; background:#dc2626; color:#ffffff; font-size:12px; font-weight:700; letter-spacing:1px; padding:6px 14px; border-radius:4px; text-transform:uppercase; box-shadow:0 2px 8px rgba(0,0,0,0.3);">ESGOTADO</span>
-          <span id="product-single-piece-badge" class="badge-peca-unica" style="display:none; position:absolute; top:16px; left:16px; z-index:10; background:#000000; color:#ffffff; font-size:11px; font-weight:700; letter-spacing:0.08em; padding:5px 12px; border-radius:2px; text-transform:uppercase; box-shadow:0 2px 8px rgba(0,0,0,0.35); pointer-events:none;">PEÇA ÚNICA</span>
+          <span id="product-single-piece-badge" class="badge-peca-unica is-hidden" style="display:none !important; position:absolute; top:16px; left:16px; z-index:10; background:#000000; color:#ffffff; font-size:11px; font-weight:700; letter-spacing:0.08em; padding:5px 12px; border-radius:2px; text-transform:uppercase; box-shadow:0 2px 8px rgba(0,0,0,0.35); pointer-events:none;" hidden>PEÇA ÚNICA</span>
           <div class="swiper-wrapper" id="gallery-slides">
             <!-- Rendered by JS -->
           </div>
@@ -328,7 +328,7 @@
           <span class="product-price-main" id="product-price">—</span>
           <span class="product-price-old" id="product-old-price" style="display:none;"></span>
           <span class="product-price-badge" id="product-badge" style="display:none;"></span>
-          <span id="product-single-piece-tag" class="badge-peca-unica-tag" style="display:none; background:#000000; color:#ffffff; font-size:11px; font-weight:700; letter-spacing:0.06em; padding:4px 9px; border-radius:2px; text-transform:uppercase; vertical-align:middle; margin-left:8px;">PEÇA ÚNICA</span>
+          <span id="product-single-piece-tag" class="badge-peca-unica-tag is-hidden" style="display:none !important; background:#000000; color:#ffffff; font-size:11px; font-weight:700; letter-spacing:0.06em; padding:4px 9px; border-radius:2px; text-transform:uppercase; vertical-align:middle; margin-left:8px;" hidden>PEÇA ÚNICA</span>
         </div>
 
         <div class="stock-line" id="stock-line" aria-live="polite">Verificando estoque...</div>
@@ -535,9 +535,9 @@
 <script src="js/checkout.js?v=20261006"></script>
 <script src="/js/dynamic-checkout.js?v=20261101"></script>
 <script src="js/menu.js?v=20260930"></script>
-<script src="js/db.js?v=20261109-peca-unica-v2"></script>
-<script src="/js/search.js?v=20261109-peca-unica-v2"></script>
-<script src="js/main.js?v=20261109-peca-unica-v2"></script>
+<script src="js/db.js?v=20261109-peca-unica-v3"></script>
+<script src="/js/search.js?v=20261109-peca-unica-v3"></script>
+<script src="js/main.js?v=20261109-peca-unica-v3"></script>
 <script src="/js/tracking.js?v=20261107-dedup"></script>
 
 <script>
@@ -627,6 +627,11 @@
 
   function isProductSinglePiece(p) {
     if (!p) return false;
+    const isExplicitFalse = p.singlePiece === false || p.singlePiece === 'false' ||
+                            p.pecaUnica === false || p.pecaUnica === 'false' ||
+                            p.peca_unica === false || p.peca_unica === 'false' ||
+                            p.single_piece === false || p.single_piece === 'false';
+    if (isExplicitFalse) return false;
     const isTruthy = v => v === true || v === 'true' || v === 1 || v === '1';
     return Boolean(
       isTruthy(p.singlePiece) ||
@@ -658,7 +663,15 @@
 
     const singleBadge = document.getElementById('product-single-piece-badge');
     if (singleBadge) {
-      singleBadge.style.display = isSinglePiece ? 'inline-flex' : 'none';
+      if (isSinglePiece) {
+        singleBadge.hidden = false;
+        singleBadge.classList.remove('is-hidden');
+        singleBadge.style.setProperty('display', 'inline-flex', 'important');
+      } else {
+        singleBadge.hidden = true;
+        singleBadge.classList.add('is-hidden');
+        singleBadge.style.setProperty('display', 'none', 'important');
+      }
       singleBadge.style.top = isOutOfStock ? '52px' : '16px';
     }
 
@@ -721,7 +734,15 @@
     const isSinglePiece = isProductSinglePiece(product);
     const singleTag = document.getElementById('product-single-piece-tag');
     if (singleTag) {
-      singleTag.style.display = isSinglePiece ? 'inline-block' : 'none';
+      if (isSinglePiece) {
+        singleTag.hidden = false;
+        singleTag.classList.remove('is-hidden');
+        singleTag.style.setProperty('display', 'inline-block', 'important');
+      } else {
+        singleTag.hidden = true;
+        singleTag.classList.add('is-hidden');
+        singleTag.style.setProperty('display', 'none', 'important');
+      }
     }
     const stockLine = document.getElementById('stock-line');
     const stock = Number(product.stock);

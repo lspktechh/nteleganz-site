@@ -181,7 +181,11 @@
 
   function renderProductCard(product, index = 0) {
     const isOutOfStock = (product.stock !== undefined && Number(product.stock) <= 0) || product.inStock === false || product.available === false;
-    const isSinglePiece = Boolean(
+    const isExplicitFalse = product.singlePiece === false || product.singlePiece === 'false' ||
+                            product.pecaUnica === false || product.pecaUnica === 'false' ||
+                            product.peca_unica === false || product.peca_unica === 'false' ||
+                            product.single_piece === false || product.single_piece === 'false';
+    const isSinglePiece = !isExplicitFalse && Boolean(
       (product.singlePiece === true || product.singlePiece === 'true' || product.singlePiece === 1) ||
       (product.pecaUnica === true || product.pecaUnica === 'true' || product.pecaUnica === 1) ||
       (product.peca_unica === true || product.peca_unica === 'true' || product.peca_unica === 1) ||

@@ -871,6 +871,11 @@
 
   function isProductSinglePiece(p) {
     if (!p) return false;
+    const isExplicitFalse = p.singlePiece === false || p.singlePiece === 'false' ||
+                            p.pecaUnica === false || p.pecaUnica === 'false' ||
+                            p.peca_unica === false || p.peca_unica === 'false' ||
+                            p.single_piece === false || p.single_piece === 'false';
+    if (isExplicitFalse) return false;
     const isTruthy = v => v === true || v === 'true' || v === 1 || v === '1';
     return Boolean(
       isTruthy(p.singlePiece) ||

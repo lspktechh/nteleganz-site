@@ -3042,7 +3042,7 @@ img.is-out-of-stock,
 .badge-peca-unica,
 .catalog-card__badge.badge-peca-unica,
 .product-card__badge.badge-peca-unica {
-  display: inline-flex !important;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   position: absolute;
@@ -3060,6 +3060,15 @@ img.is-out-of-stock,
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
   line-height: 1.2 !important;
   pointer-events: none !important;
+}
+
+.badge-peca-unica[hidden],
+.badge-peca-unica.is-hidden,
+#product-single-piece-badge[hidden],
+#product-single-piece-badge.is-hidden,
+#product-single-piece-tag[hidden],
+#product-single-piece-tag.is-hidden {
+  display: none !important;
 }
 
 .is-out-of-stock .badge-peca-unica,
