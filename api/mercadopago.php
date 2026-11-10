@@ -199,11 +199,11 @@ if ($method === 'GET') {
             exit;
         }
 
-        // Fallback: cálculo padrão de 1x a 12x
+        // Fallback: cálculo padrão de 1x a 12x atualizado com a tabela vigente do Mercado Pago
         $costs = [];
         $interestRates = [
-            1 => 0, 2 => 5.41, 3 => 6.98, 4 => 8.56, 5 => 9.94, 6 => 11.39,
-            7 => 12.82, 8 => 14.28, 9 => 15.69, 10 => 17.15, 11 => 18.59, 12 => 20.00
+            1 => 0, 2 => 9.64, 3 => 11.23, 4 => 11.36, 5 => 14.31, 6 => 14.32,
+            7 => 16.72, 8 => 16.73, 9 => 19.69, 10 => 20.65, 11 => 20.66, 12 => 22.11
         ];
         for ($i = 1; $i <= 12; $i++) {
             $rate = $interestRates[$i] ?? 0;
