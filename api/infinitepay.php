@@ -35,6 +35,22 @@ function parsePriceToCents($price): int {
     return (int)round(((float)$cleaned) * 100);
 }
 
+function getInfiniteCatalogMap(): array {
+    $productsFile = __DIR__ . '/../data/products.json';
+    if (!file_exists($productsFile)) return [];
+    $raw = @file_get_contents($productsFile);
+    if (!$raw) return [];
+    $data = @json_decode($raw, true);
+    if (!is_array($data) || empty($data['products']) || !is_array($data['products'])) return [];
+
+    $map = [];
+    foreach ($data['products'] as $p) {
+        if (!empty($p['id'])) $map[(string)$p['id']] = $p;
+        if (!empty($p['slug'])) $map[(string)$p['slug']] = $p;
+    }
+    return $map;
+}
+
 $rawInput = file_get_contents('php://input');
 $data = $rawInput ? json_decode($rawInput, true) : null;
 
@@ -52,13 +68,25 @@ $shipping = $data['shipping'] ?? null;
 $orderCode = !empty($data['code']) ? strtoupper(ltrim((string)$data['code'], '#')) : 'NTE-' . rand(1000, 9999);
 $displayCode = '#' . $orderCode;
 
-// Monta lista de itens para a API da InfinitePay (preços em centavos)
+// Monta lista de itens para a API da InfinitePay com validação estrita no catálogo
+$infiniteCatalog = getInfiniteCatalogMap();
 $infiniteItems = [];
 $totalCents = 0;
 
 foreach ($items as $item) {
     $qty = max(1, (int)($item['qty'] ?? 1));
-    $unitPriceCents = parsePriceToCents($item['price'] ?? 0);
+    $itemId = (string)($item['id'] ?? $item['productId'] ?? '');
+
+    // Preço oficial do banco de dados tem precedência absoluta
+    if ($itemId !== '' && isset($infiniteCatalog[$itemId])) {
+        $catProduct = $infiniteCatalog[$itemId];
+        $unitPriceCents = !empty($catProduct['priceNum']) ? (int)round((float)$catProduct['priceNum'] * 100) : parsePriceToCents($catProduct['price'] ?? 0);
+        $item['name'] = $catProduct['name'] ?? ($item['name'] ?? 'Produto NT Eleganz');
+        if (!empty($catProduct['brand'])) $item['brand'] = $catProduct['brand'];
+    } else {
+        $unitPriceCents = parsePriceToCents($item['price'] ?? 0);
+    }
+
     if ($unitPriceCents <= 0) $unitPriceCents = 100; // Mínimo 1 real
 
     $descParts = [];

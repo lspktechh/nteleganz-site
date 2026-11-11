@@ -78,6 +78,35 @@ function parsePriceToFloat($price): float {
     return round((float)$cleaned, 2);
 }
 
+function getCatalogProductsMap(): array {
+    $productsFile = __DIR__ . '/../data/products.json';
+    if (!file_exists($productsFile)) return [];
+    $raw = @file_get_contents($productsFile);
+    if (!$raw) return [];
+    $data = @json_decode($raw, true);
+    if (!is_array($data) || empty($data['products']) || !is_array($data['products'])) return [];
+
+    $map = [];
+    foreach ($data['products'] as $p) {
+        if (!empty($p['id'])) {
+            $map[(string)$p['id']] = $p;
+        }
+        if (!empty($p['slug'])) {
+            $map[(string)$p['slug']] = $p;
+        }
+    }
+    return $map;
+}
+
+function getOfficialShippingMethods(): array {
+    $shippingMethodsFile = __DIR__ . '/../data/shipping_methods.json';
+    if (!file_exists($shippingMethodsFile)) return [];
+    $raw = @file_get_contents($shippingMethodsFile);
+    if (!$raw) return [];
+    $data = @json_decode($raw, true);
+    return is_array($data) ? $data : [];
+}
+
 function callMercadoPagoApi(string $url, string $method, ?array $body, string $accessToken, ?string $idempotencyKey = null): array {
     $ch = curl_init($url);
     $headers = [
@@ -474,20 +503,60 @@ $action = $data['action'] ?? 'process_pix'; // 'process_pix' | 'process_card' | 
 $orderCode = !empty($data['code']) ? strtoupper(ltrim((string)$data['code'], '#')) : 'NTE-' . rand(1000, 9999);
 $displayCode = '#' . $orderCode;
 
-// Calcula Total
+// Calcula Total no Backend com Validação Estrita contra o Catálogo Oficial da Loja
+$catalogMap = getCatalogProductsMap();
 $itemsSubtotal = 0.0;
+$validatedItems = [];
+
 foreach ($items as $item) {
-    $qty = max(1, (int)($item['qty'] ?? 1));
-    $unitPrice = parsePriceToFloat($item['price'] ?? 0);
+    $qty = max(1, (int)($item['qty'] ?? $item['quantity'] ?? 1));
+    $itemId = (string)($item['id'] ?? $item['productId'] ?? '');
+
+    // Blindagem de segurança: o preço oficial cadastrado no sistema SEMPRE prevalece sobre o frontend
+    $unitPrice = 0.0;
+    if ($itemId !== '' && isset($catalogMap[$itemId])) {
+        $catProduct = $catalogMap[$itemId];
+        $unitPrice = !empty($catProduct['priceNum']) ? (float)$catProduct['priceNum'] : parsePriceToFloat($catProduct['price'] ?? 0);
+        $item['price'] = 'R$ ' . number_format($unitPrice, 2, ',', '.');
+        $item['name'] = $catProduct['name'] ?? ($item['name'] ?? 'Produto NT Eleganz');
+        if (!empty($catProduct['brand'])) {
+            $item['brand'] = $catProduct['brand'];
+        }
+    } else {
+        // Fallback apenas se o produto não for localizado pelo ID
+        $unitPrice = parsePriceToFloat($item['price'] ?? 0);
+    }
+
     if ($unitPrice <= 0) $unitPrice = 1.00;
     $itemsSubtotal += ($unitPrice * $qty);
+    $validatedItems[] = $item;
 }
+$items = $validatedItems;
 
+// Validação de frete contra a tabela oficial de métodos de envio
 $effectiveShipping = 0.0;
-if (is_array($shipping) && isset($shipping['price'])) {
-    $isFree = !empty($shipping['freeAbove']) && $itemsSubtotal >= (float)$shipping['freeAbove'];
-    if (!$isFree && (float)$shipping['price'] > 0) {
-        $effectiveShipping = parsePriceToFloat($shipping['price']);
+if (is_array($shipping)) {
+    $officialMethods = getOfficialShippingMethods();
+    $shipId = (string)($shipping['id'] ?? '');
+    $matchedMethod = null;
+    foreach ($officialMethods as $m) {
+        if (($m['id'] ?? '') === $shipId && !empty($m['active'])) {
+            $matchedMethod = $m;
+            break;
+        }
+    }
+
+    if ($matchedMethod) {
+        $isFree = !empty($matchedMethod['freeAbove']) && $itemsSubtotal >= (float)$matchedMethod['freeAbove'];
+        $effectiveShipping = $isFree ? 0.0 : (float)($matchedMethod['price'] ?? 0);
+        $shipping['price'] = $matchedMethod['price'];
+        $shipping['name'] = $matchedMethod['name'];
+        $shipping['effectivePrice'] = $effectiveShipping;
+    } else {
+        $isFree = !empty($shipping['freeAbove']) && $itemsSubtotal >= (float)$shipping['freeAbove'];
+        if (!$isFree && (float)($shipping['price'] ?? 0) > 0) {
+            $effectiveShipping = parsePriceToFloat($shipping['price']);
+        }
     }
 }
 
