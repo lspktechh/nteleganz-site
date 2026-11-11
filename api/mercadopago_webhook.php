@@ -156,44 +156,55 @@ $status = strtolower((string)($payment['status'] ?? ''));
 $orderCode = trim((string)($payment['external_reference'] ?? ''));
 $isApproved = ($status === 'approved');
 
-if ($orderCode !== '' && $isApproved) {
+if ($orderCode !== '') {
     $cleanCode = strtoupper(ltrim($orderCode, '#'));
     $paymentMethod = $payment['payment_method_id'] ?? 'mercadopago';
-    $dateApproved = $payment['date_approved'] ?? date('c');
-
-    $updateData = [
-        'status' => 'pago',
-        'paymentStatus' => 'approved',
-        'paidAt' => $dateApproved,
-        'paymentMethod' => 'mercadopago',
-        'paymentMethodDetail' => 'mercadopago_' . $paymentMethod,
-        'mercadopagoPaymentId' => (string)$paymentId
-    ];
-
-    // Atualiza o pedido direto no armazenamento. Antes era um PUT HTTP sem login na API pública de pedidos,
-    // que agora só aceita admin.
     require_once __DIR__ . '/orders_helper.php';
-    updateOrder($cleanCode, $updateData);
 
-    // Busca dados completos do pedido para enviar e-mail e CAPI
-    $orderData = findOrderByCode($cleanCode);
+    if ($isApproved) {
+        $dateApproved = $payment['date_approved'] ?? date('c');
 
-    if (is_array($orderData)) {
-        // Dispara e-mail de confirmação ao cliente
-        try {
-            require_once __DIR__ . '/send_order_email.php';
-            sendOrderConfirmationEmail($orderData);
-        } catch (\Throwable $e) {
-            // Silencioso
+        $updateData = [
+            'status' => 'pago',
+            'paymentStatus' => 'approved',
+            'paidAt' => $dateApproved,
+            'paymentMethod' => 'mercadopago',
+            'paymentMethodDetail' => 'mercadopago_' . $paymentMethod,
+            'mercadopagoPaymentId' => (string)$paymentId
+        ];
+
+        // Atualiza o pedido direto no armazenamento
+        updateOrder($cleanCode, $updateData);
+
+        // Busca dados completos do pedido para enviar e-mail e CAPI
+        $orderData = findOrderByCode($cleanCode);
+
+        if (is_array($orderData)) {
+            // Dispara e-mail de confirmação ao cliente
+            try {
+                require_once __DIR__ . '/send_order_email.php';
+                sendOrderConfirmationEmail($orderData);
+            } catch (\Throwable $e) {
+                // Silencioso
+            }
+
+            // Dispara evento Purchase para o Meta Ads CAPI
+            try {
+                require_once __DIR__ . '/tracking.php';
+                sendMetaConversionsApiPurchase($orderData);
+            } catch (\Throwable $e) {
+                // Silencioso
+            }
         }
-
-        // Dispara evento Purchase para o Meta Ads CAPI
-        try {
-            require_once __DIR__ . '/tracking.php';
-            sendMetaConversionsApiPurchase($orderData);
-        } catch (\Throwable $e) {
-            // Silencioso
-        }
+    } elseif (in_array($status, ['rejected', 'cancelled', 'refunded', 'charged_back'])) {
+        $statusDetail = (string)($payment['status_detail'] ?? $status);
+        $updateData = [
+            'status' => ($status === 'rejected' || $status === 'cancelled') ? 'cancelado' : $status,
+            'paymentStatus' => $status,
+            'statusDetail' => $statusDetail,
+            'mercadopagoPaymentId' => (string)$paymentId
+        ];
+        updateOrder($cleanCode, $updateData);
     }
 }
 

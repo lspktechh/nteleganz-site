@@ -1528,6 +1528,9 @@
     }
     const isAvailable = stockNum > 0;
 
+    const finalStock = Math.max(0, stockNum);
+    const isSinglePiece = isAvailable && finalStock === 1;
+
     // Normaliza todas as imagens salvas para o domínio oficial de 1º nível (nteleganz.com.br)
     const normalizedImages = storedImages.map(resolveAdminProductImg);
 
@@ -1540,7 +1543,7 @@
       badge: getVal('p-badge') || null,
       desc: getVal('p-desc'),
       category: getVal('p-category'),
-      stock: Math.max(0, stockNum),
+      stock: finalStock,
       inStock: isAvailable,
       available: isAvailable,
       priceNum: fmt.parsePrice(getVal('p-price')),
@@ -1552,10 +1555,10 @@
       slug: finalSlug,
       featured: document.getElementById('p-featured')?.checked || false,
       destaque: document.getElementById('p-destaque')?.checked || false,
-      singlePiece: Number(productData.stock) === 1,
-      pecaUnica: Number(productData.stock) === 1,
-      peca_unica: Number(productData.stock) === 1,
-      single_piece: Number(productData.stock) === 1,
+      singlePiece: isSinglePiece,
+      pecaUnica: isSinglePiece,
+      peca_unica: isSinglePiece,
+      single_piece: isSinglePiece,
     };
 
     if (!productData.brand || !productData.name || !productData.price || getVal('p-stock') === '' || !Number.isInteger(productData.stock) || productData.stock < 0) {

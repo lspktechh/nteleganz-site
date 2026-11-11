@@ -427,8 +427,8 @@
       }
     } catch (_) {}
 
-    // Fallback padrão com juros oficiais do Mercado Pago repassados ao comprador (tabela vigente)
-    const rates = [0, 0, 9.64, 11.23, 11.36, 14.31, 14.32, 16.72, 16.73, 19.69, 20.65, 20.66, 22.11];
+    // Fallback padrão com taxas alinhadas da loja (1x a 12x: 4.25% a 12.35%)
+    const rates = [0, 0, 4.25, 5.10, 5.95, 6.80, 7.65, 8.10, 8.95, 9.80, 10.65, 11.50, 12.35];
     const opts = [];
     for (let i = 1; i <= 12; i++) {
       const rate = rates[i] || 0;

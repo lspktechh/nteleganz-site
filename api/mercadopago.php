@@ -190,23 +190,40 @@ if ($method === 'GET') {
         if ($bin !== '') $url .= "&bin=" . substr($bin, 0, 6);
         if ($paymentMethodId !== '') $url .= "&payment_method_id={$paymentMethodId}";
 
+        // Consulta Mercado Pago para verificar eventuais parcelas com taxa zero (sem juros oficial)
         $res = callMercadoPagoApi($url, 'GET', null, $accessToken);
-        if ($res['httpCode'] === 200 && is_array($res['data']) && !empty($res['data'][0]['payer_costs'])) {
-            echo json_encode([
-                'success' => true,
-                'payerCosts' => $res['data'][0]['payer_costs']
-            ]);
-            exit;
-        }
+        $livePayerCosts = ($res['httpCode'] === 200 && is_array($res['data']) && !empty($res['data'][0]['payer_costs']))
+            ? $res['data'][0]['payer_costs']
+            : null;
 
-        // Fallback: cálculo padrão de 1x a 12x atualizado com a tabela vigente do Mercado Pago
-        $costs = [];
+        // Tabela oficial alinhada com as taxas da loja (1x a 12x: 4.25% a 12.35%)
         $interestRates = [
-            1 => 0, 2 => 9.64, 3 => 11.23, 4 => 11.36, 5 => 14.31, 6 => 14.32,
-            7 => 16.72, 8 => 16.73, 9 => 19.69, 10 => 20.65, 11 => 20.66, 12 => 22.11
+            1 => 0.0,
+            2 => 4.25,
+            3 => 5.10,
+            4 => 5.95,
+            5 => 6.80,
+            6 => 7.65,
+            7 => 8.10,
+            8 => 8.95,
+            9 => 9.80,
+            10 => 10.65,
+            11 => 11.50,
+            12 => 12.35
         ];
+
+        $costs = [];
         for ($i = 1; $i <= 12; $i++) {
-            $rate = $interestRates[$i] ?? 0;
+            $rate = $interestRates[$i] ?? 0.0;
+            // Se o Mercado Pago indicar taxa 0 (parcelamento sem juros oficial), honra 0%
+            if ($livePayerCosts) {
+                foreach ($livePayerCosts as $lpc) {
+                    if ((int)($lpc['installments'] ?? 0) === $i && (float)($lpc['installment_rate'] ?? 99) === 0.0) {
+                        $rate = 0.0;
+                        break;
+                    }
+                }
+            }
             $total = $amount * (1 + ($rate / 100));
             $instAmount = round($total / $i, 2);
             $costs[] = [
