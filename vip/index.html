@@ -589,6 +589,35 @@
           <div class="vip-form-hint">Para adicionar você ao grupo secreto de drops.</div>
         </div>
 
+        <!-- CAMPO 4: SENHA DE ACESSO -->
+        <div class="vip-form-group">
+          <label class="vip-form-label" for="vip-input-password">
+            <span>Crie uma senha</span>
+            <span class="req">* Obrigatório</span>
+          </label>
+          <div class="vip-input-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <input type="password" class="vip-form-input" id="vip-input-password" placeholder="Mínimo 6 caracteres" required minlength="6" maxlength="72" autocomplete="new-password" />
+          </div>
+        </div>
+        <div class="vip-form-group">
+          <label class="vip-form-label" for="vip-input-password-confirm">
+            <span>Confirme a senha</span>
+            <span class="req">* Obrigatório</span>
+          </label>
+          <div class="vip-input-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <input type="password" class="vip-form-input" id="vip-input-password-confirm" placeholder="Repita a senha" required minlength="6" maxlength="72" autocomplete="new-password" />
+          </div>
+          <div class="vip-form-hint">Você vai usar seu @ (ou WhatsApp) e esta senha para entrar na Área VIP em qualquer aparelho.</div>
+        </div>
+
         <!-- SELETOR DE MÉTODO -->
         <div style="margin-top: 14px;">
           <label class="vip-form-label">Forma de Pagamento</label>
@@ -709,7 +738,7 @@
           </svg>
         </div>
         <h3 style="font-family: var(--vip-font-serif); font-size: 19px; font-weight: 700; margin-bottom: 4px; color: var(--vip-text);">Identificação de Membro</h3>
-        <p style="font-size: 12.5px; color: var(--vip-text-muted);">Digite seu @ do Instagram ou o WhatsApp cadastrado para restaurar seus benefícios:</p>
+        <p style="font-size: 12.5px; color: var(--vip-text-muted);">Entre com seu @ do Instagram (ou WhatsApp) e a senha que você criou na assinatura:</p>
       </div>
 
       <div class="vip-form-group">
@@ -722,7 +751,18 @@
           </svg>
           <input type="text" class="vip-form-input" id="vip-login-identifier" placeholder="@seuperfil ou (11) 99999-9999" required autocomplete="username" />
         </div>
-        <div class="vip-form-hint">Sua sessão ficará salva neste navegador para compras futuras.</div>
+      </div>
+
+      <div class="vip-form-group">
+        <label class="vip-form-label" for="vip-login-password">Senha</label>
+        <div class="vip-input-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <input type="password" class="vip-form-input" id="vip-login-password" placeholder="Sua senha VIP" required autocomplete="current-password" onkeydown="if(event.key==='Enter'){submitVipLogin();}" />
+        </div>
+        <div class="vip-form-hint">Esqueceu a senha? Fale com a loja pelo WhatsApp para redefinir. Sua sessão fica salva neste navegador.</div>
       </div>
 
       <button type="button" class="vip-btn-submit" id="vip-btn-login-submit" onclick="submitVipLogin()">
@@ -731,6 +771,6 @@
     </div>
   </div>
 
-  <script src="../js/vip.js?v=20261112f"></script>
+  <script src="../js/vip.js?v=20261112-senha"></script>
 </body>
 </html>

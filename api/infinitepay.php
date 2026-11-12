@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/send_order_email.php';
+require_once __DIR__ . '/lib/vip_auth.php';
 
 const INFINITE_API_KEY = 'inchk_NN5xxnfdy3fprsmHaHcIOgXVqP2GfE6_pUcseRD7JBQ';
 const INFINITE_HANDLE = 'nteleganz';
@@ -51,33 +52,9 @@ function getInfiniteCatalogMap(): array {
     return $map;
 }
 
-function isCustomerVipInfinite(?string $token, ?string $phone, ?string $email, ?string $instagram = null): bool {
-    $file = __DIR__ . '/../data/vip_subscriptions.json';
-    if (!file_exists($file)) return false;
-    $raw = @file_get_contents($file);
-    if (!$raw) return false;
-    $data = @json_decode($raw, true);
-    $subs = (is_array($data) && isset($data['subscriptions']) && is_array($data['subscriptions']))
-        ? $data['subscriptions']
-        : [];
-    $now = time();
-    $cleanPhone = preg_replace('/\D/', '', (string)$phone);
-    $cleanEmail = strtolower(trim((string)$email));
-    $cleanInsta = strtolower(ltrim(trim((string)$instagram), '@'));
-
-    foreach ($subs as $s) {
-        if (($s['status'] ?? '') !== 'active') continue;
-        if (!empty($s['expiresAt']) && strtotime($s['expiresAt']) < $now) continue;
-        if (!empty($token) && !empty($s['vipToken']) && hash_equals($s['vipToken'], $token)) return true;
-        if (!empty($cleanEmail) && strtolower(trim((string)($s['customer']['email'] ?? ''))) === $cleanEmail) return true;
-        if (!empty($cleanInsta)) {
-            $sInsta = strtolower(ltrim(trim((string)($s['customer']['instagram'] ?? '')), '@'));
-            if ($sInsta !== '' && $sInsta === $cleanInsta) return true;
-        }
-        $sPhone = preg_replace('/\D/', '', (string)($s['customer']['phone'] ?? ''));
-        if (strlen($cleanPhone) >= 8 && substr($sPhone, -8) === substr($cleanPhone, -8)) return true;
-    }
-    return false;
+/** É membro VIP ativo? Só o token prova (ver lib/vip_auth.php). */
+function isCustomerVipInfinite(?string $token, ?string $phone = null, ?string $email = null, ?string $instagram = null): bool {
+    return nte_vip_token_is_valid($token);
 }
 
 $rawInput = file_get_contents('php://input');
@@ -101,6 +78,9 @@ $displayCode = '#' . $orderCode;
 $infiniteCatalog = getInfiniteCatalogMap();
 $infiniteItems = [];
 $totalCents = 0;
+
+// Membro VIP (token válido) paga o preço com o desconto VIP de cada produto — decidido no servidor.
+$buyerIsVip = nte_vip_token_is_valid(trim((string)($data['vipToken'] ?? ($customer['vipToken'] ?? ''))));
 
 foreach ($items as $item) {
     $qty = max(1, (int)($item['qty'] ?? 1));
@@ -140,6 +120,9 @@ foreach ($items as $item) {
         }
 
         $unitPriceCents = !empty($catProduct['priceNum']) ? (int)round((float)$catProduct['priceNum'] * 100) : parsePriceToCents($catProduct['price'] ?? 0);
+        if ($buyerIsVip && nte_vip_discount_percent($catProduct) > 0) {
+            $unitPriceCents = (int)round(nte_vip_apply_discount($unitPriceCents / 100, $catProduct) * 100);
+        }
         $item['name'] = $catProduct['name'] ?? ($item['name'] ?? 'Produto NT Eleganz');
         if (!empty($catProduct['brand'])) $item['brand'] = $catProduct['brand'];
     } else {

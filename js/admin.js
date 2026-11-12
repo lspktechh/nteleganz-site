@@ -376,9 +376,20 @@
 
       // Load data. Os produtos vêm com force para o painel abrir mostrando o
       // estado real do servidor, não o snapshot em cache do navegador.
-      allProducts = await window.ntDB?.products.reload() || [];
-      allOrders = await window.ntDB?.orders.getAll() || [];
-      await refreshLeads(false);
+      // Produtos, pedidos e leads em PARALELO: em fila, a tela esperava a soma dos
+      // três (e a lista de pedidos pode levar segundos, ver api/orders_helper.php).
+      // Falha nos pedidos não impede o painel de abrir: avisa e segue com a lista vazia.
+      const [loadedProducts, loadedOrders] = await Promise.all([
+        window.ntDB?.products.reload(),
+        Promise.resolve(window.ntDB?.orders.getAll()).catch(error => {
+          console.warn('Não foi possível carregar os pedidos:', error);
+          showToast('!', 'Falha ao carregar pedidos', error?.message || 'Tente atualizar em instantes.');
+          return [];
+        }),
+        refreshLeads(false),
+      ]);
+      allProducts = loadedProducts || [];
+      allOrders = loadedOrders || [];
       loadMeioCaminho().catch(e => console.warn('Falha ao inicializar Meio Caminho:', e));
       loadCategories().catch(e => console.warn('Falha ao inicializar categorias:', e));
       syncImagesInBackground();
@@ -613,7 +624,7 @@
         ? o.client
         : (o.clientName || (o.customer && o.customer.name) || (isWpp ? 'Cliente via WhatsApp' : 'Cliente do Checkout'));
       const thumbHtml = thumb
-        ? `<img src="${escHtml(thumb)}" alt="" style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:1px solid rgba(201,168,76,0.3); background:#111; cursor:pointer;" onclick="window.open('${escHtml(thumb)}', '_blank')" onerror="this.onerror=null; this.src='../assets/images/logo.png'; this.style.opacity='0.4';" />`
+        ? `<img loading="lazy" decoding="async" src="${escHtml(thumb)}" alt="" style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:1px solid rgba(201,168,76,0.3); background:#111; cursor:pointer;" onclick="window.open('${escHtml(thumb)}', '_blank')" onerror="this.onerror=null; this.src='../assets/images/logo.png'; this.style.opacity='0.4';" />`
         : `<div style="width:36px; height:36px; border-radius:6px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>`;
       const dtRecent = formatExactDateTime(o.createdAt || o.created_at);
 
@@ -1072,7 +1083,7 @@
       <tr data-id="${p.id}">
         <td>
           <div style="position:relative; display:inline-block;">
-            <img class="product-thumb ${isOutOfStock ? 'is-out-of-stock' : ''}" src="${escHtml(imgSrc)}" alt="${escHtml(p.name)}"
+            <img loading="lazy" decoding="async" class="product-thumb ${isOutOfStock ? 'is-out-of-stock' : ''}" src="${escHtml(imgSrc)}" alt="${escHtml(p.name)}"
               style="${isOutOfStock ? 'filter: grayscale(100%); opacity: 0.55;' : ''}"
               onerror="window.handleAdminThumbError(this);" />
             ${isOutOfStock ? '<span style="position:absolute; bottom:2px; left:50%; transform:translateX(-50%); background:#dc2626; color:#fff; font-size:8px; font-weight:800; padding:1px 4px; border-radius:3px; letter-spacing:0.5px; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,0.4); text-transform:uppercase;">ESGOTADO</span>' : ''}
@@ -1283,6 +1294,9 @@
     if (pVip) pVip.checked = false;
     if (pVipDur) pVipDur.value = '48';
     window.toggleVipFields(false);
+    const pVipDiscount = document.getElementById('p-vip-discount');
+    if (pVipDiscount) pVipDiscount.value = '';
+    window.updateVipDiscountPreview?.();
 
     clearTagsInput('sizes');
     clearTagsInput('colors');
@@ -1483,6 +1497,9 @@
     if (pVip) pVip.checked = isVip;
     if (pVipDur) pVipDur.value = p.vipReleaseDuration || '48';
     window.toggleVipFields(isVip);
+    const pVipDiscount = document.getElementById('p-vip-discount');
+    if (pVipDiscount) pVipDiscount.value = Number(p.vipDiscountPercent) > 0 ? String(p.vipDiscountPercent) : '';
+    window.updateVipDiscountPreview?.();
 
     if (window.updateStockHint) window.updateStockHint();
   }
@@ -1577,12 +1594,15 @@
       isVipExclusive: document.getElementById('p-vip-exclusive')?.checked || false,
       vipExclusive: document.getElementById('p-vip-exclusive')?.checked || false,
       vipReleaseDuration: document.getElementById('p-vip-duration')?.value || '48',
+      vipDiscountPercent: readVipDiscountInput(),
     };
 
     if (!productData.brand || !productData.name || !productData.price || getVal('p-stock') === '' || !Number.isInteger(productData.stock) || productData.stock < 0) {
       alert('Preencha Marca, Nome, Preço e um estoque válido (zero ou maior).');
       return;
     }
+
+    const previousProduct = id ? allProducts.find(p => p.id === id) : null;
 
     try {
       if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'Salvando produto…'; }
@@ -1611,6 +1631,10 @@
         console.warn('Produto salvo, mas a lista não pôde ser sincronizada:', syncError);
       }
       showToast('check', id ? 'Produto atualizado!' : 'Produto adicionado!', productData.name);
+      const finalProduct = { ...productData, ...(savedProduct || {}) };
+      if (vipChangeWorthAnnouncing(previousProduct, finalProduct)) {
+        openVipBroadcast(buildProductVipMessage(finalProduct, !id));
+      }
     } catch (e) {
       alert('Erro ao salvar produto: ' + e.message);
     } finally {
@@ -1847,7 +1871,7 @@
       const displaySrc = resolveAdminProductImg(image);
       return `
       <div class="img-preview-item" style="position:relative;">
-        <img src="${escHtml(displaySrc)}" alt="Foto ${index + 1} do produto" style="width:100%; height:100%; object-fit:cover; border-radius:8px;" onerror="window.handleAdminThumbError(this);" />
+        <img loading="lazy" decoding="async" src="${escHtml(displaySrc)}" alt="Foto ${index + 1} do produto" style="width:100%; height:100%; object-fit:cover; border-radius:8px;" onerror="window.handleAdminThumbError(this);" />
         ${index === 0 
           ? '<span class="img-preview-primary" style="position:absolute; top:6px; left:6px; bottom:auto !important; right:auto !important; width:auto !important; height:auto !important; display:inline-block !important; background:#c9a84c; color:#000; font-size:9px; font-weight:800; padding:3px 7px; border-radius:4px; text-transform:uppercase; z-index:2; line-height:1.2 !important; box-shadow:0 2px 4px rgba(0,0,0,0.3);">Principal</span>' 
           : `<button type="button" class="btn btn-secondary btn-sm" onclick="setPrimaryProductImage(${index})" style="position:absolute; bottom:6px; left:6px; font-size:10px; padding:2px 6px; height:auto; background:rgba(0,0,0,0.8); color:#c9a84c; border:1px solid rgba(201,168,76,0.5); border-radius:4px; cursor:pointer; z-index:2;" title="Definir como foto principal na vitrine">Tornar Principal</button>`}
@@ -2066,7 +2090,7 @@
 
       const thumbHtml = thumb 
         ? `<div style="position:relative; width:44px; height:44px; flex-shrink:0;">
-             <img src="${escHtml(thumb)}" alt="" style="width:44px; height:44px; border-radius:8px; object-fit:cover; border:1px solid rgba(201,168,76,0.3); background:#111; cursor:pointer;" onclick="window.open('${escHtml(thumb)}', '_blank')" onerror="this.onerror=null; this.src='../assets/images/logo.png'; this.style.opacity='0.4';" />
+             <img loading="lazy" decoding="async" src="${escHtml(thumb)}" alt="" style="width:44px; height:44px; border-radius:8px; object-fit:cover; border:1px solid rgba(201,168,76,0.3); background:#111; cursor:pointer;" onclick="window.open('${escHtml(thumb)}', '_blank')" onerror="this.onerror=null; this.src='../assets/images/logo.png'; this.style.opacity='0.4';" />
              ${hasMultiple ? `<span style="position:absolute; bottom:-3px; right:-3px; background:var(--gold,#c9a84c); color:#000; font-size:9px; font-weight:800; border-radius:10px; padding:1px 5px; line-height:1.2;">+${itemsList.length}</span>` : ''}
            </div>`
         : `<div style="width:44px; height:44px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>`;
@@ -2462,7 +2486,7 @@
           const itemName = it.name || it.title || 'Produto';
           return `
             <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-              ${itemImg ? `<img src="${escHtml(itemImg)}" style="width:24px; height:24px; border-radius:4px; object-fit:cover; border:1px solid var(--border);" onerror="this.style.display='none'">` : ''}
+              ${itemImg ? `<img loading="lazy" decoding="async" src="${escHtml(itemImg)}" style="width:24px; height:24px; border-radius:4px; object-fit:cover; border:1px solid var(--border);" onerror="this.style.display='none'">` : ''}
               <span style="font-size:12px; font-weight:500;">${escHtml(itemName)} (${it.qty || 1}x)</span>
               ${it.size ? `<span style="font-size:10px; color:var(--text-muted); background:var(--bg-hover); padding:1px 4px; border-radius:3px;">Tam: ${escHtml(it.size)}</span>` : ''}
               ${it.color ? `<span style="font-size:10px; color:var(--text-muted); background:var(--bg-hover); padding:1px 4px; border-radius:3px;">Cor: ${escHtml(it.color)}</span>` : ''}
@@ -2951,7 +2975,7 @@
             return `
               <div style="display:flex; align-items:center; gap:14px; padding:10px 0; border-bottom:${idx < itemsList.length - 1 ? '1px solid var(--border)' : 'none'};">
                 ${itemImg
-                  ? `<img src="${escHtml(itemImg)}" alt="" style="width:52px; height:52px; border-radius:8px; object-fit:cover; border:1px solid var(--border); background:#f4f4f5; cursor:pointer;" onclick="window.open('${escHtml(itemImg)}', '_blank')" title="Clique para ampliar">`
+                  ? `<img loading="lazy" decoding="async" src="${escHtml(itemImg)}" alt="" style="width:52px; height:52px; border-radius:8px; object-fit:cover; border:1px solid var(--border); background:#f4f4f5; cursor:pointer;" onclick="window.open('${escHtml(itemImg)}', '_blank')" title="Clique para ampliar">`
                   : `<div style="width:52px; height:52px; border-radius:8px; background:var(--bg-surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>`}
                 <div style="flex:1; min-width:0;">
                   ${it.brand ? `<span style="color:var(--gold,#c9a84c); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;">${escHtml(it.brand)}</span><br>` : ''}
@@ -3677,7 +3701,7 @@
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:14px; flex-wrap:wrap; margin-bottom:14px;">
             <div style="display:flex; align-items:center; gap:12px;">
               ${thumb ? `
-                <img src="${escHtml(thumb)}" style="width:48px; height:48px; border-radius:8px; object-fit:cover; border:1px solid var(--border); background:var(--bg-card);">
+                <img loading="lazy" decoding="async" src="${escHtml(thumb)}" style="width:48px; height:48px; border-radius:8px; object-fit:cover; border:1px solid var(--border); background:var(--bg-card);">
               ` : `
                 <div style="width:48px; height:48px; border-radius:8px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.25); display:flex; align-items:center; justify-content:center; color:#c9a84c;">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
@@ -4716,7 +4740,7 @@
       return `
         <div class="category-admin-card" style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; box-shadow: var(--shadow-sm);">
           <div style="position: relative; width: 100%; aspect-ratio: 3/4; background: #0a0a0a; overflow: hidden;">
-            <img src="${imgSrc}" alt="${safeName}" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.onerror=null; this.src='/assets/images/category-camisetas.webp';" />
+            <img loading="lazy" decoding="async" src="${imgSrc}" alt="${safeName}" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.onerror=null; this.src='/assets/images/category-camisetas.webp';" />
             <div style="position: absolute; top: 12px; right: 12px;">
               <span class="badge ${cat.active !== false ? 'badge-success' : 'badge-inactive'}" style="font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.65); color: #fff; backdrop-filter: blur(4px);">
                 ${cat.active !== false ? 'Ativa' : 'Inativa'}
@@ -5636,6 +5660,7 @@ window.showConfirm = function (msg, callback) {
   document.addEventListener('DOMContentLoaded', () => {
     setupProductNameInput();
     document.getElementById('p-category')?.addEventListener('change', updateSizeSuggestions);
+    document.getElementById('p-price')?.addEventListener('input', () => window.updateVipDiscountPreview());
     document.querySelectorAll('.nav-item').forEach(item => {
       item.setAttribute('role', 'button');
       item.setAttribute('tabindex', '0');
@@ -5741,6 +5766,7 @@ window.showConfirm = function (msg, callback) {
           alertBox.innerHTML = '<div style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:13px; font-weight:600;">Configurações da Área VIP atualizadas com sucesso!</div>';
           setTimeout(() => { if (alertBox) alertBox.innerHTML = ''; }, 4000);
         }
+        openVipBroadcast(buildVipSettingsMessage(data.settings || payload));
       } else {
         alert(data.error || 'Erro ao salvar configurações VIP.');
       }
@@ -5763,13 +5789,14 @@ window.showConfirm = function (msg, callback) {
 
     tbody.innerHTML = members.map(m => {
       const cust = m.customer || {};
-      const name = cust.name || 'Cliente';
+      // Tudo que vem do cadastro público é escapado: o cliente digita esses campos.
+      const name = escHtml(cust.name || 'Cliente');
       const rawInsta = (cust.instagram || '').trim();
-      const cleanInsta = rawInsta.replace(/^@/, '');
+      const cleanInsta = escHtml(rawInsta.replace(/^@/, '').replace(/[^A-Za-z0-9._]/g, ''));
       const instaDisplay = cleanInsta ? `<div style="margin-bottom:2px;"><a href="https://instagram.com/${cleanInsta}" target="_blank" style="color:#b45309; text-decoration:none; font-weight:700; font-size:12px; display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg> @${cleanInsta}</a></div>` : '';
-      const rawPhone = cust.phone || '';
-      const cleanPhone = rawPhone.replace(/\D/g, '');
-      const email = cust.email || '—';
+      const rawPhone = escHtml(cust.phone || '');
+      const cleanPhone = String(cust.phone || '').replace(/\D/g, '');
+      const email = escHtml(cust.email || '—');
       const planBadge = (m.plan === 'lifetime')
         ? '<span style="background:#fef9e7; color:#b45309; border:1px solid #fde68a; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;">VITALÍCIO</span>'
         : '<span style="background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600;">MENSAL</span>';
@@ -5793,9 +5820,12 @@ window.showConfirm = function (msg, callback) {
       const phoneLink = cleanPhone ? `<a href="https://wa.me/55${cleanPhone}" target="_blank" style="color:var(--text-secondary); text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:11px;"><span>${rawPhone}</span></a>` : '—';
 
       const isAct = (m.status === 'active');
-      const actionBtn = isAct
-        ? `<button type="button" class="btn btn-secondary btn-sm" onclick="toggleVipMemberStatus('${m.id}', 'cancelled')" style="padding:4px 8px; font-size:11px; height:auto; color:#b91c1c;">Cancelar</button>`
-        : `<button type="button" class="btn btn-primary btn-sm" onclick="toggleVipMemberStatus('${m.id}', 'active')" style="padding:4px 8px; font-size:11px; height:auto;">Ativar</button>`;
+      const safeId = escHtml(String(m.id || '').replace(/[^A-Za-z0-9_-]/g, ''));
+      const statusBtn = isAct
+        ? `<button type="button" class="btn btn-secondary btn-sm" onclick="toggleVipMemberStatus('${safeId}', 'cancelled')" style="padding:4px 8px; font-size:11px; height:auto; color:#b91c1c;">Cancelar</button>`
+        : `<button type="button" class="btn btn-primary btn-sm" onclick="toggleVipMemberStatus('${safeId}', 'active')" style="padding:4px 8px; font-size:11px; height:auto;">Ativar</button>`;
+      const passwordBtn = `<button type="button" class="btn btn-secondary btn-sm" onclick="setVipMemberPassword('${safeId}')" title="${m.hasPassword ? 'Redefinir a senha do membro' : 'Este membro ainda não tem senha'}" style="padding:4px 8px; font-size:11px; height:auto;">${m.hasPassword ? 'Nova senha' : 'Definir senha'}</button>`;
+      const actionBtn = `<div style="display:inline-flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">${passwordBtn}${statusBtn}</div>`;
 
       return `
         <tr style="border-bottom:1px solid var(--border); font-size:13px;">
@@ -5818,6 +5848,167 @@ window.showConfirm = function (msg, callback) {
       `;
     }).join('');
   }
+
+  // ── DESCONTO VIP DO PRODUTO ──
+  function readVipDiscountInput() {
+    const raw = Number(document.getElementById('p-vip-discount')?.value || 0);
+    return Number.isFinite(raw) ? Math.max(0, Math.min(90, Math.round(raw))) : 0;
+  }
+
+  window.updateVipDiscountPreview = function () {
+    const out = document.getElementById('p-vip-discount-preview');
+    if (!out) return;
+    const pct = readVipDiscountInput();
+    const price = fmt.parsePrice(getVal('p-price'));
+    out.textContent = (pct > 0 && price > 0)
+      ? `Preço VIP: ${fmt.currency(Math.round(price * (100 - pct)) / 100)}`
+      : '';
+  };
+
+  // ── MENSAGEM PARA O GRUPO VIP (WhatsApp) ──
+  const productIsVipExclusive = p => !!(p && (p.isVipExclusive || p.vipExclusive || p.vipOnly));
+  const productVipDiscount = p => Math.max(0, Math.min(90, Math.round(Number(p?.vipDiscountPercent) || 0)));
+
+  /** Vale avisar o grupo? Só quando o produto tem benefício VIP e algo VIP mudou (ou é novo). */
+  function vipChangeWorthAnnouncing(before, after) {
+    const hasBenefit = productIsVipExclusive(after) || productVipDiscount(after) > 0;
+    if (!hasBenefit) return false;
+    if (!before) return true;
+    return productIsVipExclusive(before) !== productIsVipExclusive(after)
+      || productVipDiscount(before) !== productVipDiscount(after)
+      || (productIsVipExclusive(after) && String(before.vipReleaseDuration || '48') !== String(after.vipReleaseDuration || '48'))
+      || Number(before.priceNum || 0) !== Number(after.priceNum || 0);
+  }
+
+  function vipDurationLabel(duration) {
+    const d = String(duration || '48');
+    if (d === 'forever') return null;
+    const hours = Number(d) || 48;
+    return hours >= 168 && hours % 24 === 0 ? `${hours / 24} dias` : `${hours} horas`;
+  }
+
+  function buildProductVipMessage(product, isNew) {
+    const origin = window.location.origin;
+    const title = [product.brand, product.name].filter(Boolean).join(' ');
+    const price = Number(product.priceNum) || fmt.parsePrice(product.price);
+    const pct = productVipDiscount(product);
+    const lines = [
+      isNew ? '*NT ELEGANZ VIP | NOVIDADE EXCLUSIVA*' : '*NT ELEGANZ VIP | ATUALIZAÇÃO PARA ASSINANTES*',
+      '',
+      `*${title}*`,
+    ];
+    if (price > 0 && pct > 0) {
+      lines.push(`De ${fmt.currency(price)} por *${fmt.currency(Math.round(price * (100 - pct)) / 100)}* para membros VIP (${pct}% OFF).`);
+    } else if (price > 0) {
+      lines.push(`Preço: ${fmt.currency(price)}`);
+    }
+    if (productIsVipExclusive(product)) {
+      const label = vipDurationLabel(product.vipReleaseDuration);
+      lines.push(label
+        ? `Acesso antecipado: só assinantes VIP compram nas próximas ${label}. Depois abre para a loja toda.`
+        : 'Peça exclusiva: só assinantes VIP podem comprar.');
+    }
+    const sizes = Array.isArray(product.sizes) ? product.sizes.filter(Boolean) : [];
+    if (sizes.length) lines.push(`Tamanhos: ${sizes.join(', ')}`);
+    lines.push('', `Ver a peça: ${origin}/products/?id=${encodeURIComponent(product.id || '')}`);
+    lines.push(`Entre na Área VIP com seu @ e sua senha para garantir o benefício: ${origin}/vip/`);
+    return lines.join('\n');
+  }
+
+  function buildVipSettingsMessage(settings) {
+    const origin = window.location.origin;
+    const money = v => fmt.currency(Number(v) || 0);
+    return [
+      `*${settings.title || 'NT ELEGANZ VIP'}*`,
+      '',
+      settings.subtitle || 'Novidades da Área VIP para os assinantes.',
+      '',
+      `Planos: Mensal ${money(settings.monthlyPrice)} | Vitalício ${money(settings.lifetimePrice)}`,
+      'As peças com acesso antecipado e os descontos exclusivos chegam primeiro aqui no grupo.',
+      '',
+      `Área VIP: ${origin}/vip/`,
+    ].join('\n');
+  }
+
+  function vipBroadcastFeedback(text, isError = false) {
+    const el = document.getElementById('vip-broadcast-feedback');
+    if (!el) return;
+    el.textContent = text;
+    el.style.color = isError ? '#b91c1c' : '#166534';
+  }
+
+  window.openVipBroadcast = function (text) {
+    const modal = document.getElementById('vip-broadcast-modal');
+    const area = document.getElementById('vip-broadcast-text');
+    if (!modal || !area) return;
+    area.value = typeof text === 'string' && text ? text : buildVipSettingsMessage({});
+    vipBroadcastFeedback('');
+    modal.classList.add('open');
+  };
+
+  window.closeVipBroadcast = function () {
+    document.getElementById('vip-broadcast-modal')?.classList.remove('open');
+  };
+
+  async function copyBroadcastText() {
+    const text = document.getElementById('vip-broadcast-text')?.value || '';
+    if (!text.trim()) return { ok: false, text };
+    try {
+      await navigator.clipboard.writeText(text);
+      return { ok: true, text };
+    } catch (e) {
+      // Navegador sem permissão de área de transferência: seleciona para Ctrl+C manual.
+      const area = document.getElementById('vip-broadcast-text');
+      area?.focus();
+      area?.select();
+      return { ok: false, text };
+    }
+  }
+
+  window.copyVipBroadcast = async function () {
+    const { ok } = await copyBroadcastText();
+    vipBroadcastFeedback(ok ? 'Mensagem copiada. Cole no grupo VIP do WhatsApp.' : 'Não foi possível copiar sozinho: o texto está selecionado, use Ctrl+C.', !ok);
+  };
+
+  window.sendVipBroadcast = async function () {
+    const { ok, text } = await copyBroadcastText();
+    if (!text.trim()) {
+      vipBroadcastFeedback('Escreva a mensagem antes de enviar.', true);
+      return;
+    }
+    // O WhatsApp não aceita postar direto num grupo por link: abre com o texto pronto e o
+    // dono escolhe o grupo VIP. A cópia garante que o texto também possa ser colado.
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    vipBroadcastFeedback(ok
+      ? 'WhatsApp aberto com a mensagem. Escolha o grupo VIP e envie. (O texto também foi copiado.)'
+      : 'WhatsApp aberto com a mensagem. Escolha o grupo VIP e envie.');
+  };
+
+  // ── REDEFINIR SENHA DE UM MEMBRO ──
+  window.setVipMemberPassword = async function (id) {
+    const password = window.prompt('Nova senha de acesso do membro (mínimo 6 caracteres).\nEnvie a senha para ele pelo WhatsApp depois de salvar.');
+    if (password === null) return;
+    if (password.length < 6) {
+      alert('A senha precisa ter pelo menos 6 caracteres.');
+      return;
+    }
+    try {
+      const res = await fetch('../api/vip.php?action=set_password', {
+        method: 'POST',
+        headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ id, password })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        showToast('check', 'Senha atualizada', 'Envie a nova senha para o membro.');
+        await loadVipPanel();
+      } else {
+        alert(data.error || 'Não foi possível atualizar a senha.');
+      }
+    } catch (e) {
+      alert('Erro de conexão ao atualizar a senha.');
+    }
+  };
 
   window.filterVipMembersTable = function() {
     const q = (document.getElementById('vip-member-search')?.value || '').toLowerCase().trim();
@@ -5865,6 +6056,8 @@ window.showConfirm = function (msg, callback) {
       document.getElementById('vip-m-phone').value = '';
       document.getElementById('vip-m-email').value = '';
       document.getElementById('vip-m-plan').value = 'lifetime';
+      const pwdEl = document.getElementById('vip-m-password');
+      if (pwdEl) pwdEl.value = '';
     }
   };
 
@@ -5879,9 +6072,15 @@ window.showConfirm = function (msg, callback) {
     const name = document.getElementById('vip-m-name')?.value.trim();
     const email = document.getElementById('vip-m-email')?.value.trim();
     const plan = document.getElementById('vip-m-plan')?.value || 'lifetime';
+    const password = document.getElementById('vip-m-password')?.value || '';
 
     if (!instagram || !phone) {
       alert('@ do Instagram e WhatsApp são obrigatórios para cadastrar o membro.');
+      return;
+    }
+    if (password.length < 6) {
+      alert('Defina uma senha de pelo menos 6 caracteres para o membro entrar na Área VIP.');
+      document.getElementById('vip-m-password')?.focus();
       return;
     }
 
@@ -5899,6 +6098,7 @@ window.showConfirm = function (msg, callback) {
           phone,
           email,
           plan,
+          password,
           status: 'active'
         })
       });

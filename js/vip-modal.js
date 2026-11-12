@@ -215,22 +215,22 @@
     const phone = localStorage.getItem(STORAGE_PHONE_KEY) || '';
     const insta = localStorage.getItem(STORAGE_INSTAGRAM_KEY) || '';
 
-    // Se marcado ativo com credenciais locais, resposta instantânea para evitar atrasos na interface
-    if (isAct && (insta || phone || token)) {
+    // A sessão VIP é o token (o servidor não aceita mais @/telefone como prova).
+    // Marcado ativo com token local: resposta instantânea para não atrasar a interface.
+    if (isAct && token) {
       updateHeaderVipButtons();
       return true;
     }
 
-    if (!token && !phone && !insta) {
+    if (!token) {
+      if (isAct) localStorage.removeItem(STORAGE_ACTIVE_KEY);
       updateHeaderVipButtons();
       return false;
     }
 
     try {
       const q = new URLSearchParams();
-      if (token) q.set('token', token);
-      if (phone) q.set('phone', phone.replace(/\D/g, ''));
-      if (insta) q.set('instagram', insta.replace(/^@/, ''));
+      q.set('token', token);
 
       const res = await fetch(`/api/vip.php?action=check_member&${q.toString()}`);
       if (res.ok) {

@@ -19,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/lib/live_data.php';
 require_once __DIR__ . '/lib/admin_guard.php';
+require_once __DIR__ . '/lib/vip_auth.php';
 
 const VIP_SETTINGS_FILE = __DIR__ . '/../data/vip_settings.json';
 const VIP_SUBSCRIPTIONS_FILE = __DIR__ . '/../data/vip_subscriptions.json';
@@ -115,6 +116,84 @@ function callMercadoPago(string $url, string $method, ?array $body, string $acce
         'httpCode' => $httpCode,
         'data' => is_array($decoded) ? $decoded : []
     ];
+}
+
+const VIP_PASSWORD_MIN = 6;
+const VIP_PASSWORD_MAX = 72; // limite do bcrypt
+const VIP_LOGIN_ATTEMPTS_FILE = __DIR__ . '/../data/vip_login_attempts.json';
+const VIP_LOGIN_MAX_FAILURES = 8;
+const VIP_LOGIN_WINDOW_SECONDS = 900;
+
+/** Mensagem de erro se a senha não serve, ou null se ela é aceita. */
+function vipPasswordError(string $password): ?string {
+    $len = strlen($password);
+    if ($len < VIP_PASSWORD_MIN) return 'A senha deve ter pelo menos ' . VIP_PASSWORD_MIN . ' caracteres.';
+    if ($len > VIP_PASSWORD_MAX) return 'A senha pode ter no máximo ' . VIP_PASSWORD_MAX . ' caracteres.';
+    return null;
+}
+
+/** Chave anônima do cliente para o limite de tentativas (o IP não é gravado em claro). */
+function vipLoginClientKey(): string {
+    return hash('sha256', (string)($_SERVER['REMOTE_ADDR'] ?? 'desconhecido'));
+}
+
+function vipReadLoginAttempts(): array {
+    $raw = @file_get_contents(VIP_LOGIN_ATTEMPTS_FILE);
+    $data = $raw ? @json_decode($raw, true) : null;
+    if (!is_array($data)) return [];
+    $now = time();
+    // Descarta janelas vencidas para o arquivo não crescer para sempre.
+    return array_filter($data, static function ($row) use ($now): bool {
+        return is_array($row) && ($row['until'] ?? 0) > $now;
+    });
+}
+
+function vipLoginBlocked(): bool {
+    $row = vipReadLoginAttempts()[vipLoginClientKey()] ?? null;
+    return is_array($row) && (int)($row['failures'] ?? 0) >= VIP_LOGIN_MAX_FAILURES;
+}
+
+function vipRegisterLoginFailure(): void {
+    $all = vipReadLoginAttempts();
+    $key = vipLoginClientKey();
+    $row = $all[$key] ?? ['failures' => 0, 'until' => time() + VIP_LOGIN_WINDOW_SECONDS];
+    $row['failures'] = (int)$row['failures'] + 1;
+    $all[$key] = $row;
+    @file_put_contents(VIP_LOGIN_ATTEMPTS_FILE, json_encode($all), LOCK_EX);
+}
+
+function vipClearLoginFailures(): void {
+    $all = vipReadLoginAttempts();
+    unset($all[vipLoginClientKey()]);
+    @file_put_contents(VIP_LOGIN_ATTEMPTS_FILE, json_encode($all), LOCK_EX);
+}
+
+/** O que o membro logado recebe: nunca o hash da senha. */
+function vipMemberResponse(array $sub, array $settings): array {
+    return [
+        'isVip' => true,
+        'plan' => $sub['plan'] ?? 'monthly',
+        'name' => $sub['customer']['name'] ?? 'Membro VIP',
+        'instagram' => $sub['customer']['instagram'] ?? '',
+        'phone' => $sub['customer']['phone'] ?? '',
+        'vipToken' => $sub['vipToken'] ?? '',
+        'startedAt' => $sub['startedAt'] ?? null,
+        'expiresAt' => $sub['expiresAt'] ?? null,
+        'whatsappGroupLink' => $settings['whatsappGroupLink'] ?? '',
+    ];
+}
+
+/** Assinatura ativa com este @ ou WhatsApp (para impedir cadastro duplicado). */
+function vipFindActiveByIdentity(array $subs, string $instagram, string $phoneDigits): ?array {
+    $insta = nte_vip_clean_instagram($instagram);
+    $phone = substr(preg_replace('/\D/', '', $phoneDigits), -10);
+    foreach ($subs as $s) {
+        if (!nte_vip_is_active($s)) continue;
+        $sInsta = nte_vip_clean_instagram((string)($s['customer']['instagram'] ?? ''));
+        $sPhone = substr(preg_replace('/\D/', '', (string)($s['customer']['phone'] ?? '')), -10);
+        if (($insta !== '' && $sInsta === $insta) || (strlen($phone) >= 10 && $sPhone === $phone)) return $s;
+    }
+    return null;
 }
 
 $action = strtolower(trim((string)($_GET['action'] ?? '')));
@@ -231,6 +310,22 @@ if ($action === 'subscribe' && $method === 'POST') {
         exit;
     }
 
+    // Senha de acesso à Área VIP: obrigatória, guardada só como hash (bcrypt).
+    $custPassword = (string)($input['password'] ?? '');
+    $passwordError = vipPasswordError($custPassword);
+    if ($passwordError !== null) {
+        http_response_code(400);
+        echo json_encode(['error' => $passwordError]);
+        exit;
+    }
+    $custPasswordHash = password_hash($custPassword, PASSWORD_DEFAULT);
+
+    if (vipFindActiveByIdentity(readVipSubscriptions(), $custInstagram, $custPhone) !== null) {
+        http_response_code(409);
+        echo json_encode(['error' => 'Já existe uma assinatura VIP ativa com este @ ou WhatsApp. Use "Já sou membro" para entrar.']);
+        exit;
+    }
+
     // BLINDAGEM DE PREÇO NO BACKEND:
     // O valor cobrado é LIDO E CALCULADO ESTRITAMENTE do arquivo oficial de configurações do servidor!
     // NENHUM valor enviado pelo frontend é considerado.
@@ -321,6 +416,7 @@ if ($action === 'subscribe' && $method === 'POST') {
                 'phone' => $custPhone,
                 'cpf' => $custCpf
             ],
+            'passwordHash' => $custPasswordHash,
             'plan' => $plan,
             'amount' => $amount,
             'paymentMethod' => 'pix',
@@ -402,6 +498,7 @@ if ($action === 'subscribe' && $method === 'POST') {
                 'phone' => $custPhone,
                 'cpf' => $custCpf
             ],
+            'passwordHash' => $custPasswordHash,
             'plan' => $plan,
             'amount' => $amount,
             'paymentMethod' => 'credit_card',
@@ -502,63 +599,58 @@ if ($action === 'check_payment') {
 }
 
 // ── 6. VERIFICAÇÃO DE MEMBRO VIP ATIVO (Sessão do Cliente) ──
+// Só o token prova a assinatura. Antes, telefone/e-mail/@ também valiam — e qualquer um que soubesse o
+// @ de um membro entrava na Área VIP. Para entrar num dispositivo novo existe o login com senha (action=login).
 if ($action === 'check_member') {
-    $token = trim((string)($_GET['token'] ?? ''));
-    $phone = preg_replace('/\D/', '', (string)($_GET['phone'] ?? ''));
-    $email = strtolower(trim((string)($_GET['email'] ?? '')));
-    $instagram = strtolower(ltrim(trim((string)($_GET['instagram'] ?? '')), '@'));
+    $sub = nte_vip_active_sub_by_token((string)($_GET['token'] ?? ''));
+    echo json_encode($sub ? vipMemberResponse($sub, readVipSettings()) : ['isVip' => false]);
+    exit;
+}
 
-    if ($token === '' && $phone === '' && $email === '' && $instagram === '') {
-        echo json_encode(['isVip' => false]);
+// ── 6b. LOGIN DO MEMBRO VIP (@ ou WhatsApp + senha) ──
+if ($action === 'login' && $method === 'POST') {
+    if (vipLoginBlocked()) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Muitas tentativas. Aguarde 15 minutos e tente de novo.']);
         exit;
     }
 
+    $raw = file_get_contents('php://input');
+    $input = $raw ? json_decode($raw, true) : null;
+    $identifier = trim((string)($input['identifier'] ?? ''));
+    $password = (string)($input['password'] ?? '');
+    if ($identifier === '' || $password === '') {
+        http_response_code(400);
+        echo json_encode(['error' => 'Informe seu @ ou WhatsApp e a sua senha.']);
+        exit;
+    }
+
+    $digits = preg_replace('/\D/', '', $identifier);
+    $insta = nte_vip_clean_instagram($identifier);
     $allSubs = readVipSubscriptions();
-    $now = time();
-    $activeSub = null;
-
+    $matched = null;
     foreach ($allSubs as $s) {
-        if ($s['status'] !== 'active') continue;
-
-        // Verifica validade (se não for vitalício)
-        if (!empty($s['expiresAt'])) {
-            $exp = strtotime($s['expiresAt']);
-            if ($exp < $now) continue; // Expirado
-        }
-
-        $matchToken = ($token !== '' && !empty($s['vipToken']) && hash_equals($s['vipToken'], $token));
+        if (!nte_vip_is_active($s) || empty($s['passwordHash'])) continue;
+        $sInsta = nte_vip_clean_instagram((string)($s['customer']['instagram'] ?? ''));
         $sPhone = preg_replace('/\D/', '', (string)($s['customer']['phone'] ?? ''));
-        $matchPhone = ($phone !== '' && strlen($phone) >= 8 && substr($sPhone, -8) === substr($phone, -8));
-        $sEmail = strtolower(trim((string)($s['customer']['email'] ?? '')));
-        $matchEmail = ($email !== '' && $sEmail === $email);
-        $sInsta = strtolower(ltrim(trim((string)($s['customer']['instagram'] ?? '')), '@'));
-        $matchInsta = ($instagram !== '' && $sInsta !== '' && $sInsta === $instagram);
-
-        if ($matchToken || $matchPhone || $matchEmail || $matchInsta) {
-            $activeSub = $s;
+        $byInsta = $insta !== '' && $sInsta !== '' && $sInsta === $insta;
+        $byPhone = strlen($digits) >= 10 && strlen($sPhone) >= 10 && substr($sPhone, -10) === substr($digits, -10);
+        if (($byInsta || $byPhone) && password_verify($password, (string)$s['passwordHash'])) {
+            $matched = $s;
             break;
         }
     }
 
-    if ($activeSub) {
-        $settings = readVipSettings();
-        echo json_encode([
-            'isVip' => true,
-            'plan' => $activeSub['plan'] ?? 'monthly',
-            'name' => $activeSub['customer']['name'] ?? 'Membro VIP',
-            'instagram' => $activeSub['customer']['instagram'] ?? '',
-            'phone' => $activeSub['customer']['phone'] ?? '',
-            'vipToken' => $activeSub['vipToken'] ?? '',
-            'startedAt' => $activeSub['startedAt'],
-            'expiresAt' => $activeSub['expiresAt'],
-            'whatsappGroupLink' => $settings['whatsappGroupLink'],
-            'vipCouponCode' => $settings['vipCouponCode'],
-            'vipCouponDiscount' => $settings['vipCouponDiscount']
-        ]);
+    if ($matched === null) {
+        vipRegisterLoginFailure();
+        http_response_code(401);
+        // Mensagem única: não revela se o @ existe ou se só a senha está errada.
+        echo json_encode(['error' => 'Dados de acesso inválidos ou assinatura inativa.']);
         exit;
     }
 
-    echo json_encode(['isVip' => false]);
+    vipClearLoginFailures();
+    echo json_encode(vipMemberResponse($matched, readVipSettings()));
     exit;
 }
 
@@ -605,7 +697,11 @@ if ($action === 'list_members') {
             'lifetimeMembers' => $lifetimeCount,
             'totalRevenue' => round($totalRevenue, 2)
         ],
-        'members' => array_reverse($subs)
+        'members' => array_reverse(array_map(static function (array $sub): array {
+            $sub['hasPassword'] = !empty($sub['passwordHash']);
+            unset($sub['passwordHash'], $sub['vipToken']);
+            return $sub;
+        }, $subs))
     ]);
     exit;
 }
@@ -650,7 +746,14 @@ if ($action === 'toggle_member' && $method === 'POST') {
         }
         $custPhone = trim((string)($input['phone'] ?? ''));
         $custEmail = trim((string)($input['email'] ?? ''));
-        $plan = ($input['plan'] === 'lifetime') ? 'lifetime' : 'monthly';
+        $plan = (($input['plan'] ?? '') === 'lifetime') ? 'lifetime' : 'monthly';
+        $manualPassword = (string)($input['password'] ?? '');
+        $manualPasswordError = vipPasswordError($manualPassword);
+        if ($manualPasswordError !== null) {
+            http_response_code(400);
+            echo json_encode(['error' => $manualPasswordError . ' Defina a senha que o membro vai usar para entrar.']);
+            exit;
+        }
 
         $allSubs[] = [
             'id' => 'sub_manual_' . time(),
@@ -662,6 +765,7 @@ if ($action === 'toggle_member' && $method === 'POST') {
                 'phone' => $custPhone,
                 'cpf' => ''
             ],
+            'passwordHash' => password_hash($manualPassword, PASSWORD_DEFAULT),
             'plan' => $plan,
             'amount' => 0.0,
             'paymentMethod' => 'manual_admin',
@@ -684,6 +788,47 @@ if ($action === 'toggle_member' && $method === 'POST') {
 
     http_response_code(404);
     echo json_encode(['error' => 'Assinatura não localizada.']);
+    exit;
+}
+
+// ── 9. REDEFINIR SENHA DE UM MEMBRO (Somente Admin) ──
+// Para o membro que esqueceu a senha: o dono define uma nova e combina com ele pelo WhatsApp.
+if ($action === 'set_password' && $method === 'POST') {
+    if (!nte_is_admin()) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Acesso não autorizado.']);
+        exit;
+    }
+    $raw = file_get_contents('php://input');
+    $input = $raw ? json_decode($raw, true) : null;
+    $subId = trim((string)($input['id'] ?? ''));
+    $newPassword = (string)($input['password'] ?? '');
+    $passwordError = vipPasswordError($newPassword);
+    if ($passwordError !== null) {
+        http_response_code(400);
+        echo json_encode(['error' => $passwordError]);
+        exit;
+    }
+
+    $allSubs = readVipSubscriptions();
+    $found = false;
+    foreach ($allSubs as &$s) {
+        if (($s['id'] ?? '') === $subId) {
+            $s['passwordHash'] = password_hash($newPassword, PASSWORD_DEFAULT);
+            $s['updatedAt'] = date('c');
+            $found = true;
+            break;
+        }
+    }
+    unset($s);
+
+    if (!$found) {
+        http_response_code(404);
+        echo json_encode(['error' => 'Assinatura não localizada.']);
+        exit;
+    }
+    saveVipSubscriptions($allSubs);
+    echo json_encode(['success' => true, 'message' => 'Senha do membro atualizada.']);
     exit;
 }
 

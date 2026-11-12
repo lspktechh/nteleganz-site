@@ -13,6 +13,8 @@
  *  - Gravação atômica (arquivo temporário + rename): nenhum visitante enxerga arquivo pela metade.
  */
 
+require_once __DIR__ . '/vps_secret.php';
+
 const NTE_IMG_VPS_UPLOADS_URL = 'https://137-131-233-254.sslip.io/nteleganz/uploads/';
 const NTE_IMG_VPS_UPLOAD_API = 'https://137-131-233-254.sslip.io/nteleganz/api/upload';
 
@@ -184,7 +186,7 @@ function nte_img_push_to_vps(string $path, string $filename): bool
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => ['image' => curl_file_create($path, $mime, $name)],
-        CURLOPT_HTTPHEADER => ['x-filename: ' . $name],
+        CURLOPT_HTTPHEADER => ['x-filename: ' . $name, nte_vps_secret_header()],
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_CONNECTTIMEOUT => 3,
         CURLOPT_TIMEOUT => 10,

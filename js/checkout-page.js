@@ -167,6 +167,30 @@
     });
   }
 
+  async function applyVipPricesForDisplay() {
+    const token = localStorage.getItem('nte_vip_token') || '';
+    if (!token || localStorage.getItem('nte_vip_active') !== 'true') return;
+    try {
+      const res = await fetch('/api/products.php', { cache: 'no-store' });
+      if (!res.ok) return;
+      const payload = await res.json();
+      const list = Array.isArray(payload) ? payload : (payload?.products || []);
+      const byId = new Map(list.map(p => [String(p.id), p]));
+      cartItems.forEach(item => {
+        const product = byId.get(String(item.id ?? item.productId ?? ''));
+        const pct = Math.max(0, Math.min(90, Math.round(Number(product?.vipDiscountPercent) || 0)));
+        if (!product || !pct) return;
+        const base = Number(product.priceNum) || parsePrice(product.price);
+        if (!base) return;
+        const vipPrice = Math.round(base * (100 - pct)) / 100;
+        item.vipDiscountPercent = pct;
+        item.price = fmtMoney(vipPrice);
+      });
+    } catch (e) {
+      // Sem catálogo: mostra o preço normal; o servidor aplica o desconto de qualquer forma.
+    }
+  }
+
   // ── Carregamento do Carrinho ──
   async function loadCart() {
     try {
@@ -190,6 +214,10 @@
         if (dbImg) item.image = dbImg;
       }
     }));
+
+    // Membro VIP vê o preço com desconto VIP de cada produto. Só exibição: o valor
+    // cobrado é recalculado no servidor (mercadopago.php / infinitepay.php).
+    await applyVipPricesForDisplay();
 
     // Calcula subtotal
     subtotal = cartItems.reduce((acc, item) => {

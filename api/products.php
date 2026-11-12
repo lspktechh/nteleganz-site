@@ -65,7 +65,7 @@ function callVpsApi(string $method, string $path, ?array $body = null, ?string $
 
     $headers = [
         'Accept: application/json',
-        'X-NTE-Secret: nte_sec_2026_isolated_vault'
+        nte_vps_secret_header()
     ];
     if ($body !== null) {
         $headers[] = 'Content-Type: application/json';
@@ -548,6 +548,7 @@ function mergeCatalogs(array $vpsProducts, array $localProducts): array
         $p['vipExclusive'] = $isVip;
         $p['vipEarlyAccessActive'] = false;
         $p['vipRemainingSeconds'] = 0;
+        $p['vipDiscountPercent'] = max(0, min(90, (int)round((float)($p['vipDiscountPercent'] ?? 0))));
 
         if ($isVip) {
             $duration = (string)($p['vipReleaseDuration'] ?? '48');
@@ -929,6 +930,12 @@ function sanitizeProduct(array $input, bool $partial = false): ?array
         } else {
             $record['vipEarlyAccessUntil'] = null;
         }
+    }
+
+    // Desconto exclusivo para membros VIP (% inteiro, 0 a 90). Aplicado no servidor de
+    // pagamento só para quem tem token VIP válido (ver lib/vip_auth.php).
+    if (array_key_exists('vipDiscountPercent', $input)) {
+        $record['vipDiscountPercent'] = max(0, min(90, (int)round((float)$input['vipDiscountPercent'])));
     }
 
     // Produtos NUNCA são inativados: sempre ativos, apenas esgotados via estoque

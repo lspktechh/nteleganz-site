@@ -68,8 +68,9 @@
     const savedGroup = localStorage.getItem(STORAGE_LINK_KEY) || '';
     const savedCoup  = localStorage.getItem(STORAGE_COUPON_KEY) || 'VIP10';
 
-    // Se já está marcado como ativo no dispositivo, renderiza imediatamente para experiência instantânea
-    if (isActive && (savedInsta || savedPhone || savedToken)) {
+    // Se já está marcado como ativo no dispositivo, renderiza imediatamente para experiência instantânea.
+    // Sem token não há sessão: o servidor só reconhece o membro pelo token (ou login com senha).
+    if (isActive && savedToken) {
       renderMemberDashboard({
         isVip: true,
         plan: savedPlan,
@@ -81,15 +82,16 @@
       });
     }
 
-    // Se não há dados salvos, permanece na tela de apresentação e planos
-    if (!savedToken && !savedPhone && !savedInsta) return;
+    // Sem token salvo, permanece na tela de apresentação e planos
+    if (!savedToken) {
+      if (isActive) clearVipSession();
+      return;
+    }
 
     // Validação silenciosa em background com a API oficial
     try {
       const q = new URLSearchParams();
-      if (savedToken) q.set('token', savedToken);
-      if (savedPhone) q.set('phone', savedPhone.replace(/\D/g, ''));
-      if (savedInsta) q.set('instagram', savedInsta.replace(/^@/, ''));
+      q.set('token', savedToken);
 
       const res = await fetch(`/api/vip.php?action=check_member&${q.toString()}`);
       if (res.ok) {
@@ -285,6 +287,19 @@
       return;
     }
 
+    const password = document.getElementById('vip-input-password')?.value || '';
+    const passwordConfirm = document.getElementById('vip-input-password-confirm')?.value || '';
+    if (password.length < 6) {
+      alert('Crie uma senha com pelo menos 6 caracteres.');
+      document.getElementById('vip-input-password')?.focus();
+      return;
+    }
+    if (password !== passwordConfirm) {
+      alert('As senhas não conferem. Digite a mesma senha nos dois campos.');
+      document.getElementById('vip-input-password-confirm')?.focus();
+      return;
+    }
+
     const submitBtn = document.getElementById('vip-btn-submit-payment');
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -298,6 +313,7 @@
         instagram: `@${instagram}`,
         name: name,
         phone: cleanPhone,
+        password,
         customer: {
           name,
           instagram: `@${instagram}`,
@@ -477,31 +493,25 @@
   };
 
   window.submitVipLogin = async function () {
-    const rawVal = document.getElementById('vip-login-identifier')?.value.trim() || '';
-    if (!rawVal) {
-      alert('Por favor, informe seu @ do Instagram ou seu WhatsApp.');
+    const identifier = document.getElementById('vip-login-identifier')?.value.trim() || '';
+    const password = document.getElementById('vip-login-password')?.value || '';
+    if (!identifier || !password) {
+      alert('Informe seu @ do Instagram (ou WhatsApp) e a sua senha.');
       return;
     }
 
     const btn = document.getElementById('vip-btn-login-submit');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<span>Consultando…</span>'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span>Entrando…</span>'; }
 
     try {
-      const cleanDigits = rawVal.replace(/\D/g, '');
-      const cleanInsta  = rawVal.replace(/^@/, '');
+      const res = await fetch('/api/vip.php?action=login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password })
+      });
+      const data = await res.json().catch(() => ({}));
 
-      const q = new URLSearchParams();
-      if (cleanDigits.length >= 8) {
-        q.set('phone', cleanDigits);
-      }
-      if (cleanInsta) {
-        q.set('instagram', cleanInsta);
-      }
-
-      const res = await fetch(`/api/vip.php?action=check_member&${q.toString()}`);
-      const data = await res.json();
-
-      if (data.isVip) {
+      if (res.ok && data.isVip) {
         localStorage.setItem(STORAGE_ACTIVE_KEY, 'true');
         if (data.instagram) localStorage.setItem(STORAGE_INSTAGRAM_KEY, data.instagram);
         if (data.phone) localStorage.setItem(STORAGE_PHONE_KEY, data.phone);
@@ -509,12 +519,13 @@
         if (data.plan) localStorage.setItem(STORAGE_PLAN_KEY, data.plan);
         if (data.name) localStorage.setItem(STORAGE_NAME_KEY, data.name);
         if (data.whatsappGroupLink) localStorage.setItem(STORAGE_LINK_KEY, data.whatsappGroupLink);
-        if (data.vipCouponCode) localStorage.setItem(STORAGE_COUPON_KEY, data.vipCouponCode);
 
+        const pwdEl = document.getElementById('vip-login-password');
+        if (pwdEl) pwdEl.value = '';
         closeVipLoginModal();
         renderMemberDashboard(data);
       } else {
-        alert('Não encontramos uma assinatura VIP ativa com esses dados. Garanta seu acesso escolhendo um dos planos!');
+        alert(data.error || 'Não foi possível entrar. Confira seu @ (ou WhatsApp) e a senha.');
       }
     } catch (e) {
       alert('Erro ao consultar assinatura. Tente novamente.');

@@ -6,6 +6,18 @@
 
 date_default_timezone_set('America/Sao_Paulo');
 
+require_once __DIR__ . '/lib/vps_secret.php';
+
+/**
+ * De quanto em quanto tempo (segundos) a lista de pedidos é mesclada com a VPS.
+ * Antes, TODA listagem (o painel lista ao abrir e a cada 25s) consultava a VPS, que leva de 0,5s a 7s,
+ * e regravava o arquivo inteiro de pedidos. Os pedidos são gravados primeiro no arquivo local
+ * (saveOrder), então a VPS só acrescenta o que foi criado fora daqui.
+ */
+if (!defined('NTE_ORDERS_VPS_SYNC_INTERVAL')) {
+    define('NTE_ORDERS_VPS_SYNC_INTERVAL', 120);
+}
+
 if (!defined('ORDERS_FILE')) {
     define('ORDERS_FILE', __DIR__ . '/../data/orders.json');
 }
@@ -17,7 +29,8 @@ function callVpsOrders(string $method, string $url, ?array $body = null): ?array
     $ch = curl_init($url);
     if (!$ch) return null;
 
-    $headers = ['Accept: application/json'];
+    // A API de pedidos da VPS exige a chave interna (dados pessoais de clientes).
+    $headers = ['Accept: application/json', nte_vps_secret_header()];
     if ($body !== null) {
         $headers[] = 'Content-Type: application/json';
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
@@ -155,8 +168,8 @@ function getMergedOrders(): array {
         $indexed[$key] = normalizeOrderChannel($item);
     }
 
-    // Consulta VPS com timeout rápido
-    $vps = callVpsOrders('GET', VPS_API_ORDERS);
+    // Consulta VPS com timeout rápido — no máximo uma vez a cada NTE_ORDERS_VPS_SYNC_INTERVAL.
+    $vps = nteOrdersVpsSyncDue() ? callVpsOrders('GET', VPS_API_ORDERS) : null;
     if ($vps !== null && isset($vps['orders']) && is_array($vps['orders'])) {
         foreach ($vps['orders'] as $vItem) {
             $vKey = !empty($vItem['id']) ? (string)$vItem['id'] : (!empty($vItem['code']) ? (string)$vItem['code'] : null);
@@ -177,9 +190,20 @@ function getMergedOrders(): array {
         return $tB <=> $tA;
     });
 
-    // Salva em cache local atualizado
-    saveLocalOrders($orders);
+    // Regrava o arquivo só se algo mudou: com ~150 pedidos são centenas de KB a cada listagem.
+    if (json_encode(array_values($orders)) !== json_encode(array_values($local))) {
+        saveLocalOrders($orders);
+    }
     return $orders;
+}
+
+/** Hora de mesclar com a VPS? Marca o horário ANTES de chamar, para requisições simultâneas não irem todas. */
+function nteOrdersVpsSyncDue(): bool {
+    $stamp = dirname(ORDERS_FILE) . '/.orders_vps_sync_at';
+    $last = (int)@file_get_contents($stamp);
+    if (time() - $last < NTE_ORDERS_VPS_SYNC_INTERVAL) return false;
+    @file_put_contents($stamp, (string)time(), LOCK_EX);
+    return true;
 }
 
 /**

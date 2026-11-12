@@ -29,7 +29,6 @@ const PRODUCTS_IMG_DIR = __DIR__ . '/../assets/images/products/';
 const VPS_API_BASE = 'https://137-131-233-254.sslip.io/nteleganz/api';
 const VPS_UPLOAD_URL = 'https://137-131-233-254.sslip.io/nteleganz/api/upload';
 const VPS_UPLOADS_URL = 'https://137-131-233-254.sslip.io/nteleganz/uploads/';
-const NTE_INTERNAL_SECRET = 'nte_sec_2026_isolated_vault';
 
 function defaultFeedbacks(): array {
     $list = [];
@@ -64,7 +63,7 @@ function callVpsFeedbackApi(string $method, string $path, ?array $body = null): 
 
     $headers = [
         'Accept: application/json',
-        'X-NTE-Secret: ' . NTE_INTERNAL_SECRET
+        nte_vps_secret_header()
     ];
     if ($body !== null) {
         $headers[] = 'Content-Type: application/json';

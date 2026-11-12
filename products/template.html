@@ -350,6 +350,8 @@
           <span class="product-price-old" id="product-old-price" style="display:none;"></span>
           <span class="product-price-badge" id="product-badge" style="display:none;"></span>
         </div>
+        <div id="product-vip-price" style="display:none; margin:6px 0 4px; font-size:13px; color:#7a5d12; line-height:1.4;">
+        </div>
 
         <div class="stock-line" id="stock-line" aria-live="polite">Verificando estoque...</div>
 
@@ -852,6 +854,25 @@
       }
     }
 
+    // Desconto exclusivo VIP: o membro logado vê o próprio preço; os demais, o convite.
+    // Só exibição — o valor cobrado é recalculado no servidor de pagamento.
+    const vipPriceEl = document.getElementById('product-vip-price');
+    const vipPct = Math.max(0, Math.min(90, Math.round(Number(product.vipDiscountPercent) || 0)));
+    if (vipPriceEl) {
+      vipPriceEl.style.display = 'none';
+      const basePrice = Number(product.priceNum)
+        || parseFloat(String(product.price || '').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      if (available && vipPct > 0 && basePrice > 0) {
+        const vipFmt = (Math.round(basePrice * (100 - vipPct)) / 100)
+          .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const isUserVipForPrice = (typeof window.isVipMember === 'function') ? await window.isVipMember() : false;
+        vipPriceEl.innerHTML = isUserVipForPrice
+          ? `Seu preço VIP: <strong>${vipFmt}</strong> (${vipPct}% OFF)`
+          : `Membros VIP pagam <strong>${vipFmt}</strong> (${vipPct}% OFF). <a href="/vip/" style="color:#7a5d12; text-decoration:underline;">Conheça a Área VIP</a>`;
+        vipPriceEl.style.display = 'block';
+      }
+    }
+
     const oldPriceEl = document.getElementById('product-old-price');
     if (product.oldPrice) {
       oldPriceEl.textContent = product.oldPrice;
@@ -1154,7 +1175,7 @@
 
 })();
 </script>
-<script src="js/vip-modal.js?v=20261112c" defer></script>
+<script src="js/vip-modal.js?v=20261112-token" defer></script>
 
 </body>
 </html>

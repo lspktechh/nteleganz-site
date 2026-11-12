@@ -7,6 +7,11 @@
 data/products.json
 data/backups/
 
+# Segredos e estado gerado no servidor (o repositório é público)
+data/vps_secret.txt
+data/vip_login_attempts.json
+data/.orders_vps_sync_at
+
 # Arquivos de sistema operacional e metadados
 .DS_Store
 Thumbs.db

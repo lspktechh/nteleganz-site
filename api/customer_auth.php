@@ -14,6 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once __DIR__ . '/lib/vps_secret.php';
+
 $vpsBaseUrl = 'https://137-131-233-254.sslip.io/nteleganz';
 $dataFile = __DIR__ . '/../data/customers.json';
 
@@ -28,14 +30,17 @@ function callVps($endpoint, $method = 'GET', $data = null) {
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    // Rotas de clientes na VPS exigem a chave interna (senha e dados pessoais).
+    $headers = [nte_vps_secret_header()];
     
     if ($method === 'POST') {
         curl_setopt($ch, CURLOPT_POST, true);
         if ($data) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            $headers[] = 'Content-Type: application/json';
         }
     }
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

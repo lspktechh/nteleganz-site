@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/lib/live_data.php';
 require_once __DIR__ . '/lib/admin_guard.php';
+require_once __DIR__ . '/lib/vip_auth.php';
 
 const MP_SETTINGS_FILE = __DIR__ . '/../data/mercadopago_settings.json';
 const MP_PAYMENTS_URL = 'https://api.mercadopago.com/v1/payments';
@@ -107,40 +108,12 @@ function getOfficialShippingMethods(): array {
     return is_array($data) ? $data : [];
 }
 
-function isCustomerVip(?string $token, ?string $phone, ?string $email, ?string $instagram = null): bool {
-    $file = __DIR__ . '/../data/vip_subscriptions.json';
-    if (!file_exists($file)) return false;
-    $raw = @file_get_contents($file);
-    if (!$raw) return false;
-    $data = @json_decode($raw, true);
-    $subs = (is_array($data) && isset($data['subscriptions']) && is_array($data['subscriptions']))
-        ? $data['subscriptions']
-        : [];
-    $now = time();
-    $cleanPhone = preg_replace('/\D/', '', (string)$phone);
-    $cleanEmail = strtolower(trim((string)$email));
-    $cleanInsta = strtolower(ltrim(trim((string)$instagram), '@'));
-
-    foreach ($subs as $s) {
-        if (($s['status'] ?? '') !== 'active') continue;
-        if (!empty($s['expiresAt']) && strtotime($s['expiresAt']) < $now) continue;
-
-        if (!empty($token) && !empty($s['vipToken']) && hash_equals($s['vipToken'], $token)) {
-            return true;
-        }
-        if (!empty($cleanEmail) && strtolower(trim((string)($s['customer']['email'] ?? ''))) === $cleanEmail) {
-            return true;
-        }
-        if (!empty($cleanInsta)) {
-            $sInsta = strtolower(ltrim(trim((string)($s['customer']['instagram'] ?? '')), '@'));
-            if ($sInsta !== '' && $sInsta === $cleanInsta) return true;
-        }
-        $sPhone = preg_replace('/\D/', '', (string)($s['customer']['phone'] ?? ''));
-        if (strlen($cleanPhone) >= 8 && substr($sPhone, -8) === substr($cleanPhone, -8)) {
-            return true;
-        }
-    }
-    return false;
+/**
+ * É membro VIP ativo? Só o token prova (ver lib/vip_auth.php). Telefone, e-mail e @ continuam na
+ * assinatura por compatibilidade com os chamadores, mas não são mais aceitos como prova.
+ */
+function isCustomerVip(?string $token, ?string $phone = null, ?string $email = null, ?string $instagram = null): bool {
+    return nte_vip_token_is_valid($token);
 }
 
 function callMercadoPagoApi(string $url, string $method, ?array $body, string $accessToken, ?string $idempotencyKey = null): array {
@@ -549,6 +522,11 @@ $catalogMap = getCatalogProductsMap();
 $itemsSubtotal = 0.0;
 $validatedItems = [];
 
+// Membro VIP (token válido) paga o preço com o desconto VIP de cada produto.
+// Decidido aqui no servidor: o frontend só exibe, nunca define o valor cobrado.
+$buyerVipToken = trim((string)($data['vipToken'] ?? ($customer['vipToken'] ?? '')));
+$buyerIsVip = nte_vip_token_is_valid($buyerVipToken);
+
 foreach ($items as $item) {
     $qty = max(1, (int)($item['qty'] ?? $item['quantity'] ?? 1));
     $itemId = (string)($item['id'] ?? $item['productId'] ?? '');
@@ -589,6 +567,10 @@ foreach ($items as $item) {
         }
 
         $unitPrice = !empty($catProduct['priceNum']) ? (float)$catProduct['priceNum'] : parsePriceToFloat($catProduct['price'] ?? 0);
+        if ($buyerIsVip && nte_vip_discount_percent($catProduct) > 0) {
+            $item['vipDiscountPercent'] = nte_vip_discount_percent($catProduct);
+            $unitPrice = nte_vip_apply_discount($unitPrice, $catProduct);
+        }
         $item['price'] = 'R$ ' . number_format($unitPrice, 2, ',', '.');
         $item['name'] = $catProduct['name'] ?? ($item['name'] ?? 'Produto NT Eleganz');
         if (!empty($catProduct['brand'])) {
