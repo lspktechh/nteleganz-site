@@ -261,9 +261,9 @@ if ($method === 'GET') {
             ? $res['data'][0]['payer_costs']
             : null;
 
-        // Tabela oficial alinhada com as taxas da loja (1x a 12x: 4.25% a 12.35%)
+        // Tabela oficial alinhada com as taxas da loja (1x a 12x: 4.98% em 1x, 4.25% a 12.35% em 2x-12x)
         $interestRates = [
-            1 => 0.0,
+            1 => 4.98,
             2 => 4.25,
             3 => 5.10,
             4 => 5.95,
@@ -280,8 +280,8 @@ if ($method === 'GET') {
         $costs = [];
         for ($i = 1; $i <= 12; $i++) {
             $rate = $interestRates[$i] ?? 0.0;
-            // Se o Mercado Pago indicar taxa 0 (parcelamento sem juros oficial), honra 0%
-            if ($livePayerCosts) {
+            // Se o Mercado Pago indicar taxa 0 oficial nas parcelas (2x em diante), honra 0%
+            if ($livePayerCosts && $i > 1) {
                 foreach ($livePayerCosts as $lpc) {
                     if ((int)($lpc['installments'] ?? 0) === $i && (float)($lpc['installment_rate'] ?? 99) === 0.0) {
                         $rate = 0.0;
@@ -291,12 +291,17 @@ if ($method === 'GET') {
             }
             $total = $amount * (1 + ($rate / 100));
             $instAmount = round($total / $i, 2);
+            $msg = ($rate == 0)
+                ? "{$i}x de R$ " . number_format($instAmount, 2, ',', '.') . " sem juros"
+                : (($i === 1)
+                    ? "1x de R$ " . number_format($instAmount, 2, ',', '.') . " (+4,98% de taxa)"
+                    : "{$i}x de R$ " . number_format($instAmount, 2, ',', '.'));
             $costs[] = [
                 'installments' => $i,
                 'installment_rate' => $rate,
                 'installment_amount' => $instAmount,
                 'total_amount' => round($total, 2),
-                'recommended_message' => "{$i}x de R$ " . number_format($instAmount, 2, ',', '.') . ($rate == 0 ? " sem juros" : "")
+                'recommended_message' => $msg
             ];
         }
 
@@ -776,8 +781,14 @@ if ($action === 'process_card') {
         exit;
     }
 
+    // Se 1x no cartão, aplica a taxa de 4.98%
+    $cardTotalAmount = ($installments === 1)
+        ? round($totalAmount * (1 + (4.98 / 100)), 2)
+        : $totalAmount;
+    $cardFormattedTotal = 'R$ ' . number_format($cardTotalAmount, 2, ',', '.');
+
     $cardPayload = [
-        'transaction_amount' => $totalAmount,
+        'transaction_amount' => $cardTotalAmount,
         'token' => $token,
         'description' => "Pedido NT Eleganz {$displayCode}",
         'installments' => $installments,
@@ -835,7 +846,7 @@ if ($action === 'process_card') {
         'id' => 'ord_' . time() . '_' . substr(md5($orderCode), 0, 5),
         'code' => $displayCode,
         'status' => $isApproved ? 'pago' : 'novo',
-        'value' => $formattedTotal,
+        'value' => $cardFormattedTotal,
         'clientName' => $customer['name'] ?? '',
         'client' => !empty($customer['name']) ? $customer['name'] : 'Cliente do site',
         'phone' => $customer['phone'] ?? '',
@@ -878,7 +889,7 @@ if ($action === 'process_card') {
         'paymentId' => $paymentId,
         'orderCode' => $orderCode,
         'displayCode' => $displayCode,
-        'total' => $formattedTotal
+        'total' => $cardFormattedTotal
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -964,7 +975,7 @@ if ($action === 'process_apple_pay') {
         'id' => 'ord_' . time() . '_' . substr(md5($orderCode), 0, 5),
         'code' => $displayCode,
         'status' => $isApproved ? 'pago' : 'novo',
-        'value' => $formattedTotal,
+        'value' => $cardFormattedTotal,
         'clientName' => $customer['name'] ?? '',
         'clientEmail' => $customer['email'] ?? '',
         'clientPhone' => $customer['phone'] ?? '',
@@ -1010,7 +1021,7 @@ if ($action === 'process_apple_pay') {
         'paymentId' => $paymentId,
         'orderCode' => $orderCode,
         'displayCode' => $displayCode,
-        'total' => $formattedTotal
+        'total' => $cardFormattedTotal
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     exit;
 }

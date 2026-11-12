@@ -411,8 +411,10 @@
           const totalParcelado = Number(c.total_amount) || (c.installment_amount * c.installments);
           const diffJuros = Math.max(0, totalParcelado - total);
           let msg;
-          if (c.installments === 1 || diffJuros <= 0.05) {
-            msg = `${c.installments}x de ${fmtMoney(c.installment_amount)} sem juros (Total: ${fmtMoney(totalParcelado)} à vista)`;
+          if (c.installments === 1 && diffJuros > 0.05) {
+            msg = `1x de ${fmtMoney(c.installment_amount)} (+${fmtMoney(diffJuros)} de taxa • Total: ${fmtMoney(totalParcelado)} à vista)`;
+          } else if (diffJuros <= 0.05) {
+            msg = `${c.installments}x de ${fmtMoney(c.installment_amount)} sem juros (Total: ${fmtMoney(totalParcelado)})`;
           } else {
             msg = `${c.installments}x de ${fmtMoney(c.installment_amount)} (+${fmtMoney(diffJuros)} de juros • Total: ${fmtMoney(totalParcelado)})`;
           }
@@ -427,8 +429,8 @@
       }
     } catch (_) {}
 
-    // Fallback padrão com taxas alinhadas da loja (1x a 12x: 4.25% a 12.35%)
-    const rates = [0, 0, 4.25, 5.10, 5.95, 6.80, 7.65, 8.10, 8.95, 9.80, 10.65, 11.50, 12.35];
+    // Fallback padrão com taxas alinhadas da loja (1x: 4.98%, 2x a 12x: 4.25% a 12.35%)
+    const rates = [0, 4.98, 4.25, 5.10, 5.95, 6.80, 7.65, 8.10, 8.95, 9.80, 10.65, 11.50, 12.35];
     const opts = [];
     for (let i = 1; i <= 12; i++) {
       const rate = rates[i] || 0;
@@ -436,8 +438,10 @@
       const parcela = totalComTaxa / i;
       const diffJuros = Math.max(0, totalComTaxa - total);
       let msg;
-      if (i === 1 || diffJuros <= 0.05) {
-        msg = `${i}x de ${fmtMoney(parcela)} sem juros (Total: ${fmtMoney(totalComTaxa)} à vista)`;
+      if (i === 1 && diffJuros > 0.05) {
+        msg = `1x de ${fmtMoney(parcela)} (+${fmtMoney(diffJuros)} de taxa • Total: ${fmtMoney(totalComTaxa)} à vista)`;
+      } else if (diffJuros <= 0.05) {
+        msg = `${i}x de ${fmtMoney(parcela)} sem juros (Total: ${fmtMoney(totalComTaxa)})`;
       } else {
         msg = `${i}x de ${fmtMoney(parcela)} (+${fmtMoney(diffJuros)} de juros • Total: ${fmtMoney(totalComTaxa)})`;
       }
@@ -1959,12 +1963,10 @@
         interestAmount = Math.max(0, Number(selectedOption.dataset.interest) || (finalOrderTotal - (baseSubtotal + shippingPrice)));
       } else {
         const instCount = instSelect ? parseInt(instSelect.value, 10) || 1 : 1;
-        const instList = calculateInstallments(baseSubtotal + shippingPrice);
-        const instData = instList.find(i => i.installment === instCount);
-        if (instData) {
-          finalOrderTotal = instData.total;
-          interestAmount = instData.interestAmount;
-        }
+        const ratesFallback = [0, 4.98, 4.25, 5.10, 5.95, 6.80, 7.65, 8.10, 8.95, 9.80, 10.65, 11.50, 12.35];
+        const r = ratesFallback[instCount] || 0;
+        finalOrderTotal = (baseSubtotal + shippingPrice) * (1 + (r / 100));
+        interestAmount = Math.max(0, finalOrderTotal - (baseSubtotal + shippingPrice));
       }
     }
 
