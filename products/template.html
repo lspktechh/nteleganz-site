@@ -285,7 +285,15 @@
         </svg>
       </a>
       <a href="/vip/" class="header-icon-btn header-vip-btn" aria-label="Área VIP" title="Área VIP">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="#c9a84c"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#b8932b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2.5 18h19v2.5h-19z" fill="#fbf3df"></path>
+          <path d="M4 16 2 6l5.5 4.5L12 3l4.5 7.5L22 6l-2 10z" fill="rgba(184, 147, 43, 0.14)"></path>
+          <circle cx="2" cy="6" r="1.2" fill="#b8932b"></circle>
+          <circle cx="7.5" cy="10.5" r="1" fill="#b8932b"></circle>
+          <circle cx="12" cy="3" r="1.4" fill="#b8932b"></circle>
+          <circle cx="16.5" cy="10.5" r="1" fill="#b8932b"></circle>
+          <circle cx="22" cy="6" r="1.2" fill="#b8932b"></circle>
+        </svg>
         <span>VIP</span>
       </a>
       <button id="cart-open-btn" class="header-icon-btn" aria-label="Carrinho" style="position: relative;">
@@ -366,22 +374,30 @@
         <p class="product-desc" id="product-desc"></p>
 
         <!-- VIP Early Access Banner -->
-        <div id="vip-product-banner" style="display:none; background:#111114; border:1px solid #c9a84c; border-radius:10px; padding:16px; margin-bottom:18px;">
+        <div id="vip-product-banner" style="display:none; background:#fbf8f0; border:1px solid #b8932b; border-radius:12px; padding:16px; margin-bottom:18px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <div style="display:flex; align-items:center; gap:6px; color:#c9a84c; font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#c9a84c"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <div style="display:flex; align-items:center; gap:6px; color:#8c6d1d; font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b8932b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2.5 18h19v2.5h-19z" fill="#fbf3df"></path>
+                <path d="M4 16 2 6l5.5 4.5L12 3l4.5 7.5L22 6l-2 10z" fill="rgba(184, 147, 43, 0.14)"></path>
+                <circle cx="2" cy="6" r="1.2" fill="#b8932b"></circle>
+                <circle cx="7.5" cy="10.5" r="1" fill="#b8932b"></circle>
+                <circle cx="12" cy="3" r="1.4" fill="#b8932b"></circle>
+                <circle cx="16.5" cy="10.5" r="1" fill="#b8932b"></circle>
+                <circle cx="22" cy="6" r="1.2" fill="#b8932b"></circle>
+              </svg>
               <span>Acesso Exclusivo VIP</span>
             </div>
-            <span id="vip-countdown-display" style="font-size:11px; color:#d4d4d8; font-weight:600;"></span>
+            <span id="vip-countdown-display" style="font-size:11px; color:#8c6d1d; font-weight:700;"></span>
           </div>
-          <p style="margin:0 0 12px; font-size:12.5px; color:#a1a1aa; line-height:1.4;">
+          <p style="margin:0 0 12px; font-size:12.5px; color:#55555c; line-height:1.4;">
             Esta peça é um drop exclusivo para membros NT VIP antes da liberação ao público geral.
           </p>
-          <div id="vip-unlocked-state" style="display:none; align-items:center; gap:6px; color:#4ade80; font-size:12px; font-weight:700; margin-bottom:10px;">
+          <div id="vip-unlocked-state" style="display:none; align-items:center; gap:6px; color:#16a34a; font-size:12px; font-weight:700; margin-bottom:10px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
             <span>Seu acesso VIP está ativo para esta compra!</span>
           </div>
-          <button type="button" id="vip-cta-banner-btn" class="btn" style="width:100%; background:linear-gradient(135deg, #d4af37, #b8932b); color:#0b0b0d; font-weight:800; font-size:12px; letter-spacing:0.06em; text-transform:uppercase; padding:12px; border:none; border-radius:6px; cursor:pointer;" onclick="window.nteOpenVipModal?.()">
+          <button type="button" id="vip-cta-banner-btn" class="btn" style="width:100%; background:#000000; color:#ffffff; font-weight:800; font-size:12px; letter-spacing:0.06em; text-transform:uppercase; padding:12px; border:none; border-radius:6px; cursor:pointer;" onclick="window.nteOpenVipModal?.()">
             Liberar com NT VIP
           </button>
         </div>

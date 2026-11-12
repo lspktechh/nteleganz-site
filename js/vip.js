@@ -271,10 +271,8 @@
   // ── Processa Assinatura VIP (Mercado Pago Backend Shield) ──
   window.submitVipSubscription = async function () {
     let instagram = document.getElementById('vip-input-instagram')?.value.trim() || '';
-    const phone = document.getElementById('vip-input-phone')?.value.trim() || '';
     let name = document.getElementById('vip-input-name')?.value.trim() || '';
-    const email = document.getElementById('vip-input-email')?.value.trim() || '';
-    const cpf = document.getElementById('vip-input-cpf')?.value.trim() || '';
+    const phone = document.getElementById('vip-input-phone')?.value.trim() || '';
 
     // Normaliza Instagram
     instagram = instagram.replace(/^@+/, '');
@@ -285,28 +283,17 @@
       return;
     }
 
+    if (!name) {
+      alert('Por favor, informe o seu nome completo.');
+      document.getElementById('vip-input-name')?.focus();
+      return;
+    }
+
     const cleanPhone = phone.replace(/\D/g, '');
     if (!cleanPhone || cleanPhone.length < 10) {
       alert('Por favor, informe seu número de WhatsApp com DDD.');
       document.getElementById('vip-input-phone')?.focus();
       return;
-    }
-
-    if (!email || !email.includes('@')) {
-      alert('Por favor, informe um e-mail válido para confirmação.');
-      document.getElementById('vip-input-email')?.focus();
-      return;
-    }
-
-    const cleanCpf = cpf.replace(/\D/g, '');
-    if (!cleanCpf || cleanCpf.length < 11) {
-      alert('Por favor, informe um CPF válido.');
-      document.getElementById('vip-input-cpf')?.focus();
-      return;
-    }
-
-    if (!name) {
-      name = `@${instagram}`;
     }
 
     const submitBtn = document.getElementById('vip-btn-submit-payment');
@@ -320,13 +307,12 @@
         plan: currentPlan,
         paymentMethod: currentMethod,
         instagram: `@${instagram}`,
+        name: name,
         phone: cleanPhone,
         customer: {
           name,
           instagram: `@${instagram}`,
-          phone: cleanPhone,
-          email,
-          cpf: cleanCpf
+          phone: cleanPhone
         }
       };
 
@@ -354,7 +340,6 @@
             action: 'create_card_token',
             cardNumber,
             cardholderName: cardHolder,
-            cpf: cleanCpf,
             expirationMonth: expMonth,
             expirationYear: expYear,
             securityCode: cardCvv

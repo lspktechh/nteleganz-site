@@ -1,6 +1,6 @@
 /* ============================================================
    NT ELEGANZ — VIP MODAL / BOTTOM SHEET (FYND VIP REPLICA)
-   Estética de Luxo Minimalista com Paleta Dourada e Escura
+   Estética de Luxo Minimalista com Tema Claro (Light Theme)
    Regra: Proibido o uso de emojis. Ícones SVG apenas.
    ============================================================ */
 
@@ -8,7 +8,7 @@
   position: fixed;
   inset: 0;
   z-index: 100000;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(15, 28, 46, 0.48);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   display: flex;
@@ -33,14 +33,14 @@
 }
 
 .nte-vip-modal-sheet {
-  background: #0d0d0f;
-  color: #f7f6f2;
+  background: #ffffff;
+  color: #111114;
   width: 100%;
   max-width: 440px;
   border-top-left-radius: 24px;
   border-top-right-radius: 24px;
-  border: 1px solid rgba(201, 168, 76, 0.25);
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+  border: 1px solid #e2ded5;
+  box-shadow: 0 -10px 40px rgba(15, 28, 46, 0.16);
   padding: 16px 24px 32px;
   transform: translateY(100%);
   transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
@@ -53,6 +53,7 @@
 @media (min-width: 640px) {
   .nte-vip-modal-sheet {
     border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(15, 28, 46, 0.2);
     transform: translateY(20px) scale(0.98);
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -69,7 +70,7 @@
   width: 36px;
   height: 4px;
   border-radius: 2px;
-  background: #333338;
+  background: #d9d5cb;
   margin: 0 auto 16px;
 }
 
@@ -77,20 +78,23 @@
   position: absolute;
   top: 18px;
   right: 18px;
-  background: none;
+  background: #f4f2ec;
   border: none;
-  color: #888890;
+  color: #55555c;
   cursor: pointer;
-  padding: 4px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .nte-vip-modal__close:hover {
-  color: #ffffff;
+  background: #e9e6dd;
+  color: #111114;
 }
 
 .nte-vip-modal__top-badge {
@@ -98,21 +102,25 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  margin-bottom: 20px;
+  gap: 4px;
+  margin-bottom: 18px;
 }
 
 .nte-vip-modal__top-badge svg {
-  color: #c9a84c;
-  width: 30px;
-  height: 24px;
+  color: #b8932b;
+  width: 28px;
+  height: 28px;
 }
 
 .nte-vip-modal__top-badge-text {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.15em;
-  color: #c9a84c;
+  color: #8c6d1d;
+  background: #fbf3df;
+  border: 1px solid #ebd9a9;
+  padding: 3px 12px;
+  border-radius: 14px;
   text-transform: uppercase;
 }
 
@@ -121,14 +129,14 @@
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #c9a84c;
+  color: #8c6d1d;
   margin-bottom: 6px;
 }
 
 .nte-vip-modal__title {
   font-size: 23px;
   font-weight: 800;
-  color: #ffffff;
+  color: #111114;
   margin-bottom: 8px;
   letter-spacing: -0.01em;
 }
@@ -136,15 +144,15 @@
 .nte-vip-modal__subtitle {
   font-size: 13.5px;
   line-height: 1.45;
-  color: #9e9ea5;
-  margin-bottom: 24px;
+  color: #6e6e76;
+  margin-bottom: 22px;
 }
 
 .nte-vip-modal__list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 22px;
 }
 
 .nte-vip-modal__item {
@@ -155,27 +163,27 @@
 }
 
 .nte-vip-modal__item-icon {
-  color: #c9a84c;
+  color: #b8932b;
   flex-shrink: 0;
   margin-top: 1px;
 }
 
 .nte-vip-modal__item-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
-  color: #ffffff;
+  color: #111114;
   margin-bottom: 2px;
 }
 
 .nte-vip-modal__item-desc {
   font-size: 12px;
-  color: #8c8c94;
+  color: #6e6e76;
   line-height: 1.4;
 }
 
 .nte-vip-modal__price-box {
-  background: #151518;
-  border: 1px solid #28282e;
+  background: #fbfaf8;
+  border: 1px solid #e5e2da;
   border-radius: 12px;
   padding: 14px 16px;
   margin-bottom: 16px;
@@ -184,19 +192,19 @@
 
 .nte-vip-modal__price-main {
   font-size: 13.5px;
-  color: #e5e5ea;
+  color: #111114;
   margin-bottom: 2px;
 }
 
 .nte-vip-modal__price-main strong {
-  color: #c9a84c;
-  font-size: 15px;
+  color: #8c6d1d;
+  font-size: 16px;
   font-weight: 800;
 }
 
 .nte-vip-modal__price-sub {
   font-size: 12px;
-  color: #8e8e96;
+  color: #6e6e76;
 }
 
 .nte-vip-modal__btn-cta {
@@ -206,9 +214,8 @@
   gap: 8px;
   width: 100%;
   padding: 16px;
-  background: #c9a84c;
-  background: linear-gradient(135deg, #d4af37, #b8932b);
-  color: #0b0b0d;
+  background: #000000;
+  color: #ffffff;
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -217,20 +224,21 @@
   border-radius: 30px;
   cursor: pointer;
   text-decoration: none;
-  transition: transform 0.15s ease, opacity 0.2s;
-  box-shadow: 0 4px 16px rgba(201, 168, 76, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
 }
 
 .nte-vip-modal__btn-cta:hover {
-  opacity: 0.95;
-  transform: translateY(-1px);
+  background: #1c1c22;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
 }
 
 .nte-vip-modal__btn-dismiss {
   display: block;
   background: none;
   border: none;
-  color: #888890;
+  color: #6e6e76;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -239,7 +247,7 @@
 }
 
 .nte-vip-modal__btn-dismiss:hover {
-  color: #ffffff;
+  color: #111114;
 }
 
 .nte-vip-modal__login-link {
@@ -247,55 +255,65 @@
   text-align: center;
   margin-top: 10px;
   font-size: 11.5px;
-  color: #777780;
+  color: #6e6e76;
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .nte-vip-modal__login-link:hover {
-  color: #c9a84c;
+  color: #8c6d1d;
 }
 
-/* ── HEADER VIP BUTTON (HARMONIZADO COM A NAVBAR) ── */
+/* ══════════════════════════════════════════
+   HEADER VIP BUTTON (TEMA CLARO HARMONIZADO)
+   ══════════════════════════════════════════ */
 .header-vip-btn {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 5px !important;
-  padding: 5px 10px !important;
+  padding: 0 10px !important;
   height: 32px !important;
-  border-radius: 18px !important;
-  background: #09090b !important;
-  color: #d4af37 !important;
-  border: 1px solid rgba(212, 175, 55, 0.45) !important;
+  border-radius: 16px !important;
+  background: transparent !important;
+  color: #111114 !important;
+  border: 1px solid #d9d5cb !important;
   font-size: 11px !important;
   font-weight: 700 !important;
-  letter-spacing: 0.06em !important;
+  letter-spacing: 0.08em !important;
   text-decoration: none !important;
   margin-right: 4px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  box-shadow: none !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
   flex-shrink: 0 !important;
 }
 
+.header-vip-btn svg {
+  width: 14px !important;
+  height: 14px !important;
+  flex-shrink: 0 !important;
+}
+
 .header-vip-btn:hover {
-  background: #141418 !important;
-  border-color: #d4af37 !important;
-  color: #ffffff !important;
-  box-shadow: 0 0 12px rgba(212, 175, 55, 0.35) !important;
+  background: #fbf3df !important;
+  border-color: #b8932b !important;
+  color: #8c6d1d !important;
+  box-shadow: 0 2px 8px rgba(184, 147, 43, 0.15) !important;
   transform: translateY(-1px) !important;
 }
 
 .header-vip-btn.is-vip-active {
-  border-color: rgba(74, 222, 128, 0.5) !important;
-  box-shadow: 0 0 10px rgba(74, 222, 128, 0.25) !important;
+  background: #fbf8f0 !important;
+  border-color: #b8932b !important;
+  color: #8c6d1d !important;
 }
 
 .header-vip-btn__dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 6px #4ade80;
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
   display: inline-block;
+  margin-right: 2px;
 }
