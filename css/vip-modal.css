@@ -1,0 +1,257 @@
+/* ============================================================
+   NT ELEGANZ — VIP MODAL / BOTTOM SHEET (FYND VIP REPLICA)
+   Estética de Luxo Minimalista com Paleta Dourada e Escura
+   Regra: Proibido o uso de emojis. Ícones SVG apenas.
+   ============================================================ */
+
+.nte-vip-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .nte-vip-modal-backdrop {
+    align-items: center;
+    padding: 20px;
+  }
+}
+
+.nte-vip-modal-backdrop.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.nte-vip-modal-sheet {
+  background: #0d0d0f;
+  color: #f7f6f2;
+  width: 100%;
+  max-width: 440px;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  border: 1px solid rgba(201, 168, 76, 0.25);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+  padding: 16px 24px 32px;
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  max-height: 92vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 640px) {
+  .nte-vip-modal-sheet {
+    border-radius: 24px;
+    transform: translateY(20px) scale(0.98);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .nte-vip-modal-backdrop.is-open .nte-vip-modal-sheet {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.nte-vip-modal-backdrop.is-open .nte-vip-modal-sheet {
+  transform: translateY(0);
+}
+
+.nte-vip-modal__handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #333338;
+  margin: 0 auto 16px;
+}
+
+.nte-vip-modal__close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: none;
+  border: none;
+  color: #888890;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.nte-vip-modal__close:hover {
+  color: #ffffff;
+}
+
+.nte-vip-modal__top-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin-bottom: 20px;
+}
+
+.nte-vip-modal__top-badge svg {
+  color: #c9a84c;
+  width: 30px;
+  height: 24px;
+}
+
+.nte-vip-modal__top-badge-text {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: #c9a84c;
+  text-transform: uppercase;
+}
+
+.nte-vip-modal__kicker {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c9a84c;
+  margin-bottom: 6px;
+}
+
+.nte-vip-modal__title {
+  font-size: 23px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.nte-vip-modal__subtitle {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: #9e9ea5;
+  margin-bottom: 24px;
+}
+
+.nte-vip-modal__list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.nte-vip-modal__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+}
+
+.nte-vip-modal__item-icon {
+  color: #c9a84c;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.nte-vip-modal__item-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+
+.nte-vip-modal__item-desc {
+  font-size: 12px;
+  color: #8c8c94;
+  line-height: 1.4;
+}
+
+.nte-vip-modal__price-box {
+  background: #151518;
+  border: 1px solid #28282e;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.nte-vip-modal__price-main {
+  font-size: 13.5px;
+  color: #e5e5ea;
+  margin-bottom: 2px;
+}
+
+.nte-vip-modal__price-main strong {
+  color: #c9a84c;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.nte-vip-modal__price-sub {
+  font-size: 12px;
+  color: #8e8e96;
+}
+
+.nte-vip-modal__btn-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  background: #c9a84c;
+  background: linear-gradient(135deg, #d4af37, #b8932b);
+  color: #0b0b0d;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s ease, opacity 0.2s;
+  box-shadow: 0 4px 16px rgba(201, 168, 76, 0.25);
+}
+
+.nte-vip-modal__btn-cta:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.nte-vip-modal__btn-dismiss {
+  display: block;
+  background: none;
+  border: none;
+  color: #888890;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin: 16px auto 0;
+  transition: color 0.2s;
+}
+
+.nte-vip-modal__btn-dismiss:hover {
+  color: #ffffff;
+}
+
+.nte-vip-modal__login-link {
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+  font-size: 11.5px;
+  color: #777780;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.nte-vip-modal__login-link:hover {
+  color: #c9a84c;
+}

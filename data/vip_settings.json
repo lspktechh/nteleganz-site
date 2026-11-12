@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "monthlyPrice": 29.90,
+  "lifetimePrice": 69.90,
+  "vipCouponCode": "VIP10",
+  "vipCouponDiscount": 10,
+  "whatsappGroupLink": "https://chat.whatsapp.com/invite/nteleganz-vip",
+  "defaultEarlyAccessHours": 48,
+  "title": "NT ELEGANZ VIP",
+  "subtitle": "A comunidade de quem garimpa antes. Peças raras primeiro pra você, descontos exclusivos e um grupo fechado de achados.",
+  "updatedAt": "2026-11-12T10:00:00-03:00"
+}

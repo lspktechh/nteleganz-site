@@ -51,6 +51,30 @@ function getInfiniteCatalogMap(): array {
     return $map;
 }
 
+function isCustomerVipInfinite(?string $token, ?string $phone, ?string $email): bool {
+    $file = __DIR__ . '/../data/vip_subscriptions.json';
+    if (!file_exists($file)) return false;
+    $raw = @file_get_contents($file);
+    if (!$raw) return false;
+    $data = @json_decode($raw, true);
+    $subs = (is_array($data) && isset($data['subscriptions']) && is_array($data['subscriptions']))
+        ? $data['subscriptions']
+        : [];
+    $now = time();
+    $cleanPhone = preg_replace('/\D/', '', (string)$phone);
+    $cleanEmail = strtolower(trim((string)$email));
+
+    foreach ($subs as $s) {
+        if (($s['status'] ?? '') !== 'active') continue;
+        if (!empty($s['expiresAt']) && strtotime($s['expiresAt']) < $now) continue;
+        if (!empty($token) && !empty($s['vipToken']) && hash_equals($s['vipToken'], $token)) return true;
+        if (!empty($cleanEmail) && strtolower(trim((string)($s['customer']['email'] ?? ''))) === $cleanEmail) return true;
+        $sPhone = preg_replace('/\D/', '', (string)($s['customer']['phone'] ?? ''));
+        if (strlen($cleanPhone) >= 8 && substr($sPhone, -8) === substr($cleanPhone, -8)) return true;
+    }
+    return false;
+}
+
 $rawInput = file_get_contents('php://input');
 $data = $rawInput ? json_decode($rawInput, true) : null;
 
@@ -80,6 +104,35 @@ foreach ($items as $item) {
     // Preço oficial do banco de dados tem precedência absoluta
     if ($itemId !== '' && isset($infiniteCatalog[$itemId])) {
         $catProduct = $infiniteCatalog[$itemId];
+
+        // Verificação de Acesso Antecipado VIP
+        $isVipExclusive = !empty($catProduct['isVipExclusive']) || !empty($catProduct['vipExclusive']);
+        if ($isVipExclusive) {
+            $duration = (string)($catProduct['vipReleaseDuration'] ?? '48');
+            $isStillVip = false;
+            if ($duration === 'forever') {
+                $isStillVip = true;
+            } elseif (!empty($catProduct['vipEarlyAccessUntil'])) {
+                $untilTs = strtotime((string)$catProduct['vipEarlyAccessUntil']);
+                if ($untilTs > time()) {
+                    $isStillVip = true;
+                }
+            }
+            if ($isStillVip) {
+                $clientVipToken = trim((string)($data['vipToken'] ?? ($customer['vipToken'] ?? '')));
+                $clientPhone = (string)($customer['phone'] ?? '');
+                $clientEmail = (string)($customer['email'] ?? '');
+                if (!isCustomerVipInfinite($clientVipToken, $clientPhone, $clientEmail)) {
+                    http_response_code(403);
+                    echo json_encode([
+                        'error' => 'O produto "' . ($catProduct['name'] ?? 'exclusivo') . '" está em período de acesso exclusivo para membros NT VIP.',
+                        'vipRequired' => true
+                    ]);
+                    exit;
+                }
+            }
+        }
+
         $unitPriceCents = !empty($catProduct['priceNum']) ? (int)round((float)$catProduct['priceNum'] * 100) : parsePriceToCents($catProduct['price'] ?? 0);
         $item['name'] = $catProduct['name'] ?? ($item['name'] ?? 'Produto NT Eleganz');
         if (!empty($catProduct['brand'])) $item['brand'] = $catProduct['brand'];

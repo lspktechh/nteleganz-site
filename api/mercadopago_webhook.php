@@ -156,6 +156,55 @@ $status = strtolower((string)($payment['status'] ?? ''));
 $orderCode = trim((string)($payment['external_reference'] ?? ''));
 $isApproved = ($status === 'approved');
 
+// Tratamento de assinaturas da Área VIP
+if ($orderCode !== '' && (stripos($orderCode, 'VIP-') === 0 || stripos($orderCode, '#VIP-') === 0)) {
+    $cleanVipCode = strtoupper(ltrim($orderCode, '#'));
+    $vipSubsFile = __DIR__ . '/../data/vip_subscriptions.json';
+    if (file_exists($vipSubsFile)) {
+        $rawSubs = @file_get_contents($vipSubsFile);
+        $subsData = $rawSubs ? @json_decode($rawSubs, true) : null;
+        $subs = (is_array($subsData) && isset($subsData['subscriptions'])) ? $subsData['subscriptions'] : [];
+        $found = false;
+        foreach ($subs as &$s) {
+            if ($s['subCode'] === $cleanVipCode || (string)($s['mercadopagoPaymentId'] ?? '') === (string)$paymentId) {
+                if ($isApproved) {
+                    $s['status'] = 'active';
+                    if (empty($s['vipToken'])) {
+                        $s['vipToken'] = bin2hex(random_bytes(24));
+                    }
+                    $s['startedAt'] = $payment['date_approved'] ?? date('c');
+                    $s['expiresAt'] = ($s['plan'] === 'lifetime') ? null : date('c', strtotime('+30 days'));
+                    $s['mercadopagoPaymentId'] = (string)$paymentId;
+                    $s['updatedAt'] = date('c');
+                } elseif (in_array($status, ['rejected', 'cancelled', 'refunded', 'charged_back'])) {
+                    $s['status'] = ($status === 'rejected' || $status === 'cancelled') ? 'cancelled' : $status;
+                    $s['updatedAt'] = date('c');
+                }
+                $found = true;
+                break;
+            }
+        }
+        unset($s);
+        if ($found) {
+            @file_put_contents($vipSubsFile, json_encode([
+                'updatedAt' => date('c'),
+                'count' => count($subs),
+                'subscriptions' => $subs
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        }
+    }
+
+    http_response_code(200);
+    echo json_encode([
+        'success' => true,
+        'vip' => true,
+        'payment_id' => $paymentId,
+        'status' => $status,
+        'order_code' => $cleanVipCode
+    ]);
+    exit;
+}
+
 if ($orderCode !== '') {
     $cleanCode = strtoupper(ltrim($orderCode, '#'));
     $paymentMethod = $payment['payment_method_id'] ?? 'mercadopago';

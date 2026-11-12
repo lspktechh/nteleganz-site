@@ -541,6 +541,31 @@ function mergeCatalogs(array $vpsProducts, array $localProducts): array
         $p['pecaUnica'] = $isSingle;
         $p['peca_unica'] = $isSingle;
         $p['single_piece'] = $isSingle;
+
+        // Acesso Antecipado / Exclusividade VIP
+        $isVip = !empty($p['isVipExclusive']) || !empty($p['vipExclusive']) || !empty($p['vipOnly']);
+        $p['isVipExclusive'] = $isVip;
+        $p['vipExclusive'] = $isVip;
+        $p['vipEarlyAccessActive'] = false;
+        $p['vipRemainingSeconds'] = 0;
+
+        if ($isVip) {
+            $duration = (string)($p['vipReleaseDuration'] ?? '48');
+            if ($duration === 'forever') {
+                $p['vipEarlyAccessActive'] = true;
+                $p['vipRemainingSeconds'] = 999999999;
+            } elseif (!empty($p['vipEarlyAccessUntil'])) {
+                $untilTs = strtotime((string)$p['vipEarlyAccessUntil']);
+                $nowTs = time();
+                if ($untilTs > $nowTs) {
+                    $p['vipEarlyAccessActive'] = true;
+                    $p['vipRemainingSeconds'] = max(0, $untilTs - $nowTs);
+                } else {
+                    $p['vipEarlyAccessActive'] = false;
+                }
+            }
+        }
+
         return $p;
     };
 
@@ -882,6 +907,29 @@ function sanitizeProduct(array $input, bool $partial = false): ?array
     $record['pecaUnica'] = $singleVal;
     $record['peca_unica'] = $singleVal;
     $record['single_piece'] = $singleVal;
+
+    // Acesso Antecipado / Exclusividade VIP
+    if (array_key_exists('isVipExclusive', $input) || array_key_exists('vipExclusive', $input) || array_key_exists('vipOnly', $input)) {
+        $isVip = $bool($input['isVipExclusive'] ?? $input['vipExclusive'] ?? $input['vipOnly'] ?? false);
+        $record['isVipExclusive'] = $isVip;
+        $record['vipExclusive'] = $isVip;
+
+        $duration = (string)($input['vipReleaseDuration'] ?? '48');
+        $record['vipReleaseDuration'] = $duration;
+
+        if ($isVip) {
+            if (!empty($input['vipEarlyAccessUntil'])) {
+                $record['vipEarlyAccessUntil'] = (string)$input['vipEarlyAccessUntil'];
+            } elseif ($duration === 'forever') {
+                $record['vipEarlyAccessUntil'] = null; // Sempre exclusivo
+            } else {
+                $hours = is_numeric($duration) ? (int)$duration : 48;
+                $record['vipEarlyAccessUntil'] = date('c', time() + ($hours * 3600));
+            }
+        } else {
+            $record['vipEarlyAccessUntil'] = null;
+        }
+    }
 
     // Produtos NUNCA são inativados: sempre ativos, apenas esgotados via estoque
     $record['active'] = true;

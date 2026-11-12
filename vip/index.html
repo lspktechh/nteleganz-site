@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NT VIP — Comunidade Exclusiva | NT Eleganz</title>
+  <meta name="description" content="A comunidade de quem garimpa antes. Peças raras primeiro pra você, descontos exclusivos e grupo fechado de achados." />
+  <link rel="icon" type="image/x-icon" href="../assets/images/favicon.ico" />
+  <link rel="stylesheet" href="../css/vip.css?v=20261112b" />
+</head>
+<body class="vip-body">
+
+  <!-- HEADER -->
+  <header class="vip-header">
+    <div class="vip-header__inner">
+      <a href="/" class="vip-header__back" aria-label="Voltar para a loja">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>Loja</span>
+      </a>
+
+      <a href="/" class="vip-header__logo" aria-label="NT Eleganz">
+        <img src="../assets/images/logonz-400.webp" alt="NT Eleganz" />
+      </a>
+
+      <button type="button" class="vip-header__login-btn" id="vip-login-toggle-btn" onclick="openVipLoginModal()">
+        Já sou Membro
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="vip-container">
+
+    <!-- HERO -->
+    <section class="vip-hero">
+      <div class="vip-hero__badge">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#c9a84c">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
+        <span>VIP</span>
+      </div>
+      <h1 class="vip-hero__title" id="vip-page-title">NT ELEGANZ VIP</h1>
+      <p class="vip-hero__subtitle" id="vip-page-subtitle">
+        A comunidade de quem garimpa antes. Peças novas primeiro pra você, provador virtual e um grupo que vive de achados.
+      </p>
+    </section>
+
+    <!-- DASHBOARD DO MEMBRO VIP ATIVO (Visível apenas após validação) -->
+    <section class="vip-dashboard-card" id="vip-member-dashboard" style="display: none;">
+      <div class="vip-dashboard-card__header">
+        <div>
+          <div class="vip-dashboard-card__tag">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span id="vip-dash-plan">Plano Vitalício</span>
+          </div>
+          <h2 style="font-size: 20px; font-weight: 700; margin-top: 4px;" id="vip-dash-greeting">Membro VIP Ativo</h2>
+          <p style="font-size: 12px; color: #a0a0a5; margin-top: 2px;" id="vip-dash-exp">Acesso Permanente</p>
+        </div>
+      </div>
+
+      <div class="vip-dashboard-card__actions">
+        <!-- Botão WhatsApp -->
+        <a href="#" target="_blank" class="vip-btn-wpp" id="vip-dash-wpp-btn" style="display: none;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"></path>
+          </svg>
+          <span>Entrar no Grupo VIP do WhatsApp</span>
+        </a>
+
+        <!-- Cupom VIP -->
+        <div class="vip-coupon-box" id="vip-dash-coupon-box" style="display: none;">
+          <div>
+            <div style="font-size: 11px; text-transform: uppercase; color: #888; letter-spacing: 0.05em;">Seu Cupom Exclusivo</div>
+            <div class="vip-coupon-code" id="vip-dash-coupon-code">VIP10</div>
+            <div style="font-size: 11px; color: #aaa; margin-top: 2px;" id="vip-dash-coupon-desc">10% OFF em todas as compras.</div>
+          </div>
+          <button type="button" class="vip-copy-btn" onclick="copyVipCoupon(document.getElementById('vip-dash-coupon-code').textContent)">
+            Copiar Cupom
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- BENEFÍCIOS (Estilo FYND VIP) -->
+    <section class="vip-benefits">
+      <!-- 1: Comunidade WhatsApp -->
+      <div class="vip-benefit-item">
+        <div class="vip-benefit-item__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+        <h3 class="vip-benefit-item__title">Comunidade no WhatsApp</h3>
+        <p class="vip-benefit-item__desc">Grupo fechado com drops, avisos de peças raras e trocas entre membros.</p>
+      </div>
+
+      <!-- 2: Acesso Antecipado -->
+      <div class="vip-benefit-item">
+        <div class="vip-benefit-item__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <h3 class="vip-benefit-item__title">Acesso antecipado</h3>
+        <p class="vip-benefit-item__desc">Peças selecionadas ficam liberadas só pra VIP antes de todo mundo.</p>
+      </div>
+
+      <!-- 3: Cupom Exclusivo -->
+      <div class="vip-benefit-item">
+        <div class="vip-benefit-item__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
+            <path d="M13 5v2"></path>
+            <path d="M13 17v2"></path>
+            <path d="M13 11v2"></path>
+          </svg>
+        </div>
+        <h3 class="vip-benefit-item__title">Cupom exclusivo</h3>
+        <p class="vip-benefit-item__desc">Um cupom de desconto que só funciona para membros com assinatura ativa.</p>
+      </div>
+
+      <!-- 4: Curadoria Garantida -->
+      <div class="vip-benefit-item">
+        <div class="vip-benefit-item__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <polyline points="9 12 11 14 15 10"></polyline>
+          </svg>
+        </div>
+        <h3 class="vip-benefit-item__title">Curadoria garantida</h3>
+        <p class="vip-benefit-item__desc">Toda peça passa por autenticação e conferência antes de chegar até você.</p>
+      </div>
+
+      <!-- 5: Selo de Membro -->
+      <div class="vip-benefit-item">
+        <div class="vip-benefit-item__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+        </div>
+        <h3 class="vip-benefit-item__title">Selo de membro</h3>
+        <p class="vip-benefit-item__desc">Prioridade no atendimento e nas novidades da NT Eleganz.</p>
+      </div>
+    </section>
+
+    <!-- PLANOS (Estilo FYND VIP) -->
+    <section class="vip-plans" id="vip-plans-section">
+
+      <!-- PLANO MENSAL -->
+      <div class="vip-plan-card">
+        <div class="vip-plan-card__kicker">MENSAL</div>
+        <div class="vip-plan-card__price-row">
+          <span class="vip-plan-card__price" id="val-monthly-price">R$ 29,90</span>
+          <span class="vip-plan-card__period">/mês</span>
+        </div>
+        <p class="vip-plan-card__desc">Cancele quando quiser • renova por link todo mês.</p>
+        <button type="button" class="vip-plan-btn vip-plan-btn--dark" onclick="openVipSubscribeModal('monthly')">
+          Criar conta para assinar
+        </button>
+      </div>
+
+      <!-- PLANO VITALÍCIO (DESTACADO) -->
+      <div class="vip-plan-card vip-plan-card--featured">
+        <div class="vip-plan-card__badge-top">MELHOR VALOR</div>
+        <div class="vip-plan-card__kicker">VITALÍCIO</div>
+        <div class="vip-plan-card__price-row">
+          <span class="vip-plan-card__price" id="val-lifetime-price">R$ 69,90</span>
+          <span class="vip-plan-card__period">• pague uma vez</span>
+        </div>
+        <p class="vip-plan-card__desc">Melhor valor — equivale a pouco mais de 2 meses e é seu pra sempre.</p>
+        <button type="button" class="vip-plan-btn vip-plan-btn--gold" onclick="openVipSubscribeModal('lifetime')">
+          Criar conta para assinar
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="vip-footer">
+    <div class="vip-footer__brand">NT ELEGANZ</div>
+    <p>Moda masculina de luxo. Peças autênticas e curadoria exclusiva.</p>
+  </footer>
+
+  <!-- ══════════════════════════════════════════
+       MODAL: ASSINATURA VIP (CHECKOUT MERCADO PAGO)
+  ══════════════════════════════════════════ -->
+  <div class="vip-modal-overlay" id="vip-subscribe-modal">
+    <div class="vip-modal-dialog">
+      <button class="vip-modal-close" onclick="closeVipSubscribeModal()" aria-label="Fechar">&times;</button>
+
+      <!-- PASSO 1: FORMULÁRIO DE DADOS & PAGAMENTO -->
+      <div id="vip-modal-form-step">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; color: var(--vip-gold); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#c9a84c">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span>Assinatura Segura</span>
+          </div>
+          <h3 style="font-size: 20px; font-weight: 800; margin: 6px 0 4px;" id="vip-modal-plan-name">Plano Vitalício NT VIP</h3>
+          <p style="font-size: 13px; color: var(--vip-gold);" id="vip-modal-plan-price">R$ 69,90</p>
+        </div>
+
+        <div class="vip-form-group">
+          <label class="vip-form-label">Nome Completo *</label>
+          <input type="text" class="vip-form-input" id="vip-input-name" placeholder="Seu nome" required />
+        </div>
+
+        <div class="vip-form-group">
+          <label class="vip-form-label">WhatsApp (com DDD) *</label>
+          <input type="tel" class="vip-form-input" id="vip-input-phone" placeholder="(11) 99999-9999" required />
+        </div>
+
+        <div class="vip-form-group">
+          <label class="vip-form-label">E-mail *</label>
+          <input type="email" class="vip-form-input" id="vip-input-email" placeholder="seu@email.com" required />
+        </div>
+
+        <div class="vip-form-group">
+          <label class="vip-form-label">CPF (Para emissão de recibo/Pix) *</label>
+          <input type="text" class="vip-form-input" id="vip-input-cpf" placeholder="000.000.000-00" required />
+        </div>
+
+        <!-- SELETOR DE MÉTODO -->
+        <div style="margin-top: 18px;">
+          <label class="vip-form-label">Forma de Pagamento</label>
+          <div class="vip-tabs">
+            <button type="button" class="vip-tab-btn active" id="tab-btn-pix" onclick="switchVipPaymentTab('pix')">
+              PIX (Aprovação Instantânea)
+            </button>
+            <button type="button" class="vip-tab-btn" id="tab-btn-card" onclick="switchVipPaymentTab('card')">
+              Cartão de Crédito
+            </button>
+          </div>
+        </div>
+
+        <!-- CAMPOS CARTÃO DE CRÉDITO (Ocultos se Pix) -->
+        <div id="vip-card-fields" style="display: none; margin-top: 14px;">
+          <div class="vip-form-group">
+            <label class="vip-form-label">Número do Cartão *</label>
+            <input type="text" class="vip-form-input" id="vip-card-number" placeholder="0000 0000 0000 0000" maxlength="19" />
+          </div>
+
+          <div class="vip-form-group">
+            <label class="vip-form-label">Nome Impresso no Cartão *</label>
+            <input type="text" class="vip-form-input" id="vip-card-holder" placeholder="NOME COMO NO CARTAO" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="vip-form-group">
+              <label class="vip-form-label">Validade (MM/AA) *</label>
+              <input type="text" class="vip-form-input" id="vip-card-exp" placeholder="12/28" maxlength="5" />
+            </div>
+            <div class="vip-form-group">
+              <label class="vip-form-label">CVV *</label>
+              <input type="password" class="vip-form-input" id="vip-card-cvv" placeholder="123" maxlength="4" />
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="vip-btn-submit" id="vip-btn-submit-payment" onclick="submitVipSubscription()">
+          Gerar Chave Pix
+        </button>
+      </div>
+
+      <!-- PASSO 2: PIX GERADO -->
+      <div id="vip-modal-pix-step" style="display: none;">
+        <div style="text-align: center; margin-bottom: 16px;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; color: #25d366; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>Pix Gerado com Sucesso</span>
+          </div>
+          <h3 style="font-size: 20px; font-weight: 800; margin: 4px 0;" id="vip-pix-amount-text">R$ 69,90</h3>
+          <p style="font-size: 12.5px; color: #aaa;">Escaneie o QR Code abaixo ou copie o código Pix para pagar no seu banco:</p>
+        </div>
+
+        <div class="vip-pix-box">
+          <div class="vip-pix-qr">
+            <img id="vip-pix-qr-img" src="" alt="QR Code Pix" />
+          </div>
+          <div class="vip-copy-input-row">
+            <input type="text" class="vip-form-input" id="vip-pix-copy-input" readonly />
+            <button type="button" class="vip-copy-btn" id="vip-pix-copy-btn" onclick="copyVipPix()">Copiar Código</button>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 16px;">
+          <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--vip-gold);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>Aguardando pagamento... Liberação automática imediata.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASSO 3: SUCESSO / ATIVAÇÃO CONFIRMADA -->
+      <div id="vip-modal-success-step" style="display: none; text-align: center; padding: 10px 0;">
+        <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(37, 211, 102, 0.15); color: #25d366; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <h3 style="font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 6px;">Seja bem-vindo ao NT VIP!</h3>
+        <p style="font-size: 13.5px; color: #bbb; line-height: 1.5; margin-bottom: 24px;">
+          Sua assinatura foi ativada com sucesso. Acesse o grupo exclusivo de membros e resgate seu cupom:
+        </p>
+
+        <a href="#" target="_blank" class="vip-btn-wpp" id="vip-success-wpp-btn" style="margin-bottom: 12px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"></path>
+          </svg>
+          <span>Entrar no Grupo VIP</span>
+        </a>
+
+        <div class="vip-coupon-box" style="margin-bottom: 20px;">
+          <div>
+            <div style="font-size: 11px; text-transform: uppercase; color: #888;">Cupom de Desconto Exclusivo</div>
+            <div class="vip-coupon-code" id="vip-success-coupon-code">VIP10</div>
+          </div>
+          <button type="button" class="vip-copy-btn" onclick="copyVipCoupon(document.getElementById('vip-success-coupon-code').textContent)">
+            Copiar
+          </button>
+        </div>
+
+        <button type="button" class="vip-plan-btn vip-plan-btn--gold" onclick="closeVipSubscribeModal()">
+          Ir para a Loja
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       MODAL: JÁ SOU MEMBRO VIP (LOGIN RÁPIDO)
+  ══════════════════════════════════════════ -->
+  <div class="vip-modal-overlay" id="vip-login-modal">
+    <div class="vip-modal-dialog" style="max-width: 380px;">
+      <button class="vip-modal-close" onclick="closeVipLoginModal()" aria-label="Fechar">&times;</button>
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="width: 44px; height: 44px; border-radius: 50%; background: #222; color: var(--vip-gold); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="#c9a84c">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+        </div>
+        <h3 style="font-size: 18px; font-weight: 800; margin-bottom: 4px;">Identificação de Membro</h3>
+        <p style="font-size: 12.5px; color: #aaa;">Digite o WhatsApp cadastrado na sua assinatura VIP para liberar seus benefícios:</p>
+      </div>
+
+      <div class="vip-form-group">
+        <label class="vip-form-label">WhatsApp com DDD</label>
+        <input type="tel" class="vip-form-input" id="vip-login-phone" placeholder="(11) 99999-9999" required />
+      </div>
+
+      <button type="button" class="vip-btn-submit" id="vip-btn-login-submit" onclick="submitVipLogin()">
+        Acessar Área VIP
+      </button>
+    </div>
+  </div>
+
+  <script src="../js/vip.js?v=20261112b"></script>
+</body>
+</html>

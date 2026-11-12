@@ -472,6 +472,7 @@
     const isOutOfStock = (p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false;
     const stock = Number(p.stock);
     const isSinglePiece = !isOutOfStock && Number.isFinite(stock) && stock === 1;
+    const isVipEarlyAccess = !isOutOfStock && !!p.vipEarlyAccessActive;
     const badgeClass = p.badge === 'OFERTA' ? 'catalog-card__badge--sale' : p.badge === 'LUXO' ? 'catalog-card__badge--new' : '';
     const brand = esc(p.brand || '');
     const name = esc(p.name || '');
@@ -488,7 +489,10 @@
         : '',
       isSinglePiece
         ? `<span class="catalog-card__badge badge-peca-unica" style="display:inline-flex !important; position:absolute; ${isOutOfStock ? 'top:42px !important;' : 'top:12px !important;'} left:12px; background:#000000 !important; color:#ffffff !important; font-size:10.5px !important; font-weight:700 !important; letter-spacing:0.08em !important; padding:4px 9px !important; border-radius:2px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.4) !important; line-height:1.2 !important; pointer-events:none !important;">PEÇA ÚNICA</span>`
-        : (!isOutOfStock && p.badge ? `<span class="catalog-card__badge ${badgeClass}">${esc(p.badge)}</span>` : '')
+        : (!isOutOfStock && p.badge ? `<span class="catalog-card__badge ${badgeClass}">${esc(p.badge)}</span>` : ''),
+      isVipEarlyAccess
+        ? `<span class="catalog-card__badge badge-vip-early" style="display:inline-flex !important; position:absolute; top:12px; right:12px; background:#0d0d0f !important; color:#c9a84c !important; border:1px solid #c9a84c !important; font-size:10px !important; font-weight:800 !important; letter-spacing:0.08em !important; padding:4px 8px !important; border-radius:3px !important; text-transform:uppercase !important; z-index:5 !important; box-shadow:0 2px 6px rgba(0,0,0,0.5) !important; gap:4px; align-items:center;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#c9a84c"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> ACESSO VIP</span>`
+        : ''
     ].filter(Boolean).join('');
 
     return `
@@ -505,11 +509,15 @@
             <span>Recarregar</span>
           </button>
           ${badgesHtml}
-          ${!isOutOfStock ? `
-          <button class="catalog-card__quick-add" onclick="event.preventDefault();event.stopPropagation();catalogAddToCart('${esc(p.id)}')">
-            Adicionar ao Carrinho
-          </button>
-          ` : ''}
+          ${!isOutOfStock ? (
+            isVipEarlyAccess
+              ? `<button class="catalog-card__quick-add" style="background:#0d0d0f; color:#c9a84c; border-color:#c9a84c;" onclick="event.preventDefault();event.stopPropagation();(window.isVipMemberCached ? catalogAddToCart('${esc(p.id)}') : window.nteOpenVipModal?.())">
+                  Liberar com NT VIP
+                </button>`
+              : `<button class="catalog-card__quick-add" onclick="event.preventDefault();event.stopPropagation();catalogAddToCart('${esc(p.id)}')">
+                  Adicionar ao Carrinho
+                </button>`
+          ) : ''}
         </a>
         <div class="catalog-card__info">
           <span class="catalog-card__brand">${brand}</span>

@@ -175,6 +175,7 @@
     clientes: 'Base de Clientes',
     leads: 'Leads do WhatsApp',
     marketing: 'Marketing, Pixels & Tráfego',
+    vip: 'Gestão da Área VIP',
     configuracoes: 'Configurações',
   };
 
@@ -211,6 +212,7 @@
         markLeadsRead();
       }
       if (panelId === 'marketing') loadTrackingSettings();
+      if (panelId === 'vip') await loadVipPanel();
       if (panelId === 'configuracoes') loadSettings();
     } catch (err) {
       console.warn(`Erro ao carregar painel ${panelId}:`, err);
@@ -1276,6 +1278,12 @@
     if (pFeat) pFeat.checked = false;
     if (pDest) pDest.checked = false;
 
+    const pVip = document.getElementById('p-vip-exclusive');
+    const pVipDur = document.getElementById('p-vip-duration');
+    if (pVip) pVip.checked = false;
+    if (pVipDur) pVipDur.value = '48';
+    window.toggleVipFields(false);
+
     clearTagsInput('sizes');
     clearTagsInput('colors');
 
@@ -1469,6 +1477,13 @@
     if (pFeat) pFeat.checked = !!p.featured;
     if (pDest) pDest.checked = !!p.destaque;
 
+    const isVip = !!(p.isVipExclusive || p.vipExclusive || p.vipOnly);
+    const pVip = document.getElementById('p-vip-exclusive');
+    const pVipDur = document.getElementById('p-vip-duration');
+    if (pVip) pVip.checked = isVip;
+    if (pVipDur) pVipDur.value = p.vipReleaseDuration || '48';
+    window.toggleVipFields(isVip);
+
     if (window.updateStockHint) window.updateStockHint();
   }
 
@@ -1559,6 +1574,9 @@
       pecaUnica: isSinglePiece,
       peca_unica: isSinglePiece,
       single_piece: isSinglePiece,
+      isVipExclusive: document.getElementById('p-vip-exclusive')?.checked || false,
+      vipExclusive: document.getElementById('p-vip-exclusive')?.checked || false,
+      vipReleaseDuration: document.getElementById('p-vip-duration')?.value || '48',
     };
 
     if (!productData.brand || !productData.name || !productData.price || getVal('p-stock') === '' || !Number.isInteger(productData.stock) || productData.stock < 0) {
@@ -5628,6 +5646,268 @@ window.showConfirm = function (msg, callback) {
         }
       });
     });
+  // ── ÁREA VIP & ASSINATURAS ──
+  window.toggleVipFields = function(active) {
+    const wrap = document.getElementById('vip-duration-wrap');
+    if (wrap) wrap.style.display = active ? 'flex' : 'none';
+  };
+
+  let allVipMembers = [];
+
+  async function loadVipPanel() {
+    try {
+      const authHdrs = await adminApiHeaders();
+      const [settingsRes, membersRes] = await Promise.all([
+        fetch('../api/vip.php?action=admin_settings', { headers: authHdrs, cache: 'no-store' }),
+        fetch('../api/vip.php?action=list_members', { headers: authHdrs, cache: 'no-store' })
+      ]);
+
+      if (settingsRes.ok) {
+        const sData = await settingsRes.json();
+        if (sData.settings) {
+          const s = sData.settings;
+          const setV = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+          setV('vip-monthly-price', Number(s.monthlyPrice || 29.9).toFixed(2).replace('.', ','));
+          setV('vip-lifetime-price', Number(s.lifetimePrice || 69.9).toFixed(2).replace('.', ','));
+          setV('vip-early-access-hours', s.defaultEarlyAccessHours || 48);
+          setV('vip-enabled-status', s.enabled ? 'true' : 'false');
+          setV('vip-whatsapp-link', s.whatsappGroupLink || '');
+          setV('vip-coupon-code', s.vipCouponCode || 'VIP10');
+          setV('vip-coupon-discount', s.vipCouponDiscount || 10);
+          setV('vip-title', s.title || 'NT ELEGANZ VIP');
+          setV('vip-subtitle', s.subtitle || '');
+        }
+      }
+
+      if (membersRes.ok) {
+        const mData = await membersRes.json();
+        if (mData.kpis) {
+          const k = mData.kpis;
+          const setT = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+          setT('kpi-vip-active', k.activeMembers || 0);
+          setT('kpi-vip-total', k.totalMembers || 0);
+          setT('kpi-vip-monthly', k.monthlyMembers || 0);
+          setT('kpi-vip-lifetime', k.lifetimeMembers || 0);
+          setT('kpi-vip-revenue', 'R$ ' + Number(k.totalRevenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
+
+          const navBadge = document.getElementById('vip-nav-badge');
+          if (navBadge) {
+            navBadge.textContent = k.activeMembers || 0;
+            navBadge.hidden = !k.activeMembers;
+          }
+        }
+
+        allVipMembers = Array.isArray(mData.members) ? mData.members : [];
+        renderVipMembersTable(allVipMembers);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar painel VIP:', err);
+    }
+  }
+  window.loadVipPanel = loadVipPanel;
+
+  window.saveVipSettingsForm = async function() {
+    const btn = document.getElementById('btn-save-vip');
+    const alertBox = document.getElementById('vip-alert');
+    if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
+
+    try {
+      const getNum = (id) => {
+        const v = (document.getElementById(id)?.value || '').replace(/\./g, '').replace(',', '.');
+        return parseFloat(v) || 0;
+      };
+
+      const payload = {
+        monthlyPrice: getNum('vip-monthly-price'),
+        lifetimePrice: getNum('vip-lifetime-price'),
+        defaultEarlyAccessHours: parseInt(document.getElementById('vip-early-access-hours')?.value || '48', 10),
+        enabled: document.getElementById('vip-enabled-status')?.value === 'true',
+        whatsappGroupLink: document.getElementById('vip-whatsapp-link')?.value || '',
+        vipCouponCode: document.getElementById('vip-coupon-code')?.value || 'VIP10',
+        vipCouponDiscount: parseFloat(document.getElementById('vip-coupon-discount')?.value || '10'),
+        title: document.getElementById('vip-title')?.value || 'NT ELEGANZ VIP',
+        subtitle: document.getElementById('vip-subtitle')?.value || ''
+      };
+
+      const res = await fetch('../api/vip.php?action=save_settings', {
+        method: 'POST',
+        headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (alertBox) {
+          alertBox.innerHTML = '<div style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:13px; font-weight:600;">Configurações da Área VIP atualizadas com sucesso!</div>';
+          setTimeout(() => { if (alertBox) alertBox.innerHTML = ''; }, 4000);
+        }
+      } else {
+        alert(data.error || 'Erro ao salvar configurações VIP.');
+      }
+    } catch (e) {
+      console.error('Erro ao salvar VIP:', e);
+      alert('Erro de conexão ao salvar configurações VIP.');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Salvar Configurações VIP'; }
+    }
+  };
+
+  function renderVipMembersTable(members) {
+    const tbody = document.getElementById('vip-members-tbody');
+    if (!tbody) return;
+
+    if (!members || !members.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:32px; color:var(--text-muted); font-size:13px;">Nenhum assinante VIP cadastrado até o momento.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = members.map(m => {
+      const cust = m.customer || {};
+      const name = cust.name || 'Cliente';
+      const rawPhone = cust.phone || '';
+      const cleanPhone = rawPhone.replace(/\D/g, '');
+      const email = cust.email || '—';
+      const planBadge = (m.plan === 'lifetime')
+        ? '<span style="background:#fef9e7; color:#b45309; border:1px solid #fde68a; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;">VITALÍCIO</span>'
+        : '<span style="background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600;">MENSAL</span>';
+
+      const amountFormatted = 'R$ ' + Number(m.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      const methodLabel = m.paymentMethod === 'pix' ? 'Pix' : m.paymentMethod === 'credit_card' ? 'Cartão' : 'Manual Admin';
+
+      const statusMap = {
+        active: '<span style="background:#dcfce7; color:#15803d; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;">Ativo</span>',
+        pending: '<span style="background:#fef3c7; color:#b45309; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;">Pendente</span>',
+        expired: '<span style="background:#f3f4f6; color:#6b7280; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;">Expirado</span>',
+        cancelled: '<span style="background:#fee2e2; color:#b91c1c; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;">Cancelado</span>'
+      };
+      const statusBadge = statusMap[m.status] || m.status;
+
+      const startedFormatted = m.startedAt ? new Date(m.startedAt).toLocaleDateString('pt-BR') : '—';
+      const expFormatted = (m.plan === 'lifetime')
+        ? 'Permanente'
+        : (m.expiresAt ? new Date(m.expiresAt).toLocaleDateString('pt-BR') : '—');
+
+      const phoneLink = cleanPhone ? `<a href="https://wa.me/55${cleanPhone}" target="_blank" style="color:var(--text-secondary); text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:11px;"><span>${rawPhone}</span></a>` : '—';
+
+      const isAct = (m.status === 'active');
+      const actionBtn = isAct
+        ? `<button type="button" class="btn btn-secondary btn-sm" onclick="toggleVipMemberStatus('${m.id}', 'cancelled')" style="padding:4px 8px; font-size:11px; height:auto; color:#b91c1c;">Cancelar</button>`
+        : `<button type="button" class="btn btn-primary btn-sm" onclick="toggleVipMemberStatus('${m.id}', 'active')" style="padding:4px 8px; font-size:11px; height:auto;">Ativar</button>`;
+
+      return `
+        <tr style="border-bottom:1px solid var(--border); font-size:13px;">
+          <td style="padding:12px;">
+            <div style="font-weight:600; color:var(--text-primary);">${name}</div>
+            <div>${phoneLink}</div>
+            <div style="font-size:11px; color:var(--text-muted);">${email}</div>
+          </td>
+          <td style="padding:12px;">${planBadge}</td>
+          <td style="padding:12px; font-weight:600;">${amountFormatted}</td>
+          <td style="padding:12px; color:var(--text-secondary);">${methodLabel}</td>
+          <td style="padding:12px;">${statusBadge}</td>
+          <td style="padding:12px;">
+            <div style="font-size:12px;">Início: ${startedFormatted}</div>
+            <div style="font-size:11px; color:var(--text-muted);">Venc: ${expFormatted}</div>
+          </td>
+          <td style="padding:12px; text-align:right;">${actionBtn}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  window.filterVipMembersTable = function() {
+    const q = (document.getElementById('vip-member-search')?.value || '').toLowerCase().trim();
+    if (!q) {
+      renderVipMembersTable(allVipMembers);
+      return;
+    }
+    const filtered = allVipMembers.filter(m => {
+      const name = (m.customer?.name || '').toLowerCase();
+      const phone = (m.customer?.phone || '').toLowerCase();
+      const email = (m.customer?.email || '').toLowerCase();
+      return name.includes(q) || phone.includes(q) || email.includes(q);
+    });
+    renderVipMembersTable(filtered);
+  };
+
+  window.toggleVipMemberStatus = async function(id, newStatus) {
+    if (!confirm(`Deseja alterar o status deste membro para "${newStatus === 'active' ? 'Ativo' : 'Cancelado'}"?`)) return;
+    try {
+      const res = await fetch('../api/vip.php?action=toggle_member', {
+        method: 'POST',
+        headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ id, status: newStatus })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        await loadVipPanel();
+      } else {
+        alert(data.error || 'Erro ao alterar status do membro.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Erro de conexão ao alterar status do membro.');
+    }
+  };
+
+  window.openAddVipMemberModal = function() {
+    const modal = document.getElementById('vip-member-modal');
+    if (modal) {
+      modal.classList.add('open');
+      document.getElementById('vip-m-name').value = '';
+      document.getElementById('vip-m-phone').value = '';
+      document.getElementById('vip-m-email').value = '';
+      document.getElementById('vip-m-plan').value = 'lifetime';
+    }
+  };
+
+  window.closeAddVipMemberModal = function() {
+    const modal = document.getElementById('vip-member-modal');
+    if (modal) modal.classList.remove('open');
+  };
+
+  window.saveNewVipMember = async function() {
+    const name = document.getElementById('vip-m-name')?.value.trim();
+    const phone = document.getElementById('vip-m-phone')?.value.trim();
+    const email = document.getElementById('vip-m-email')?.value.trim();
+    const plan = document.getElementById('vip-m-plan')?.value || 'lifetime';
+
+    if (!name || !phone) {
+      alert('Nome e WhatsApp são obrigatórios para cadastrar o membro.');
+      return;
+    }
+
+    const btn = document.getElementById('btn-save-vip-member');
+    if (btn) { btn.disabled = true; btn.textContent = 'Cadastrando…'; }
+
+    try {
+      const res = await fetch('../api/vip.php?action=toggle_member', {
+        method: 'POST',
+        headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          manualAdd: true,
+          name,
+          phone,
+          email,
+          plan,
+          status: 'active'
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        closeAddVipMemberModal();
+        await loadVipPanel();
+      } else {
+        alert(data.error || 'Erro ao cadastrar membro.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao cadastrar membro.');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Cadastrar Membro'; }
+    }
+  };
+
     Promise.resolve(window.ntAuth?.requireAuth?.()).then(authenticated => {
       if (!authenticated) return;
       return init();

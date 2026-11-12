@@ -92,6 +92,11 @@
         <span>Marketing & Tráfego</span>
       </div>
 
+      <div class="nav-item" data-panel="vip" onclick="showPanel('vip', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>Área VIP</span><b class="nav-notification" id="vip-nav-badge" hidden>0</b>
+      </div>
+
       <div class="nav-section-label">Sistema</div>
       <div class="nav-item" data-panel="configuracoes" onclick="showPanel('configuracoes', this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1228,6 +1233,246 @@
 
       </div>
 
+      <!-- ══════════════════════════════════════════
+           PANEL: ÁREA VIP & ASSINATURAS
+      ══════════════════════════════════════════ -->
+      <div id="panel-vip" class="admin-panel">
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h2 style="font-size:18px; font-weight:700; margin:0 0 4px; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Gestão da Área VIP
+            </h2>
+            <p style="font-size:12px; color:var(--text-muted); margin:0;">
+              Controle de preços dos planos mensal e vitalício, cupom exclusivo, grupo do WhatsApp e membros assinantes.
+            </p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button type="button" class="btn btn-secondary" onclick="openAddVipMemberModal()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Novo Membro Manual
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-save-vip" onclick="saveVipSettingsForm()">
+              Salvar Configurações VIP
+            </button>
+          </div>
+        </div>
+
+        <div id="vip-alert"></div>
+
+        <!-- KPIs da Área VIP -->
+        <div class="kpi-grid" style="margin-bottom:24px;">
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <div class="kpi-icon" style="background:#fef9e7; border-color:rgba(201,168,76,0.3);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.8">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </div>
+              <span class="kpi-trend up" id="kpi-vip-active-trend">ativos</span>
+            </div>
+            <div class="kpi-label">Membros VIP Ativos</div>
+            <div class="kpi-value" id="kpi-vip-active">0</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <div class="kpi-icon" style="background:#f5f5f5; border-color:rgba(0,0,0,0.1);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.8">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </div>
+              <span class="kpi-trend up">acumulado</span>
+            </div>
+            <div class="kpi-label">Total de Assinantes</div>
+            <div class="kpi-value" id="kpi-vip-total">0</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <div class="kpi-icon" style="background:#f5f5f5; border-color:rgba(0,0,0,0.1);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.8">
+                  <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                </svg>
+              </div>
+              <span class="kpi-trend up">recorrente</span>
+            </div>
+            <div class="kpi-label">Plano Mensal</div>
+            <div class="kpi-value" id="kpi-vip-monthly">0</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <div class="kpi-icon" style="background:#fef9e7; border-color:rgba(201,168,76,0.3);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.8">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </div>
+              <span class="kpi-trend up">vitalício</span>
+            </div>
+            <div class="kpi-label">Plano Vitalício</div>
+            <div class="kpi-value" id="kpi-vip-lifetime">0</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <div class="kpi-icon" style="background:#f5f5f5; border-color:rgba(0,0,0,0.1);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.8">
+                  <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+              </div>
+              <span class="kpi-trend up">receita VIP</span>
+            </div>
+            <div class="kpi-label">Receita de Assinaturas</div>
+            <div class="kpi-value" id="kpi-vip-revenue">R$ 0,00</div>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+
+          <!-- Card 1: Valores dos Planos -->
+          <div class="settings-card">
+            <div class="settings-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              Preços Oficiais dos Planos (Processados no Servidor)
+            </div>
+            <div class="settings-card-desc">
+              Estes valores são calculados diretamente no backend e não podem ser alterados pelo cliente no navegador.
+            </div>
+
+            <div class="settings-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Preço do Plano Mensal (R$) *</label>
+                  <input type="text" class="form-control" id="vip-monthly-price" placeholder="29,90" />
+                  <small class="form-hint">Cobrança padrão mensal por Pix ou Cartão.</small>
+                </div>
+                <div class="form-group">
+                  <label>Preço do Plano Vitalício (R$) *</label>
+                  <input type="text" class="form-control" id="vip-lifetime-price" placeholder="69,90" />
+                  <small class="form-hint">Pagamento único para acesso para sempre (Selo Melhor Valor).</small>
+                </div>
+                <div class="form-group">
+                  <label>Tempo Padrão de Acesso Antecipado (Horas)</label>
+                  <input type="number" class="form-control" id="vip-early-access-hours" placeholder="48" min="1" />
+                  <small class="form-hint">Horas que um drop exclusivo fica reservado aos VIPs antes de abrir ao público.</small>
+                </div>
+                <div class="form-group">
+                  <label>Status das Novas Assinaturas</label>
+                  <select class="form-control" id="vip-enabled-status">
+                    <option value="true">Habilitado (Recebendo novos membros)</option>
+                    <option value="false">Pausado temporariamente</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Benefícios & Integrações -->
+          <div class="settings-card">
+            <div class="settings-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Benefícios & Grupo do WhatsApp
+            </div>
+            <div class="settings-card-desc">
+              Configurações entregues automaticamente ao assinante assim que o pagamento for aprovado.
+            </div>
+
+            <div class="settings-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Link do Grupo VIP do WhatsApp</label>
+                  <input type="url" class="form-control" id="vip-whatsapp-link" placeholder="https://chat.whatsapp.com/..." />
+                  <small class="form-hint">Link exclusivo liberado na tela do membro após confirmação de pagamento.</small>
+                </div>
+                <div class="form-group">
+                  <label>Código do Cupom VIP Exclusivo</label>
+                  <input type="text" class="form-control" id="vip-coupon-code" placeholder="VIP10" />
+                  <small class="form-hint">Cupom que funciona no checkout apenas para clientes com assinatura ativa.</small>
+                </div>
+                <div class="form-group">
+                  <label>Porcentagem de Desconto do Cupom (%)</label>
+                  <input type="number" class="form-control" id="vip-coupon-discount" placeholder="10" min="0" max="100" />
+                  <small class="form-hint">Porcentagem de desconto aplicada nas compras da loja.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Textos da Landing Page VIP -->
+          <div class="settings-card" style="grid-column: 1 / -1;">
+            <div class="settings-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Textos da Página VIP e Modal de Assinatura
+            </div>
+            <div class="settings-card-desc">
+              Personalize a chamada da página exclusiva `/vip/` e dos modais de convite.
+            </div>
+
+            <div class="settings-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Título da Comunidade VIP</label>
+                  <input type="text" class="form-control" id="vip-title" placeholder="NT ELEGANZ VIP" />
+                </div>
+                <div class="form-group">
+                  <label>Subtítulo / Descrição</label>
+                  <input type="text" class="form-control" id="vip-subtitle" placeholder="A comunidade de quem garimpa antes. Peças novas primeiro pra você, descontos exclusivos e um grupo fechado de achados." />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Tabela de Membros VIP -->
+          <div class="settings-card" style="grid-column: 1 / -1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <div class="settings-card-title" style="margin:0;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  Membros & Assinantes VIP
+                </div>
+                <div class="settings-card-desc" style="margin:4px 0 0;">
+                  Todos os clientes que assinaram ou foram adicionados à Área VIP.
+                </div>
+              </div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <input type="text" class="form-control" id="vip-member-search" placeholder="Buscar por nome ou WhatsApp..." style="max-width:260px;" oninput="filterVipMembersTable()" />
+                <button type="button" class="btn btn-secondary btn-sm" onclick="loadVipPanel()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  Atualizar
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive" style="overflow-x:auto;">
+              <table class="admin-table" style="width:100%; border-collapse:collapse;">
+                <thead>
+                  <tr style="text-align:left; border-bottom:1px solid var(--border);">
+                    <th style="padding:10px 12px; font-size:12px; color:var(--text-muted);">CLIENTE</th>
+                    <th style="padding:10px 12px; font-size:12px; color:var(--text-muted);">PLANO</th>
+                    <th style="padding:10px 12px; font-size:12px; color:var(--text-muted);">VALOR</th>
+                    <th style="padding:10px 12px; font-size:12px; color:var(--text-muted);">PAGAMENTO</th>
+                    <th style="padding:10px 12px; font-size:12px; color:var(--text-muted);">STATUS</th>
+                    <th style="padding:10px 12px; font-size:12px; color:var(--text-muted);">VALIDADE</th>
+                    <th style="padding:10px 12px; font-size:12px; color:var(--text-muted); text-align:right;">AÇÕES</th>
+                  </tr>
+                </thead>
+                <tbody id="vip-members-tbody">
+                  <tr>
+                    <td colspan="7" style="text-align:center; padding:24px; color:var(--text-muted);">
+                      Carregando membros VIP...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
     </div>
   </div>
 </div>
@@ -1330,6 +1575,35 @@
               <input type="checkbox" id="p-featured" style="width:16px;height:16px;accent-color:#0a0a0a;" />
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg> Mais Vendidos
             </label>
+          </div>
+        </div>
+
+        <div class="form-group form-col-full" style="background:#fbfaf8; border:1px solid #ebd9a9; border-radius:10px; padding:16px; margin-top:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <strong style="font-size:0.95rem; color:#111;">Acesso Antecipado VIP</strong>
+            </div>
+            <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; font-size:12px; color:#111;">
+              <input type="checkbox" id="p-vip-exclusive" onchange="window.toggleVipFields(this.checked)" style="width:18px; height:18px; accent-color:#c9a84c;" />
+              Liberar Primeiro para Assinantes VIP
+            </label>
+          </div>
+          <p style="margin:0 0 10px; font-size:0.85rem; color:#666; line-height:1.4;">
+            Quando ativado, apenas assinantes da Área VIP poderão visualizar e adquirir este produto antes da liberação ao público geral.
+          </p>
+          <div id="vip-duration-wrap" style="display:none; flex-direction:column; gap:6px;">
+            <label style="font-size:0.85rem; font-weight:600; color:#333;">Tempo de exclusividade VIP:</label>
+            <select class="form-control" id="p-vip-duration" style="max-width:340px;">
+              <option value="24">24 horas (1 dia)</option>
+              <option value="48" selected>48 horas (2 dias — Padrão)</option>
+              <option value="72">72 horas (3 dias)</option>
+              <option value="168">7 dias (1 semana)</option>
+              <option value="forever">Sempre Exclusivo (Apenas Membros VIP compram)</option>
+            </select>
+            <small style="color:#777; font-size:0.8rem;">
+              Após o término do prazo, o produto será aberto e liberado automaticamente na loja geral sem intervenção manual.
+            </small>
           </div>
         </div>
         <br />
@@ -1538,6 +1812,49 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle; margin-right:4px;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
         <span>Abrir no WhatsApp</span>
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL: ADICIONAR MEMBRO VIP MANUAL
+══════════════════════════════════════════ -->
+<div id="vip-member-modal" class="modal-overlay" onclick="if(event.target===this)closeAddVipMemberModal()">
+  <div class="modal" style="max-width:480px; width:100%;">
+    <div class="modal-header">
+      <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Adicionar Membro VIP
+      </div>
+      <button class="modal-close" onclick="closeAddVipMemberModal()">×</button>
+    </div>
+    <div class="modal-body" style="padding: 24px;">
+      <div class="form-grid" style="grid-template-columns: 1fr;">
+        <div class="form-group">
+          <label>Nome do Cliente *</label>
+          <input type="text" class="form-control" id="vip-m-name" placeholder="Ex: Roberto Silva" required />
+        </div>
+        <div class="form-group">
+          <label>WhatsApp (com DDD) *</label>
+          <input type="text" class="form-control" id="vip-m-phone" placeholder="11999998888" required />
+          <small class="form-hint">Usado para identificação automática do cliente na loja.</small>
+        </div>
+        <div class="form-group">
+          <label>E-mail (opcional)</label>
+          <input type="email" class="form-control" id="vip-m-email" placeholder="cliente@email.com" />
+        </div>
+        <div class="form-group">
+          <label>Plano VIP</label>
+          <select class="form-control" id="vip-m-plan">
+            <option value="monthly">Mensal (30 dias de acesso)</option>
+            <option value="lifetime" selected>Vitalício (Acesso Permanente)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeAddVipMemberModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-vip-member" onclick="saveNewVipMember()">Cadastrar Membro</button>
     </div>
   </div>
 </div>

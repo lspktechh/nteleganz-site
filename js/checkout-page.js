@@ -1116,11 +1116,13 @@
   }
 
   function getCustomerPayload() {
+    const vipToken = (typeof window.getVipToken === 'function' ? window.getVipToken() : (localStorage.getItem('nte_vip_token') || ''));
     return {
       name: getVal('chk-name'),
       email: getVal('chk-email'),
       phone: getVal('chk-phone'),
       cpf: getVal('chk-cpf'),
+      vipToken: vipToken,
       address: {
         cep: getVal('chk-cep'),
         street: getVal('chk-street'),

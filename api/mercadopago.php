@@ -107,6 +107,37 @@ function getOfficialShippingMethods(): array {
     return is_array($data) ? $data : [];
 }
 
+function isCustomerVip(?string $token, ?string $phone, ?string $email): bool {
+    $file = __DIR__ . '/../data/vip_subscriptions.json';
+    if (!file_exists($file)) return false;
+    $raw = @file_get_contents($file);
+    if (!$raw) return false;
+    $data = @json_decode($raw, true);
+    $subs = (is_array($data) && isset($data['subscriptions']) && is_array($data['subscriptions']))
+        ? $data['subscriptions']
+        : [];
+    $now = time();
+    $cleanPhone = preg_replace('/\D/', '', (string)$phone);
+    $cleanEmail = strtolower(trim((string)$email));
+
+    foreach ($subs as $s) {
+        if (($s['status'] ?? '') !== 'active') continue;
+        if (!empty($s['expiresAt']) && strtotime($s['expiresAt']) < $now) continue;
+
+        if (!empty($token) && !empty($s['vipToken']) && hash_equals($s['vipToken'], $token)) {
+            return true;
+        }
+        if (!empty($cleanEmail) && strtolower(trim((string)($s['customer']['email'] ?? ''))) === $cleanEmail) {
+            return true;
+        }
+        $sPhone = preg_replace('/\D/', '', (string)($s['customer']['phone'] ?? ''));
+        if (strlen($cleanPhone) >= 8 && substr($sPhone, -8) === substr($cleanPhone, -8)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function callMercadoPagoApi(string $url, string $method, ?array $body, string $accessToken, ?string $idempotencyKey = null): array {
     $ch = curl_init($url);
     $headers = [
@@ -516,6 +547,36 @@ foreach ($items as $item) {
     $unitPrice = 0.0;
     if ($itemId !== '' && isset($catalogMap[$itemId])) {
         $catProduct = $catalogMap[$itemId];
+
+        // Verificação de Acesso Antecipado VIP
+        $isVipExclusive = !empty($catProduct['isVipExclusive']) || !empty($catProduct['vipExclusive']);
+        if ($isVipExclusive) {
+            $duration = (string)($catProduct['vipReleaseDuration'] ?? '48');
+            $isStillVip = false;
+            if ($duration === 'forever') {
+                $isStillVip = true;
+            } elseif (!empty($catProduct['vipEarlyAccessUntil'])) {
+                $untilTs = strtotime((string)$catProduct['vipEarlyAccessUntil']);
+                if ($untilTs > time()) {
+                    $isStillVip = true;
+                }
+            }
+            if ($isStillVip) {
+                $clientVipToken = trim((string)($data['vipToken'] ?? ($customer['vipToken'] ?? '')));
+                $clientPhone = (string)($customer['phone'] ?? ($customer['whatsapp'] ?? ''));
+                $clientEmail = (string)($customer['email'] ?? '');
+                if (!isCustomerVip($clientVipToken, $clientPhone, $clientEmail)) {
+                    http_response_code(403);
+                    echo json_encode([
+                        'success' => false,
+                        'error' => 'O produto "' . ($catProduct['name'] ?? 'exclusivo') . '" está em período de acesso exclusivo para membros NT VIP.',
+                        'vipRequired' => true
+                    ]);
+                    exit;
+                }
+            }
+        }
+
         $unitPrice = !empty($catProduct['priceNum']) ? (float)$catProduct['priceNum'] : parsePriceToFloat($catProduct['price'] ?? 0);
         $item['price'] = 'R$ ' . number_format($unitPrice, 2, ',', '.');
         $item['name'] = $catProduct['name'] ?? ($item['name'] ?? 'Produto NT Eleganz');
