@@ -107,7 +107,7 @@ function getOfficialShippingMethods(): array {
     return is_array($data) ? $data : [];
 }
 
-function isCustomerVip(?string $token, ?string $phone, ?string $email): bool {
+function isCustomerVip(?string $token, ?string $phone, ?string $email, ?string $instagram = null): bool {
     $file = __DIR__ . '/../data/vip_subscriptions.json';
     if (!file_exists($file)) return false;
     $raw = @file_get_contents($file);
@@ -119,6 +119,7 @@ function isCustomerVip(?string $token, ?string $phone, ?string $email): bool {
     $now = time();
     $cleanPhone = preg_replace('/\D/', '', (string)$phone);
     $cleanEmail = strtolower(trim((string)$email));
+    $cleanInsta = strtolower(ltrim(trim((string)$instagram), '@'));
 
     foreach ($subs as $s) {
         if (($s['status'] ?? '') !== 'active') continue;
@@ -129,6 +130,10 @@ function isCustomerVip(?string $token, ?string $phone, ?string $email): bool {
         }
         if (!empty($cleanEmail) && strtolower(trim((string)($s['customer']['email'] ?? ''))) === $cleanEmail) {
             return true;
+        }
+        if (!empty($cleanInsta)) {
+            $sInsta = strtolower(ltrim(trim((string)($s['customer']['instagram'] ?? '')), '@'));
+            if ($sInsta !== '' && $sInsta === $cleanInsta) return true;
         }
         $sPhone = preg_replace('/\D/', '', (string)($s['customer']['phone'] ?? ''));
         if (strlen($cleanPhone) >= 8 && substr($sPhone, -8) === substr($cleanPhone, -8)) {
@@ -565,7 +570,8 @@ foreach ($items as $item) {
                 $clientVipToken = trim((string)($data['vipToken'] ?? ($customer['vipToken'] ?? '')));
                 $clientPhone = (string)($customer['phone'] ?? ($customer['whatsapp'] ?? ''));
                 $clientEmail = (string)($customer['email'] ?? '');
-                if (!isCustomerVip($clientVipToken, $clientPhone, $clientEmail)) {
+                $clientInsta = (string)($customer['instagram'] ?? ($data['vipInstagram'] ?? ''));
+                if (!isCustomerVip($clientVipToken, $clientPhone, $clientEmail, $clientInsta)) {
                     http_response_code(403);
                     echo json_encode([
                         'success' => false,

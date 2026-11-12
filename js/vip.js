@@ -1,7 +1,7 @@
 /**
- * NT Eleganz — Área VIP & Assinaturas
+ * NT Eleganz — Área VIP & Assinaturas (Luxury Engine)
  * Gerencia a apresentação, planos, pagamento Mercado Pago e validação de sessão VIP.
- * Regra: Proibido o uso de emojis. Ícones SVG apenas.
+ * Regra Absoluta: Proibido o uso de emojis. Ícones SVG apenas.
  */
 
 (function () {
@@ -12,14 +12,20 @@
   let pixPollInterval = null;
   let vipSettings = null;
 
-  const STORAGE_TOKEN_KEY = 'nte_vip_token';
-  const STORAGE_PHONE_KEY = 'nte_vip_phone';
+  const STORAGE_ACTIVE_KEY    = 'nte_vip_active';
+  const STORAGE_TOKEN_KEY     = 'nte_vip_token';
+  const STORAGE_PHONE_KEY     = 'nte_vip_phone';
+  const STORAGE_INSTAGRAM_KEY = 'nte_vip_instagram';
+  const STORAGE_NAME_KEY      = 'nte_vip_name';
+  const STORAGE_PLAN_KEY      = 'nte_vip_plan';
+  const STORAGE_COUPON_KEY    = 'nte_vip_coupon';
+  const STORAGE_LINK_KEY      = 'nte_vip_group_link';
 
   // ── Inicialização ──
   document.addEventListener('DOMContentLoaded', async () => {
+    setupMasks();
     await loadSettings();
     await checkMemberSession();
-    setupMasks();
   });
 
   // ── Carrega Preços Oficiais do Backend ──
@@ -51,23 +57,62 @@
     }
   }
 
-  // ── Verifica se Usuário já é Membro VIP Ativo ──
+  // ── Verifica se Usuário já é Membro VIP Ativo (Persistência no Dispositivo) ──
   async function checkMemberSession() {
+    const isActive   = localStorage.getItem(STORAGE_ACTIVE_KEY) === 'true';
     const savedToken = localStorage.getItem(STORAGE_TOKEN_KEY) || '';
     const savedPhone = localStorage.getItem(STORAGE_PHONE_KEY) || '';
+    const savedInsta = localStorage.getItem(STORAGE_INSTAGRAM_KEY) || '';
+    const savedPlan  = localStorage.getItem(STORAGE_PLAN_KEY) || 'lifetime';
+    const savedName  = localStorage.getItem(STORAGE_NAME_KEY) || '';
+    const savedGroup = localStorage.getItem(STORAGE_LINK_KEY) || '';
+    const savedCoup  = localStorage.getItem(STORAGE_COUPON_KEY) || 'VIP10';
 
-    if (!savedToken && !savedPhone) return;
+    // Se já está marcado como ativo no dispositivo, renderiza imediatamente para experiência instantânea
+    if (isActive && (savedInsta || savedPhone || savedToken)) {
+      renderMemberDashboard({
+        isVip: true,
+        plan: savedPlan,
+        instagram: savedInsta,
+        phone: savedPhone,
+        name: savedName || savedInsta,
+        whatsappGroupLink: savedGroup,
+        vipCouponCode: savedCoup
+      });
+    }
 
+    // Se não há dados salvos, permanece na tela de apresentação e planos
+    if (!savedToken && !savedPhone && !savedInsta) return;
+
+    // Validação silenciosa em background com a API oficial
     try {
-      const url = `/api/vip.php?action=check_member&token=${encodeURIComponent(savedToken)}&phone=${encodeURIComponent(savedPhone)}`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const q = new URLSearchParams();
+      if (savedToken) q.set('token', savedToken);
+      if (savedPhone) q.set('phone', savedPhone.replace(/\D/g, ''));
+      if (savedInsta) q.set('instagram', savedInsta.replace(/^@/, ''));
 
-      if (data.isVip) {
-        renderMemberDashboard(data);
+      const res = await fetch(`/api/vip.php?action=check_member&${q.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.isVip) {
+          localStorage.setItem(STORAGE_ACTIVE_KEY, 'true');
+          if (data.instagram) localStorage.setItem(STORAGE_INSTAGRAM_KEY, data.instagram);
+          if (data.phone) localStorage.setItem(STORAGE_PHONE_KEY, data.phone);
+          if (data.vipToken) localStorage.setItem(STORAGE_TOKEN_KEY, data.vipToken);
+          if (data.plan) localStorage.setItem(STORAGE_PLAN_KEY, data.plan);
+          if (data.name) localStorage.setItem(STORAGE_NAME_KEY, data.name);
+          if (data.whatsappGroupLink) localStorage.setItem(STORAGE_LINK_KEY, data.whatsappGroupLink);
+          if (data.vipCouponCode) localStorage.setItem(STORAGE_COUPON_KEY, data.vipCouponCode);
+
+          renderMemberDashboard(data);
+        } else if (isActive) {
+          // Assinatura foi cancelada ou expirou no backend
+          clearVipSession();
+          window.location.reload();
+        }
       }
     } catch (e) {
-      console.warn('Erro ao checar sessão VIP:', e);
+      console.warn('Erro ao validar sessão VIP com a API:', e);
     }
   }
 
@@ -77,15 +122,23 @@
     const plansSec = document.getElementById('vip-plans-section');
     if (!dash) return;
 
-    const planName = (member.plan === 'lifetime') ? 'Plano Vitalício' : 'Plano Mensal';
-    const memberName = member.name ? `Olá, ${member.name}!` : 'Olá, Membro VIP!';
-    const expText = (member.plan === 'lifetime')
-      ? 'Acesso Permanente e Ilimitado'
-      : (member.expiresAt ? `Válido até ${new Date(member.expiresAt).toLocaleDateString('pt-BR')}` : 'Ativo');
+    const planName = (member.plan === 'lifetime') ? 'Plano Vitalício Privé' : 'Plano Mensal';
+    const cleanInsta = (member.instagram || '').trim();
+    const displayName = member.name || cleanInsta || 'Membro VIP';
 
-    document.getElementById('vip-dash-greeting').textContent = memberName;
-    document.getElementById('vip-dash-plan').textContent = planName;
-    document.getElementById('vip-dash-exp').textContent = expText;
+    const userEl = document.getElementById('vip-dash-username');
+    if (userEl) userEl.textContent = cleanInsta ? (cleanInsta.startsWith('@') ? cleanInsta : `@${cleanInsta}`) : '@membro_vip';
+
+    const fullEl = document.getElementById('vip-dash-fullname');
+    if (fullEl) fullEl.textContent = displayName;
+
+    const planEl = document.getElementById('vip-dash-plan');
+    if (planEl) planEl.textContent = planName;
+
+    const statusEl = document.getElementById('vip-dash-status-text');
+    if (statusEl) {
+      statusEl.textContent = (member.plan === 'lifetime') ? 'ACESSO VITALÍCIO ATIVO' : 'ACESSO MENSAL ATIVO';
+    }
 
     if (member.whatsappGroupLink) {
       const wppBtn = document.getElementById('vip-dash-wpp-btn');
@@ -96,12 +149,12 @@
     }
 
     if (member.vipCouponCode) {
-      const cBox = document.getElementById('vip-dash-coupon-box');
+      const cBox = document.getElementById('vip-dash-coupon-wrap');
       const cCode = document.getElementById('vip-dash-coupon-code');
-      const cDisc = document.getElementById('vip-dash-coupon-desc');
+      const cDesc = document.getElementById('vip-dash-coupon-desc');
       if (cBox && cCode) {
         cCode.textContent = member.vipCouponCode;
-        if (cDisc) cDisc.textContent = `Aproveite ${member.vipCouponDiscount || 10}% de desconto em qualquer compra no site.`;
+        if (cDesc) cDesc.textContent = `${member.vipCouponDiscount || 10}% OFF automático em qualquer compra no site.`;
         cBox.style.display = 'flex';
       }
     }
@@ -111,10 +164,35 @@
 
     const loginBtn = document.getElementById('vip-login-toggle-btn');
     if (loginBtn) {
-      loginBtn.textContent = 'Membro Ativo';
-      loginBtn.style.color = 'var(--vip-gold)';
-      loginBtn.onclick = null;
+      loginBtn.innerHTML = `
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#4ade80">
+          <circle cx="12" cy="12" r="10"></circle>
+        </svg>
+        <span style="color:#4ade80;">VIP Ativo</span>
+      `;
+      loginBtn.onclick = () => {
+        dash.scrollIntoView({ behavior: 'smooth' });
+      };
     }
+  }
+
+  // ── Desconectar Sessão VIP ──
+  window.disconnectVipSession = function () {
+    if (confirm('Deseja desconectar a sua sessão VIP deste dispositivo?')) {
+      clearVipSession();
+      window.location.reload();
+    }
+  };
+
+  function clearVipSession() {
+    localStorage.removeItem(STORAGE_ACTIVE_KEY);
+    localStorage.removeItem(STORAGE_TOKEN_KEY);
+    localStorage.removeItem(STORAGE_PHONE_KEY);
+    localStorage.removeItem(STORAGE_INSTAGRAM_KEY);
+    localStorage.removeItem(STORAGE_NAME_KEY);
+    localStorage.removeItem(STORAGE_PLAN_KEY);
+    localStorage.removeItem(STORAGE_COUPON_KEY);
+    localStorage.removeItem(STORAGE_LINK_KEY);
   }
 
   // ── Abre Modal de Assinatura ──
@@ -133,27 +211,38 @@
 
     if (plan === 'lifetime') {
       if (modalTitle) modalTitle.textContent = 'Plano Vitalício NT VIP';
-      if (modalPrice) modalPrice.textContent = `R$ ${lPrice} (Pagamento Único)`;
+      if (modalPrice) modalPrice.textContent = `R$ ${lPrice} (Pagamento Único · Acesso Vitalício)`;
     } else {
       if (modalTitle) modalTitle.textContent = 'Plano Mensal NT VIP';
       if (modalPrice) modalPrice.textContent = `R$ ${mPrice} / mês`;
     }
 
-    // Reset views
+    // Pré-preenche se já houver dados no navegador
+    const savedInsta = localStorage.getItem(STORAGE_INSTAGRAM_KEY);
+    const savedPhone = localStorage.getItem(STORAGE_PHONE_KEY);
+    if (savedInsta) {
+      const inEl = document.getElementById('vip-input-instagram');
+      if (inEl && !inEl.value) inEl.value = savedInsta;
+    }
+    if (savedPhone) {
+      const phEl = document.getElementById('vip-input-phone');
+      if (phEl && !phEl.value) phEl.value = savedPhone;
+    }
+
+    // Reset de visualizações
     document.getElementById('vip-modal-form-step').style.display = 'block';
     document.getElementById('vip-modal-pix-step').style.display = 'none';
-    document.getElementById('vip-modal-card-step').style.display = 'none';
     document.getElementById('vip-modal-success-step').style.display = 'none';
 
-    // Tabs
     switchVipPaymentTab('pix');
-
     modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
   };
 
   window.closeVipSubscribeModal = function () {
     const modal = document.getElementById('vip-subscribe-modal');
     if (modal) modal.classList.remove('open');
+    document.body.style.overflow = '';
     if (pixPollInterval) {
       clearInterval(pixPollInterval);
       pixPollInterval = null;
@@ -173,33 +262,72 @@
 
     const submitBtn = document.getElementById('vip-btn-submit-payment');
     if (submitBtn) {
-      submitBtn.textContent = (method === 'pix') ? 'Gerar Chave Pix' : 'Pagar com Cartão de Crédito';
+      submitBtn.innerHTML = (method === 'pix')
+        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>Gerar Chave Pix</span>'
+        : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg> <span>Pagar com Cartão de Crédito</span>';
     }
   };
 
-  // ── Processa Assinatura VIP ──
+  // ── Processa Assinatura VIP (Mercado Pago Backend Shield) ──
   window.submitVipSubscription = async function () {
-    const name = document.getElementById('vip-input-name')?.value.trim();
-    const phone = document.getElementById('vip-input-phone')?.value.trim();
-    const email = document.getElementById('vip-input-email')?.value.trim();
-    const cpf = document.getElementById('vip-input-cpf')?.value.trim();
+    let instagram = document.getElementById('vip-input-instagram')?.value.trim() || '';
+    const phone = document.getElementById('vip-input-phone')?.value.trim() || '';
+    let name = document.getElementById('vip-input-name')?.value.trim() || '';
+    const email = document.getElementById('vip-input-email')?.value.trim() || '';
+    const cpf = document.getElementById('vip-input-cpf')?.value.trim() || '';
 
-    if (!name || !phone) {
-      alert('Por favor, informe seu Nome e WhatsApp.');
+    // Normaliza Instagram
+    instagram = instagram.replace(/^@+/, '');
+
+    if (!instagram) {
+      alert('Por favor, informe o seu @ do Instagram.');
+      document.getElementById('vip-input-instagram')?.focus();
       return;
+    }
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      alert('Por favor, informe seu número de WhatsApp com DDD.');
+      document.getElementById('vip-input-phone')?.focus();
+      return;
+    }
+
+    if (!email || !email.includes('@')) {
+      alert('Por favor, informe um e-mail válido para confirmação.');
+      document.getElementById('vip-input-email')?.focus();
+      return;
+    }
+
+    const cleanCpf = cpf.replace(/\D/g, '');
+    if (!cleanCpf || cleanCpf.length < 11) {
+      alert('Por favor, informe um CPF válido.');
+      document.getElementById('vip-input-cpf')?.focus();
+      return;
+    }
+
+    if (!name) {
+      name = `@${instagram}`;
     }
 
     const submitBtn = document.getElementById('vip-btn-submit-payment');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Processando com segurança…';
+      submitBtn.innerHTML = '<span>Processando com segurança…</span>';
     }
 
     try {
       const payload = {
         plan: currentPlan,
         paymentMethod: currentMethod,
-        customer: { name, phone, email, cpf }
+        instagram: `@${instagram}`,
+        phone: cleanPhone,
+        customer: {
+          name,
+          instagram: `@${instagram}`,
+          phone: cleanPhone,
+          email,
+          cpf: cleanCpf
+        }
       };
 
       if (currentMethod === 'card') {
@@ -209,8 +337,8 @@
         const cardCvv = document.getElementById('vip-card-cvv')?.value.trim();
 
         if (!cardNumber || !cardHolder || !cardExp || !cardCvv) {
-          alert('Preencha os dados do cartão de crédito.');
-          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Pagar com Cartão de Crédito'; }
+          alert('Preencha todos os dados do cartão de crédito.');
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<span>Pagar com Cartão de Crédito</span>'; }
           return;
         }
 
@@ -219,7 +347,6 @@
         let expYear = parseInt(expParts[1], 10);
         if (expYear < 100) expYear += 2000;
 
-        // Tokeniza cartão via proxy Mercado Pago
         const tokenRes = await fetch('/api/mercadopago.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -227,7 +354,7 @@
             action: 'create_card_token',
             cardNumber,
             cardholderName: cardHolder,
-            cpf,
+            cpf: cleanCpf,
             expirationMonth: expMonth,
             expirationYear: expYear,
             securityCode: cardCvv
@@ -236,8 +363,8 @@
 
         const tokenData = await tokenRes.json();
         if (!tokenRes.ok || !tokenData.token) {
-          alert(tokenData.error || 'Cartão não autorizado. Verifique os dados e tente novamente.');
-          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Pagar com Cartão de Crédito'; }
+          alert(tokenData.error || 'Cartão não autorizado. Verifique os dados informados.');
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<span>Pagar com Cartão de Crédito</span>'; }
           return;
         }
 
@@ -245,8 +372,7 @@
         payload.paymentMethodId = tokenData.data?.payment_method_id || 'visa';
       }
 
-      // Envia pedido de assinatura para o backend
-      // O valor da transação é lido e blindado diretamente pelo servidor no endpoint vip.php
+      // Envia pedido de assinatura para o backend blindado
       const res = await fetch('/api/vip.php?action=subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -256,22 +382,31 @@
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        alert(data.error || 'Não foi possível processar a assinatura.');
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = (currentMethod === 'pix') ? 'Gerar Chave Pix' : 'Pagar com Cartão'; }
+        alert(data.error || 'Não foi possível gerar a assinatura.');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = (currentMethod === 'pix') ? '<span>Gerar Chave Pix</span>' : '<span>Pagar com Cartão</span>';
+        }
         return;
       }
 
-      // Salva WhatsApp no navegador para reconexão futura
-      localStorage.setItem(STORAGE_PHONE_KEY, phone);
+      // Salva identificadores no cliente
+      localStorage.setItem(STORAGE_INSTAGRAM_KEY, `@${instagram}`);
+      localStorage.setItem(STORAGE_PHONE_KEY, cleanPhone);
+      localStorage.setItem(STORAGE_NAME_KEY, name);
 
       if (currentMethod === 'pix') {
         renderPixStep(data);
       } else if (currentMethod === 'card') {
         if (data.isApproved) {
+          localStorage.setItem(STORAGE_ACTIVE_KEY, 'true');
           if (data.vipToken) localStorage.setItem(STORAGE_TOKEN_KEY, data.vipToken);
+          if (data.plan) localStorage.setItem(STORAGE_PLAN_KEY, data.plan);
+          if (data.whatsappGroupLink) localStorage.setItem(STORAGE_LINK_KEY, data.whatsappGroupLink);
+          if (data.vipCouponCode) localStorage.setItem(STORAGE_COUPON_KEY, data.vipCouponCode);
           renderSuccessStep(data);
         } else {
-          alert('O pagamento com cartão está em análise ou pendente. Assim que for compensado sua assinatura será liberada.');
+          alert('Seu pagamento está em análise. Assim que compensado, seu acesso VIP será ativado automaticamente.');
           closeVipSubscribeModal();
         }
       }
@@ -281,12 +416,12 @@
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = (currentMethod === 'pix') ? 'Gerar Chave Pix' : 'Pagar com Cartão';
+        submitBtn.innerHTML = (currentMethod === 'pix') ? '<span>Gerar Chave Pix</span>' : '<span>Pagar com Cartão</span>';
       }
     }
   };
 
-  // ── Exibe QR Code Pix e Inicia Polling ──
+  // ── Renderiza QR Code Pix e Faz Polling Instantâneo ──
   function renderPixStep(pixData) {
     document.getElementById('vip-modal-form-step').style.display = 'none';
     const pixStep = document.getElementById('vip-modal-pix-step');
@@ -304,7 +439,7 @@
 
     const valEl = document.getElementById('vip-pix-amount-text');
     if (valEl) {
-      valEl.textContent = pixData.amountFormatted || 'R$ 29,90';
+      valEl.textContent = pixData.amountFormatted || 'R$ 69,90';
     }
 
     // Inicia verificação do status a cada 2.5s
@@ -318,7 +453,11 @@
         if (cData.isApproved) {
           clearInterval(pixPollInterval);
           pixPollInterval = null;
+          localStorage.setItem(STORAGE_ACTIVE_KEY, 'true');
           if (cData.vipToken) localStorage.setItem(STORAGE_TOKEN_KEY, cData.vipToken);
+          if (cData.plan) localStorage.setItem(STORAGE_PLAN_KEY, cData.plan);
+          if (cData.whatsappGroupLink) localStorage.setItem(STORAGE_LINK_KEY, cData.whatsappGroupLink);
+          if (cData.vipCouponCode) localStorage.setItem(STORAGE_COUPON_KEY, cData.vipCouponCode);
           renderSuccessStep(cData);
         }
       } catch (err) {
@@ -345,48 +484,73 @@
       if (sCoup) sCoup.textContent = vipData.vipCouponCode;
     }
 
-    // Atualiza dashboard em background
+    // Atualiza dashboard na página
     checkMemberSession();
   }
 
-  // ── Login Rápido ("Já sou Membro VIP") ──
+  // ── Login Rápido / Reconexão ("Já sou Membro VIP") ──
   window.openVipLoginModal = function () {
     const modal = document.getElementById('vip-login-modal');
-    if (modal) modal.classList.add('open');
+    if (modal) {
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      const input = document.getElementById('vip-login-identifier');
+      if (input) input.focus();
+    }
   };
 
   window.closeVipLoginModal = function () {
     const modal = document.getElementById('vip-login-modal');
-    if (modal) modal.classList.remove('open');
+    if (modal) {
+      modal.classList.remove('open');
+      document.body.style.overflow = '';
+    }
   };
 
   window.submitVipLogin = async function () {
-    const phoneInput = document.getElementById('vip-login-phone');
-    const phone = phoneInput ? phoneInput.value.replace(/\D/g, '') : '';
-
-    if (!phone || phone.length < 10) {
-      alert('Informe um número de WhatsApp válido com DDD.');
+    const rawVal = document.getElementById('vip-login-identifier')?.value.trim() || '';
+    if (!rawVal) {
+      alert('Por favor, informe seu @ do Instagram ou seu WhatsApp.');
       return;
     }
 
     const btn = document.getElementById('vip-btn-login-submit');
-    if (btn) { btn.disabled = true; btn.textContent = 'Verificando…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span>Consultando…</span>'; }
 
     try {
-      const res = await fetch(`/api/vip.php?action=check_member&phone=${phone}`);
+      const cleanDigits = rawVal.replace(/\D/g, '');
+      const cleanInsta  = rawVal.replace(/^@/, '');
+
+      const q = new URLSearchParams();
+      if (cleanDigits.length >= 8) {
+        q.set('phone', cleanDigits);
+      }
+      if (cleanInsta) {
+        q.set('instagram', cleanInsta);
+      }
+
+      const res = await fetch(`/api/vip.php?action=check_member&${q.toString()}`);
       const data = await res.json();
 
       if (data.isVip) {
-        localStorage.setItem(STORAGE_PHONE_KEY, phone);
+        localStorage.setItem(STORAGE_ACTIVE_KEY, 'true');
+        if (data.instagram) localStorage.setItem(STORAGE_INSTAGRAM_KEY, data.instagram);
+        if (data.phone) localStorage.setItem(STORAGE_PHONE_KEY, data.phone);
+        if (data.vipToken) localStorage.setItem(STORAGE_TOKEN_KEY, data.vipToken);
+        if (data.plan) localStorage.setItem(STORAGE_PLAN_KEY, data.plan);
+        if (data.name) localStorage.setItem(STORAGE_NAME_KEY, data.name);
+        if (data.whatsappGroupLink) localStorage.setItem(STORAGE_LINK_KEY, data.whatsappGroupLink);
+        if (data.vipCouponCode) localStorage.setItem(STORAGE_COUPON_KEY, data.vipCouponCode);
+
         closeVipLoginModal();
         renderMemberDashboard(data);
       } else {
-        alert('Não encontramos uma assinatura VIP ativa para este número. Garanta seu acesso escolhendo um dos planos!');
+        alert('Não encontramos uma assinatura VIP ativa com esses dados. Garanta seu acesso escolhendo um dos planos!');
       }
     } catch (e) {
-      alert('Erro ao consultar assinatura.');
+      alert('Erro ao consultar assinatura. Tente novamente.');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Acessar Área VIP'; }
+      if (btn) { btn.disabled = false; btn.innerHTML = '<span>Acessar Meus Benefícios</span>'; }
     }
   };
 
@@ -399,23 +563,24 @@
       const btn = document.getElementById('vip-pix-copy-btn');
       if (btn) {
         btn.textContent = 'Copiado!';
-        setTimeout(() => { btn.textContent = 'Copiar Código Pix'; }, 3000);
+        setTimeout(() => { btn.textContent = 'Copiar Código'; }, 3000);
       }
     });
   };
 
   // ── Copiar Cupom VIP ──
   window.copyVipCoupon = function (code) {
+    if (!code) return;
     navigator.clipboard.writeText(code).then(() => {
-      alert(`Cupom ${code} copiado com sucesso! Use no checkout para obter seu desconto.`);
+      alert(`Cupom ${code} copiado com sucesso! Use no checkout para aplicar seu desconto VIP.`);
     });
   };
 
   // ── Máscaras de Inputs ──
   function setupMasks() {
-    const phoneInputs = document.querySelectorAll('#vip-input-phone, #vip-login-phone');
-    phoneInputs.forEach(input => {
-      input.addEventListener('input', (e) => {
+    const phoneInput = document.getElementById('vip-input-phone');
+    if (phoneInput) {
+      phoneInput.addEventListener('input', (e) => {
         let v = e.target.value.replace(/\D/g, '');
         if (v.length > 11) v = v.substring(0, 11);
         if (v.length > 6) {
@@ -426,7 +591,17 @@
           e.target.value = v;
         }
       });
-    });
+    }
+
+    const instaInput = document.getElementById('vip-input-instagram');
+    if (instaInput) {
+      instaInput.addEventListener('blur', (e) => {
+        let v = e.target.value.trim();
+        if (v && !v.startsWith('@')) {
+          e.target.value = `@${v}`;
+        }
+      });
+    }
 
     const cpfInput = document.getElementById('vip-input-cpf');
     if (cpfInput) {

@@ -5764,6 +5764,9 @@ window.showConfirm = function (msg, callback) {
     tbody.innerHTML = members.map(m => {
       const cust = m.customer || {};
       const name = cust.name || 'Cliente';
+      const rawInsta = (cust.instagram || '').trim();
+      const cleanInsta = rawInsta.replace(/^@/, '');
+      const instaDisplay = cleanInsta ? `<div style="margin-bottom:2px;"><a href="https://instagram.com/${cleanInsta}" target="_blank" style="color:#b45309; text-decoration:none; font-weight:700; font-size:12px; display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg> @${cleanInsta}</a></div>` : '';
       const rawPhone = cust.phone || '';
       const cleanPhone = rawPhone.replace(/\D/g, '');
       const email = cust.email || '—';
@@ -5797,6 +5800,7 @@ window.showConfirm = function (msg, callback) {
       return `
         <tr style="border-bottom:1px solid var(--border); font-size:13px;">
           <td style="padding:12px;">
+            ${instaDisplay}
             <div style="font-weight:600; color:var(--text-primary);">${name}</div>
             <div>${phoneLink}</div>
             <div style="font-size:11px; color:var(--text-muted);">${email}</div>
@@ -5825,7 +5829,8 @@ window.showConfirm = function (msg, callback) {
       const name = (m.customer?.name || '').toLowerCase();
       const phone = (m.customer?.phone || '').toLowerCase();
       const email = (m.customer?.email || '').toLowerCase();
-      return name.includes(q) || phone.includes(q) || email.includes(q);
+      const insta = (m.customer?.instagram || '').toLowerCase();
+      return name.includes(q) || phone.includes(q) || email.includes(q) || insta.includes(q);
     });
     renderVipMembersTable(filtered);
   };
@@ -5854,6 +5859,8 @@ window.showConfirm = function (msg, callback) {
     const modal = document.getElementById('vip-member-modal');
     if (modal) {
       modal.classList.add('open');
+      const instaEl = document.getElementById('vip-m-instagram');
+      if (instaEl) instaEl.value = '';
       document.getElementById('vip-m-name').value = '';
       document.getElementById('vip-m-phone').value = '';
       document.getElementById('vip-m-email').value = '';
@@ -5867,13 +5874,14 @@ window.showConfirm = function (msg, callback) {
   };
 
   window.saveNewVipMember = async function() {
-    const name = document.getElementById('vip-m-name')?.value.trim();
+    const instagram = document.getElementById('vip-m-instagram')?.value.trim();
     const phone = document.getElementById('vip-m-phone')?.value.trim();
+    const name = document.getElementById('vip-m-name')?.value.trim();
     const email = document.getElementById('vip-m-email')?.value.trim();
     const plan = document.getElementById('vip-m-plan')?.value || 'lifetime';
 
-    if (!name || !phone) {
-      alert('Nome e WhatsApp são obrigatórios para cadastrar o membro.');
+    if (!instagram || !phone) {
+      alert('@ do Instagram e WhatsApp são obrigatórios para cadastrar o membro.');
       return;
     }
 
@@ -5886,7 +5894,8 @@ window.showConfirm = function (msg, callback) {
         headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           manualAdd: true,
-          name,
+          instagram,
+          name: name || instagram,
           phone,
           email,
           plan,

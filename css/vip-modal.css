@@ -255,3 +255,47 @@
 .nte-vip-modal__login-link:hover {
   color: #c9a84c;
 }
+
+/* ── HEADER VIP BUTTON (HARMONIZADO COM A NAVBAR) ── */
+.header-vip-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  padding: 5px 10px !important;
+  height: 32px !important;
+  border-radius: 18px !important;
+  background: #09090b !important;
+  color: #d4af37 !important;
+  border: 1px solid rgba(212, 175, 55, 0.45) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  text-decoration: none !important;
+  margin-right: 4px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  flex-shrink: 0 !important;
+}
+
+.header-vip-btn:hover {
+  background: #141418 !important;
+  border-color: #d4af37 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.35) !important;
+  transform: translateY(-1px) !important;
+}
+
+.header-vip-btn.is-vip-active {
+  border-color: rgba(74, 222, 128, 0.5) !important;
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.25) !important;
+}
+
+.header-vip-btn__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade80;
+  display: inline-block;
+}

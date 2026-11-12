@@ -216,14 +216,18 @@ if ($action === 'subscribe' && $method === 'POST') {
     }
 
     $customer = $input['customer'] ?? [];
-    $custName = trim((string)($customer['name'] ?? ''));
-    $custEmail = strtolower(trim((string)($customer['email'] ?? '')));
-    $custPhone = trim((string)($customer['phone'] ?? ''));
-    $custCpf = preg_replace('/\D/', '', (string)($customer['cpf'] ?? ''));
+    $custInstagram = ltrim(trim((string)($customer['instagram'] ?? ($input['instagram'] ?? ''))), '@');
+    $custPhone = trim((string)($customer['phone'] ?? ($input['phone'] ?? '')));
+    $custName = trim((string)($customer['name'] ?? ($input['name'] ?? '')));
+    if ($custName === '') {
+        $custName = $custInstagram !== '' ? '@' . $custInstagram : 'Membro VIP';
+    }
+    $custEmail = strtolower(trim((string)($customer['email'] ?? ($input['email'] ?? ''))));
+    $custCpf = preg_replace('/\D/', '', (string)($customer['cpf'] ?? ($input['cpf'] ?? '')));
 
-    if ($custName === '' || $custPhone === '') {
+    if ($custInstagram === '' || $custPhone === '') {
         http_response_code(400);
-        echo json_encode(['error' => 'Por favor, informe seu nome e WhatsApp.']);
+        echo json_encode(['error' => 'Por favor, informe seu @ do Instagram e seu WhatsApp com DDD.']);
         exit;
     }
 
@@ -312,6 +316,7 @@ if ($action === 'subscribe' && $method === 'POST') {
             'subCode' => $subCode,
             'customer' => [
                 'name' => $custName,
+                'instagram' => '@' . $custInstagram,
                 'email' => $custEmail,
                 'phone' => $custPhone,
                 'cpf' => $custCpf
@@ -392,6 +397,7 @@ if ($action === 'subscribe' && $method === 'POST') {
             'subCode' => $subCode,
             'customer' => [
                 'name' => $custName,
+                'instagram' => '@' . $custInstagram,
                 'email' => $custEmail,
                 'phone' => $custPhone,
                 'cpf' => $custCpf
@@ -500,8 +506,9 @@ if ($action === 'check_member') {
     $token = trim((string)($_GET['token'] ?? ''));
     $phone = preg_replace('/\D/', '', (string)($_GET['phone'] ?? ''));
     $email = strtolower(trim((string)($_GET['email'] ?? '')));
+    $instagram = strtolower(ltrim(trim((string)($_GET['instagram'] ?? '')), '@'));
 
-    if ($token === '' && $phone === '' && $email === '') {
+    if ($token === '' && $phone === '' && $email === '' && $instagram === '') {
         echo json_encode(['isVip' => false]);
         exit;
     }
@@ -524,8 +531,10 @@ if ($action === 'check_member') {
         $matchPhone = ($phone !== '' && strlen($phone) >= 8 && substr($sPhone, -8) === substr($phone, -8));
         $sEmail = strtolower(trim((string)($s['customer']['email'] ?? '')));
         $matchEmail = ($email !== '' && $sEmail === $email);
+        $sInsta = strtolower(ltrim(trim((string)($s['customer']['instagram'] ?? '')), '@'));
+        $matchInsta = ($instagram !== '' && $sInsta !== '' && $sInsta === $instagram);
 
-        if ($matchToken || $matchPhone || $matchEmail) {
+        if ($matchToken || $matchPhone || $matchEmail || $matchInsta) {
             $activeSub = $s;
             break;
         }
@@ -537,6 +546,9 @@ if ($action === 'check_member') {
             'isVip' => true,
             'plan' => $activeSub['plan'] ?? 'monthly',
             'name' => $activeSub['customer']['name'] ?? 'Membro VIP',
+            'instagram' => $activeSub['customer']['instagram'] ?? '',
+            'phone' => $activeSub['customer']['phone'] ?? '',
+            'vipToken' => $activeSub['vipToken'] ?? '',
             'startedAt' => $activeSub['startedAt'],
             'expiresAt' => $activeSub['expiresAt'],
             'whatsappGroupLink' => $settings['whatsappGroupLink'],
@@ -631,7 +643,11 @@ if ($action === 'toggle_member' && $method === 'POST') {
 
     if (!$found && !empty($input['manualAdd'])) {
         // Criando membro manualmente pelo admin
-        $custName = trim((string)($input['name'] ?? 'Cliente VIP'));
+        $custInstagram = ltrim(trim((string)($input['instagram'] ?? '')), '@');
+        $custName = trim((string)($input['name'] ?? ''));
+        if ($custName === '') {
+            $custName = $custInstagram !== '' ? '@' . $custInstagram : 'Cliente VIP';
+        }
         $custPhone = trim((string)($input['phone'] ?? ''));
         $custEmail = trim((string)($input['email'] ?? ''));
         $plan = ($input['plan'] === 'lifetime') ? 'lifetime' : 'monthly';
@@ -641,6 +657,7 @@ if ($action === 'toggle_member' && $method === 'POST') {
             'subCode' => 'VIP-MANUAL-' . rand(1000, 9999),
             'customer' => [
                 'name' => $custName,
+                'instagram' => $custInstagram !== '' ? '@' . $custInstagram : '',
                 'email' => $custEmail,
                 'phone' => $custPhone,
                 'cpf' => ''

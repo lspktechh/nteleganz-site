@@ -51,7 +51,7 @@ function getInfiniteCatalogMap(): array {
     return $map;
 }
 
-function isCustomerVipInfinite(?string $token, ?string $phone, ?string $email): bool {
+function isCustomerVipInfinite(?string $token, ?string $phone, ?string $email, ?string $instagram = null): bool {
     $file = __DIR__ . '/../data/vip_subscriptions.json';
     if (!file_exists($file)) return false;
     $raw = @file_get_contents($file);
@@ -63,12 +63,17 @@ function isCustomerVipInfinite(?string $token, ?string $phone, ?string $email): 
     $now = time();
     $cleanPhone = preg_replace('/\D/', '', (string)$phone);
     $cleanEmail = strtolower(trim((string)$email));
+    $cleanInsta = strtolower(ltrim(trim((string)$instagram), '@'));
 
     foreach ($subs as $s) {
         if (($s['status'] ?? '') !== 'active') continue;
         if (!empty($s['expiresAt']) && strtotime($s['expiresAt']) < $now) continue;
         if (!empty($token) && !empty($s['vipToken']) && hash_equals($s['vipToken'], $token)) return true;
         if (!empty($cleanEmail) && strtolower(trim((string)($s['customer']['email'] ?? ''))) === $cleanEmail) return true;
+        if (!empty($cleanInsta)) {
+            $sInsta = strtolower(ltrim(trim((string)($s['customer']['instagram'] ?? '')), '@'));
+            if ($sInsta !== '' && $sInsta === $cleanInsta) return true;
+        }
         $sPhone = preg_replace('/\D/', '', (string)($s['customer']['phone'] ?? ''));
         if (strlen($cleanPhone) >= 8 && substr($sPhone, -8) === substr($cleanPhone, -8)) return true;
     }
@@ -122,7 +127,8 @@ foreach ($items as $item) {
                 $clientVipToken = trim((string)($data['vipToken'] ?? ($customer['vipToken'] ?? '')));
                 $clientPhone = (string)($customer['phone'] ?? '');
                 $clientEmail = (string)($customer['email'] ?? '');
-                if (!isCustomerVipInfinite($clientVipToken, $clientPhone, $clientEmail)) {
+                $clientInsta = (string)($customer['instagram'] ?? ($data['vipInstagram'] ?? ''));
+                if (!isCustomerVipInfinite($clientVipToken, $clientPhone, $clientEmail, $clientInsta)) {
                     http_response_code(403);
                     echo json_encode([
                         'error' => 'O produto "' . ($catProduct['name'] ?? 'exclusivo') . '" está em período de acesso exclusivo para membros NT VIP.',

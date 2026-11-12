@@ -1117,12 +1117,14 @@
 
   function getCustomerPayload() {
     const vipToken = (typeof window.getVipToken === 'function' ? window.getVipToken() : (localStorage.getItem('nte_vip_token') || ''));
+    const vipInsta = (typeof window.getVipInstagram === 'function' ? window.getVipInstagram() : (localStorage.getItem('nte_vip_instagram') || ''));
     return {
       name: getVal('chk-name'),
       email: getVal('chk-email'),
       phone: getVal('chk-phone'),
       cpf: getVal('chk-cpf'),
       vipToken: vipToken,
+      instagram: vipInsta,
       address: {
         cep: getVal('chk-cep'),
         street: getVal('chk-street'),

@@ -3,22 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>NT VIP — Comunidade Exclusiva | NT Eleganz</title>
-  <meta name="description" content="A comunidade de quem garimpa antes. Peças raras primeiro pra você, descontos exclusivos e grupo fechado de achados." />
+  <title>NT VIP — Comunidade Exclusiva & Acesso Antecipado | NT Eleganz</title>
+  <meta name="description" content="A comunidade fechada de quem garimpa antes. Peças raras primeiro pra você, drops no WhatsApp e Instagram, descontos exclusivos e liberação antecipada no site." />
   <link rel="icon" type="image/x-icon" href="../assets/images/favicon.ico" />
-  <link rel="stylesheet" href="../css/vip.css?v=20261112b" />
+  <link rel="stylesheet" href="../css/vip.css?v=20261112c" />
 </head>
 <body class="vip-body">
+
+  <!-- AMBIENT AURORA GLOW (MESH BLUR) -->
+  <div class="vip-ambient" aria-hidden="true">
+    <div class="vip-ambient__orb vip-ambient__orb--1"></div>
+    <div class="vip-ambient__orb vip-ambient__orb--2"></div>
+    <div class="vip-ambient__orb vip-ambient__orb--3"></div>
+  </div>
 
   <!-- HEADER -->
   <header class="vip-header">
     <div class="vip-header__inner">
       <a href="/" class="vip-header__back" aria-label="Voltar para a loja">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
-        <span>Loja</span>
+        <span>Voltar à Loja</span>
       </a>
 
       <a href="/" class="vip-header__logo" aria-label="NT Eleganz">
@@ -26,7 +33,11 @@
       </a>
 
       <button type="button" class="vip-header__login-btn" id="vip-login-toggle-btn" onclick="openVipLoginModal()">
-        Já sou Membro
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span>Já sou Membro</span>
       </button>
     </div>
   </header>
@@ -34,154 +45,392 @@
   <!-- MAIN CONTAINER -->
   <main class="vip-container">
 
-    <!-- HERO -->
+    <!-- HERO SECTION -->
     <section class="vip-hero">
+      <div class="vip-hero__crown-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 18h18v2H3z"></path>
+          <path d="M4 18l2-11 5 6 5-6 2 11"></path>
+          <circle cx="4" cy="6" r="1" fill="currentColor"></circle>
+          <circle cx="11" cy="7" r="1" fill="currentColor"></circle>
+          <circle cx="12" cy="3" r="1.2" fill="currentColor"></circle>
+          <circle cx="13" cy="7" r="1" fill="currentColor"></circle>
+          <circle cx="20" cy="6" r="1" fill="currentColor"></circle>
+        </svg>
+      </div>
+
       <div class="vip-hero__badge">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="#c9a84c">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="#d4af37">
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
         </svg>
-        <span>VIP</span>
+        <span>NT ELEGANZ PRIVÉ · ACESSO ANTECIPADO</span>
       </div>
+
       <h1 class="vip-hero__title" id="vip-page-title">NT ELEGANZ VIP</h1>
+      
       <p class="vip-hero__subtitle" id="vip-page-subtitle">
-        A comunidade de quem garimpa antes. Peças novas primeiro pra você, provador virtual e um grupo que vive de achados.
+        A comunidade fechada de quem compra antes de todo mundo. Peças raras e lançamentos exclusivos liberados primeiro para você, direto no WhatsApp e Instagram.
       </p>
+
+      <div class="vip-hero__quick-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>Garanta peças únicas até 72h antes do público geral</span>
+      </div>
     </section>
 
-    <!-- DASHBOARD DO MEMBRO VIP ATIVO (Visível apenas após validação) -->
-    <section class="vip-dashboard-card" id="vip-member-dashboard" style="display: none;">
-      <div class="vip-dashboard-card__header">
-        <div>
-          <div class="vip-dashboard-card__tag">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+    <!-- DASHBOARD DO MEMBRO VIP ATIVO (Visível automaticamente quando logado) -->
+    <section class="vip-dashboard" id="vip-member-dashboard" style="display: none;">
+      <!-- CARTÃO DIGITAL METAL BLACK & GOLD -->
+      <div class="vip-card-metal">
+        <div class="vip-card-metal__top">
+          <div class="vip-card-metal__brand">NT ELEGANZ · VIP PRIVÉ</div>
+          <div class="vip-card-metal__chip" aria-hidden="true"></div>
+        </div>
+
+        <div class="vip-card-metal__info">
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--vip-text-muted); letter-spacing: 0.1em; margin-bottom: 4px;">Membro Identificado</div>
+          <div class="vip-card-metal__insta" id="vip-dash-insta">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
             </svg>
-            <span id="vip-dash-plan">Plano Vitalício</span>
+            <span id="vip-dash-username">@membro_vip</span>
           </div>
-          <h2 style="font-size: 20px; font-weight: 700; margin-top: 4px;" id="vip-dash-greeting">Membro VIP Ativo</h2>
-          <p style="font-size: 12px; color: #a0a0a5; margin-top: 2px;" id="vip-dash-exp">Acesso Permanente</p>
+          <div style="font-size: 13px; color: #a5a5ad; margin-top: 4px;" id="vip-dash-fullname">Cliente VIP</div>
+        </div>
+
+        <div class="vip-card-metal__meta">
+          <div>
+            <div style="font-size: 10px; text-transform: uppercase; color: #777;">Modalidade</div>
+            <div style="font-weight: 700; color: #fff;" id="vip-dash-plan">Plano Vitalício</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 10px; text-transform: uppercase; color: #777;">Status</div>
+            <div class="vip-card-metal__status">
+              <span class="vip-card-metal__status-dot"></span>
+              <span id="vip-dash-status-text">ACESSO ATIVO</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="vip-dashboard-card__actions">
-        <!-- Botão WhatsApp -->
-        <a href="#" target="_blank" class="vip-btn-wpp" id="vip-dash-wpp-btn" style="display: none;">
+      <!-- AÇÕES DO MEMBRO -->
+      <div class="vip-dashboard__actions">
+        <!-- Botão Grupo WhatsApp -->
+        <a href="#" target="_blank" class="vip-btn-wpp" id="vip-dash-wpp-btn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"></path>
           </svg>
-          <span>Entrar no Grupo VIP do WhatsApp</span>
+          <span>Entrar no Grupo VIP</span>
         </a>
 
-        <!-- Cupom VIP -->
-        <div class="vip-coupon-box" id="vip-dash-coupon-box" style="display: none;">
-          <div>
-            <div style="font-size: 11px; text-transform: uppercase; color: #888; letter-spacing: 0.05em;">Seu Cupom Exclusivo</div>
-            <div class="vip-coupon-code" id="vip-dash-coupon-code">VIP10</div>
-            <div style="font-size: 11px; color: #aaa; margin-top: 2px;" id="vip-dash-coupon-desc">10% OFF em todas as compras.</div>
-          </div>
-          <button type="button" class="vip-copy-btn" onclick="copyVipCoupon(document.getElementById('vip-dash-coupon-code').textContent)">
-            Copiar Cupom
-          </button>
+        <!-- Botão Catálogo Desbloqueado -->
+        <a href="/collections/" class="vip-btn-catalog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Ver Peças Liberadas</span>
+        </a>
+      </div>
+
+      <!-- Cupom VIP Permanente -->
+      <div class="vip-coupon-bar" id="vip-dash-coupon-wrap">
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--vip-text-muted); letter-spacing: 0.08em;">Seu Cupom de Desconto Exclusivo</div>
+          <div class="vip-coupon-bar__code" id="vip-dash-coupon-code">VIP10</div>
+          <div style="font-size: 11.5px; color: #8e8e93; margin-top: 2px;" id="vip-dash-coupon-desc">10% OFF automático aplicado em todas as peças do site.</div>
         </div>
+        <button type="button" class="vip-btn-copy-coupon" onclick="copyVipCoupon(document.getElementById('vip-dash-coupon-code').textContent)">
+          Copiar Cupom
+        </button>
+      </div>
+
+      <div style="text-align: center; margin-top: 20px;">
+        <button type="button" onclick="disconnectVipSession()" style="background: none; border: none; color: #6e6e76; font-size: 11.5px; text-decoration: underline; cursor: pointer;">
+          Desconectar deste dispositivo
+        </button>
       </div>
     </section>
 
-    <!-- BENEFÍCIOS (Estilo FYND VIP) -->
-    <section class="vip-benefits">
-      <!-- 1: Comunidade WhatsApp -->
-      <div class="vip-benefit-item">
-        <div class="vip-benefit-item__icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    <!-- ══════════════════════════════════════════
+         SEÇÃO: COMO VOCÊ RECEBE AS NOVIDADES
+    ══════════════════════════════════════════ -->
+    <section class="vip-flow-section">
+      <div class="vip-section-header">
+        <div class="vip-section-header__tag">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
+          <span>Fluxo de Entrega Exclusivo</span>
         </div>
-        <h3 class="vip-benefit-item__title">Comunidade no WhatsApp</h3>
-        <p class="vip-benefit-item__desc">Grupo fechado com drops, avisos de peças raras e trocas entre membros.</p>
+        <h2 class="vip-section-header__title">Como Você Recebe as Novidades</h2>
+        <p style="font-size: 13.5px; color: var(--vip-text-muted); max-width: 580px; margin: 8px auto 0;">
+          Sem intermediários e sem atrasos: os lançamentos e reposições chegam diretamente a você antes do público geral.
+        </p>
       </div>
 
-      <!-- 2: Acesso Antecipado -->
-      <div class="vip-benefit-item">
-        <div class="vip-benefit-item__icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+      <div class="vip-flow-grid">
+        <!-- 1: WhatsApp -->
+        <article class="vip-flow-card">
+          <span class="vip-flow-card__number" aria-hidden="true">01</span>
+          <div class="vip-flow-card__icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"></path>
+            </svg>
+          </div>
+          <h3 class="vip-flow-card__title">Grupo Fechado no WhatsApp</h3>
+          <p class="vip-flow-card__desc">
+            Você é incluído instantaneamente em nossa comunidade secreta. Receba fotos em alta resolução, vídeos de caimento e prévias antes de qualquer anúncio público.
+          </p>
+          <div class="vip-flow-card__highlight">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Silencioso e direto ao ponto</span>
+          </div>
+        </article>
+
+        <!-- 2: Instagram -->
+        <article class="vip-flow-card">
+          <span class="vip-flow-card__number" aria-hidden="true">02</span>
+          <div class="vip-flow-card__icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+            </svg>
+          </div>
+          <h3 class="vip-flow-card__title">Alertas Prioritários no seu @</h3>
+          <p class="vip-flow-card__desc">
+            Seu @ do Instagram é cadastrado em nossa lista prioritária VIP. Avisos exclusivos no Close Friends e Direct garantem que você nunca perca uma peça rara por segundos.
+          </p>
+          <div class="vip-flow-card__highlight">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Close Friends &amp; Direct VIP</span>
+          </div>
+        </article>
+
+        <!-- 3: Site Automático -->
+        <article class="vip-flow-card">
+          <span class="vip-flow-card__number" aria-hidden="true">03</span>
+          <div class="vip-flow-card__icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h3 class="vip-flow-card__title">Liberação Automática no Site</h3>
+          <p class="vip-flow-card__desc">
+            Ao navegar na loja, seu dispositivo reconhece sua assinatura automaticamente. Peças exclusivas e estoques únicos aparecem desbloqueados até 72h antes do público.
+          </p>
+          <div class="vip-flow-card__highlight">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Sem precisar digitar senhas</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         BENEFÍCIOS COMPACTOS (ESTILO FYND VIP)
+    ══════════════════════════════════════════ -->
+    <section class="vip-benefits-box">
+      <!-- 1: Acesso Antecipado -->
+      <div class="vip-benefit-row">
+        <div class="vip-benefit-row__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
             <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
         </div>
-        <h3 class="vip-benefit-item__title">Acesso antecipado</h3>
-        <p class="vip-benefit-item__desc">Peças selecionadas ficam liberadas só pra VIP antes de todo mundo.</p>
+        <div>
+          <div class="vip-benefit-row__title">Acesso Antecipado a Drops</div>
+          <div class="vip-benefit-row__desc">Peças selecionadas de alta procura ficam liberadas só para membros VIP antes de todo mundo.</div>
+        </div>
       </div>
 
-      <!-- 3: Cupom Exclusivo -->
-      <div class="vip-benefit-item">
-        <div class="vip-benefit-item__icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+      <!-- 2: Cupom Exclusivo -->
+      <div class="vip-benefit-row">
+        <div class="vip-benefit-row__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
-            <path d="M13 5v2"></path>
-            <path d="M13 17v2"></path>
-            <path d="M13 11v2"></path>
+            <path d="M13 5v2"></path><path d="M13 17v2"></path>
           </svg>
         </div>
-        <h3 class="vip-benefit-item__title">Cupom exclusivo</h3>
-        <p class="vip-benefit-item__desc">Um cupom de desconto que só funciona para membros com assinatura ativa.</p>
+        <div>
+          <div class="vip-benefit-row__title">Cupom Exclusivo Permanente</div>
+          <div class="vip-benefit-row__desc">Um código promocional que abate valor em qualquer compra no site, exclusivo para membros ativos.</div>
+        </div>
       </div>
 
-      <!-- 4: Curadoria Garantida -->
-      <div class="vip-benefit-item">
-        <div class="vip-benefit-item__icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+      <!-- 3: Curadoria Garantida -->
+      <div class="vip-benefit-row">
+        <div class="vip-benefit-row__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             <polyline points="9 12 11 14 15 10"></polyline>
           </svg>
         </div>
-        <h3 class="vip-benefit-item__title">Curadoria garantida</h3>
-        <p class="vip-benefit-item__desc">Toda peça passa por autenticação e conferência antes de chegar até você.</p>
+        <div>
+          <div class="vip-benefit-row__title">Curadoria Garantida &amp; Autenticidade</div>
+          <div class="vip-benefit-row__desc">Cada peça passa por conferência manual de qualidade, medidas e costura antes de ser enviada até você.</div>
+        </div>
       </div>
 
-      <!-- 5: Selo de Membro -->
-      <div class="vip-benefit-item">
-        <div class="vip-benefit-item__icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+      <!-- 4: Atendimento Prioritário -->
+      <div class="vip-benefit-row">
+        <div class="vip-benefit-row__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
           </svg>
         </div>
-        <h3 class="vip-benefit-item__title">Selo de membro</h3>
-        <p class="vip-benefit-item__desc">Prioridade no atendimento e nas novidades da NT Eleganz.</p>
+        <div>
+          <div class="vip-benefit-row__title">Atendimento &amp; Reserva Prioritária</div>
+          <div class="vip-benefit-row__desc">Canal direto com nossos curadores para tirar medidas exatas e reservar peças únicas de alta procura.</div>
+        </div>
       </div>
     </section>
 
-    <!-- PLANOS (Estilo FYND VIP) -->
-    <section class="vip-plans" id="vip-plans-section">
-
-      <!-- PLANO MENSAL -->
-      <div class="vip-plan-card">
-        <div class="vip-plan-card__kicker">MENSAL</div>
-        <div class="vip-plan-card__price-row">
-          <span class="vip-plan-card__price" id="val-monthly-price">R$ 29,90</span>
-          <span class="vip-plan-card__period">/mês</span>
+    <!-- ══════════════════════════════════════════
+         PLANOS DE ACESSO (BLACK CARD & GOLD CARD)
+    ══════════════════════════════════════════ -->
+    <section class="vip-plans-section" id="vip-plans-section">
+      <div class="vip-section-header">
+        <div class="vip-section-header__tag">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+            <line x1="1" y1="10" x2="23" y2="10"></line>
+          </svg>
+          <span>Escolha Sua Modalidade</span>
         </div>
-        <p class="vip-plan-card__desc">Cancele quando quiser • renova por link todo mês.</p>
-        <button type="button" class="vip-plan-btn vip-plan-btn--dark" onclick="openVipSubscribeModal('monthly')">
-          Criar conta para assinar
-        </button>
+        <h2 class="vip-section-header__title">Acesso Exclusivo à Comunidade</h2>
       </div>
 
-      <!-- PLANO VITALÍCIO (DESTACADO) -->
-      <div class="vip-plan-card vip-plan-card--featured">
-        <div class="vip-plan-card__badge-top">MELHOR VALOR</div>
-        <div class="vip-plan-card__kicker">VITALÍCIO</div>
-        <div class="vip-plan-card__price-row">
-          <span class="vip-plan-card__price" id="val-lifetime-price">R$ 69,90</span>
-          <span class="vip-plan-card__period">• pague uma vez</span>
-        </div>
-        <p class="vip-plan-card__desc">Melhor valor — equivale a pouco mais de 2 meses e é seu pra sempre.</p>
-        <button type="button" class="vip-plan-btn vip-plan-btn--gold" onclick="openVipSubscribeModal('lifetime')">
-          Criar conta para assinar
-        </button>
+      <div class="vip-plans-grid">
+        <!-- PLANO MENSAL -->
+        <article class="vip-plan-card">
+          <div class="vip-plan-card__kicker">PLANO MENSAL</div>
+          <div class="vip-plan-card__price-wrap">
+            <span class="vip-plan-card__price" id="val-monthly-price">R$ 29,90</span>
+            <span class="vip-plan-card__period">/mês</span>
+          </div>
+          <p class="vip-plan-card__desc">Cancele quando quiser. Sem fidelidade, renovação simples por link todo mês.</p>
+          
+          <ul class="vip-plan-card__list">
+            <li class="vip-plan-card__item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Grupo de drops fechado no WhatsApp</span>
+            </li>
+            <li class="vip-plan-card__item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Alertas antecipados no Instagram (@)</span>
+            </li>
+            <li class="vip-plan-card__item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Liberação antecipada no catálogo</span>
+            </li>
+            <li class="vip-plan-card__item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Cupom de desconto permanente</span>
+            </li>
+          </ul>
+
+          <button type="button" class="vip-plan-btn vip-plan-btn--dark" onclick="openVipSubscribeModal('monthly')">
+            <span>Assinar Mensal</span>
+          </button>
+        </article>
+
+        <!-- PLANO VITALÍCIO (DESTACADO SUPREMO) -->
+        <article class="vip-plan-card vip-plan-card--featured">
+          <div class="vip-plan-card__badge-top">MELHOR VALOR · PAGAMENTO ÚNICO</div>
+          <div class="vip-plan-card__kicker">VITALÍCIO PRIVÉ</div>
+          <div class="vip-plan-card__price-wrap">
+            <span class="vip-plan-card__price" id="val-lifetime-price">R$ 69,90</span>
+            <span class="vip-plan-card__period">· pague uma vez só</span>
+          </div>
+          <p class="vip-plan-card__desc">Equivale a pouco mais de 2 meses do plano mensal e é seu para sempre, sem mensalidades.</p>
+
+          <ul class="vip-plan-card__list">
+            <li class="vip-plan-card__item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span><strong>Acesso vitalício ilimitado</strong> sem mensalidade</span>
+            </li>
+            <li class="vip-plan-card__item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Comunidade prioritária no WhatsApp</span>
+            </li>
+            <li class="vip-plan-card__item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Alertas prioritários para seu @ do Instagram</span>
+            </li>
+            <li class="vip-plan-card__item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Atendimento e reserva VIP de peças únicas</span>
+            </li>
+          </ul>
+
+          <button type="button" class="vip-plan-btn vip-plan-btn--gold" onclick="openVipSubscribeModal('lifetime')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span>Garantir Acesso Vitalício</span>
+          </button>
+        </article>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         PERGUNTAS FREQUENTES (FAQ)
+    ══════════════════════════════════════════ -->
+    <section class="vip-faq-section">
+      <div class="vip-section-header" style="margin-bottom: 24px;">
+        <h2 class="vip-section-header__title" style="font-size: 20px;">Dúvidas Frequentes</h2>
       </div>
 
+      <details class="vip-faq-item">
+        <summary>
+          <span>Como recebo o acesso ao grupo VIP do WhatsApp?</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </summary>
+        <div class="vip-faq-item__body">
+          Assim que o pagamento for aprovado pelo Mercado Pago (instantâneo no Pix ou Cartão), o botão com o link exclusivo para entrar na nossa comunidade oficial no WhatsApp será liberado imediatamente nesta tela e enviado ao seu WhatsApp.
+        </div>
+      </details>
+
+      <details class="vip-faq-item">
+        <summary>
+          <span>Como meu @ do Instagram recebe as novidades?</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </summary>
+        <div class="vip-faq-item__body">
+          Seu @ informado no cadastro é adicionado à lista VIP prioritária. Antes de liberarmos qualquer peça para o público geral, nossa equipe compartilha os drops nos Stories (Close Friends) e envia menções diretas para que você tenha prioridade de escolha.
+        </div>
+      </details>
+
+      <details class="vip-faq-item">
+        <summary>
+          <span>Preciso digitar meu @ toda vez que entrar no site?</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </summary>
+        <div class="vip-faq-item__body">
+          Não! Seu dispositivo salva a sua sessão de membro com segurança. Sempre que você abrir o site da NT Eleganz pelo mesmo navegador, os produtos exclusivos VIP estarão destravados automaticamente e o botão VIP exibirá o seu status de membro ativo.
+        </div>
+      </details>
+
+      <details class="vip-faq-item">
+        <summary>
+          <span>Como recuperar meu acesso se trocar de celular?</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </summary>
+        <div class="vip-faq-item__body">
+          Basta clicar no botão "Já sou Membro" no topo da página e informar seu @ do Instagram ou o número do WhatsApp cadastrado. O sistema reconhece sua assinatura ativa imediatamente.
+        </div>
+      </details>
     </section>
 
   </main>
@@ -189,74 +438,118 @@
   <!-- FOOTER -->
   <footer class="vip-footer">
     <div class="vip-footer__brand">NT ELEGANZ</div>
-    <p>Moda masculina de luxo. Peças autênticas e curadoria exclusiva.</p>
+    <p>Moda masculina de luxo. Peças originais, curadoria rigorosa e experiência exclusiva.</p>
   </footer>
 
   <!-- ══════════════════════════════════════════
-       MODAL: ASSINATURA VIP (CHECKOUT MERCADO PAGO)
+       MODAL: ASSINATURA VIP (MERCADO PAGO BLINDADO)
   ══════════════════════════════════════════ -->
-  <div class="vip-modal-overlay" id="vip-subscribe-modal">
+  <div class="vip-modal-overlay" id="vip-subscribe-modal" onclick="if(event.target===this)closeVipSubscribeModal()">
     <div class="vip-modal-dialog">
-      <button class="vip-modal-close" onclick="closeVipSubscribeModal()" aria-label="Fechar">&times;</button>
+      <div class="vip-modal-handle" aria-hidden="true"></div>
+      <button class="vip-modal-close" onclick="closeVipSubscribeModal()" aria-label="Fechar modal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
 
-      <!-- PASSO 1: FORMULÁRIO DE DADOS & PAGAMENTO -->
+      <!-- PASSO 1: FORMULÁRIO -->
       <div id="vip-modal-form-step">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <div style="display: inline-flex; align-items: center; gap: 6px; color: var(--vip-gold); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="#c9a84c">
+        <div style="text-align: center; margin-bottom: 22px;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; color: var(--vip-gold); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#d4af37">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
             </svg>
-            <span>Assinatura Segura</span>
+            <span>Assinatura Segura · NT VIP</span>
           </div>
-          <h3 style="font-size: 20px; font-weight: 800; margin: 6px 0 4px;" id="vip-modal-plan-name">Plano Vitalício NT VIP</h3>
-          <p style="font-size: 13px; color: var(--vip-gold);" id="vip-modal-plan-price">R$ 69,90</p>
+          <h3 style="font-family: var(--vip-font-serif); font-size: 21px; font-weight: 700; margin: 6px 0 2px; color: #ffffff;" id="vip-modal-plan-name">Plano Vitalício NT VIP</h3>
+          <p style="font-size: 14px; font-weight: 700; color: var(--vip-gold-light);" id="vip-modal-plan-price">R$ 69,90 (Pagamento Único)</p>
         </div>
 
+        <!-- CAMPO 1: @ DO INSTAGRAM (DESTAQUE) -->
         <div class="vip-form-group">
-          <label class="vip-form-label">Nome Completo *</label>
-          <input type="text" class="vip-form-input" id="vip-input-name" placeholder="Seu nome" required />
+          <label class="vip-form-label" for="vip-input-instagram">
+            <span>Seu @ do Instagram</span>
+            <span class="req">* Obrigatório</span>
+          </label>
+          <div class="vip-input-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+            </svg>
+            <input type="text" class="vip-form-input" id="vip-input-instagram" placeholder="@seuperfil" required autocomplete="username" />
+          </div>
+          <div class="vip-form-hint">Usado para identificar sua conta VIP e enviar novidades prioritárias.</div>
         </div>
 
+        <!-- CAMPO 2: WHATSAPP (DESTAQUE) -->
         <div class="vip-form-group">
-          <label class="vip-form-label">WhatsApp (com DDD) *</label>
-          <input type="tel" class="vip-form-input" id="vip-input-phone" placeholder="(11) 99999-9999" required />
+          <label class="vip-form-label" for="vip-input-phone">
+            <span>WhatsApp (com DDD)</span>
+            <span class="req">* Obrigatório</span>
+          </label>
+          <div class="vip-input-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"></path>
+            </svg>
+            <input type="tel" class="vip-form-input" id="vip-input-phone" placeholder="(11) 99999-9999" required autocomplete="tel" />
+          </div>
+          <div class="vip-form-hint">Para adicionar você ao grupo secreto de drops.</div>
         </div>
 
+        <!-- CAMPO 3: NOME COMPLETO -->
         <div class="vip-form-group">
-          <label class="vip-form-label">E-mail *</label>
-          <input type="email" class="vip-form-input" id="vip-input-email" placeholder="seu@email.com" required />
+          <label class="vip-form-label" for="vip-input-name">
+            <span>Nome Completo</span>
+            <span style="color:#777; font-size:10px; font-weight:normal;">Opcional</span>
+          </label>
+          <input type="text" class="vip-form-input" id="vip-input-name" placeholder="Como prefere ser chamado" />
         </div>
 
-        <div class="vip-form-group">
-          <label class="vip-form-label">CPF (Para emissão de recibo/Pix) *</label>
-          <input type="text" class="vip-form-input" id="vip-input-cpf" placeholder="000.000.000-00" required />
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="vip-form-group">
+            <label class="vip-form-label" for="vip-input-email">
+              <span>E-mail</span>
+              <span class="req">*</span>
+            </label>
+            <input type="email" class="vip-form-input" id="vip-input-email" placeholder="seu@email.com" required autocomplete="email" />
+          </div>
+          <div class="vip-form-group">
+            <label class="vip-form-label" for="vip-input-cpf">
+              <span>CPF</span>
+              <span class="req">*</span>
+            </label>
+            <input type="text" class="vip-form-input" id="vip-input-cpf" placeholder="000.000.000-00" required />
+          </div>
         </div>
 
         <!-- SELETOR DE MÉTODO -->
-        <div style="margin-top: 18px;">
+        <div style="margin-top: 14px;">
           <label class="vip-form-label">Forma de Pagamento</label>
           <div class="vip-tabs">
             <button type="button" class="vip-tab-btn active" id="tab-btn-pix" onclick="switchVipPaymentTab('pix')">
-              PIX (Aprovação Instantânea)
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>PIX Instantâneo</span>
             </button>
             <button type="button" class="vip-tab-btn" id="tab-btn-card" onclick="switchVipPaymentTab('card')">
-              Cartão de Crédito
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+              <span>Cartão de Crédito</span>
             </button>
           </div>
         </div>
 
-        <!-- CAMPOS CARTÃO DE CRÉDITO (Ocultos se Pix) -->
-        <div id="vip-card-fields" style="display: none; margin-top: 14px;">
+        <!-- CAMPOS CARTÃO DE CRÉDITO -->
+        <div id="vip-card-fields" style="display: none; margin-top: 10px;">
           <div class="vip-form-group">
             <label class="vip-form-label">Número do Cartão *</label>
             <input type="text" class="vip-form-input" id="vip-card-number" placeholder="0000 0000 0000 0000" maxlength="19" />
           </div>
-
           <div class="vip-form-group">
-            <label class="vip-form-label">Nome Impresso no Cartão *</label>
-            <input type="text" class="vip-form-input" id="vip-card-holder" placeholder="NOME COMO NO CARTAO" />
+            <label class="vip-form-label">Nome no Cartão *</label>
+            <input type="text" class="vip-form-input" id="vip-card-holder" placeholder="NOME COMO IMPRESSO" />
           </div>
-
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div class="vip-form-group">
               <label class="vip-form-label">Validade (MM/AA) *</label>
@@ -270,75 +563,71 @@
         </div>
 
         <button type="button" class="vip-btn-submit" id="vip-btn-submit-payment" onclick="submitVipSubscription()">
-          Gerar Chave Pix
+          <span>Gerar Chave Pix</span>
         </button>
       </div>
 
       <!-- PASSO 2: PIX GERADO -->
       <div id="vip-modal-pix-step" style="display: none;">
-        <div style="text-align: center; margin-bottom: 16px;">
-          <div style="display: inline-flex; align-items: center; gap: 6px; color: #25d366; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            <span>Pix Gerado com Sucesso</span>
+        <div style="text-align: center; margin-bottom: 14px;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; color: #4ade80; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Chave Pix Gerada</span>
           </div>
-          <h3 style="font-size: 20px; font-weight: 800; margin: 4px 0;" id="vip-pix-amount-text">R$ 69,90</h3>
-          <p style="font-size: 12.5px; color: #aaa;">Escaneie o QR Code abaixo ou copie o código Pix para pagar no seu banco:</p>
+          <h3 style="font-family: var(--vip-font-serif); font-size: 26px; font-weight: 800; margin: 4px 0; color: #ffffff;" id="vip-pix-amount-text">R$ 69,90</h3>
+          <p style="font-size: 12.5px; color: var(--vip-text-muted);">Escaneie o QR Code ou copie a chave Pix para pagar pelo aplicativo do seu banco:</p>
         </div>
 
         <div class="vip-pix-box">
           <div class="vip-pix-qr">
             <img id="vip-pix-qr-img" src="" alt="QR Code Pix" />
           </div>
-          <div class="vip-copy-input-row">
+          <div class="vip-copy-row">
             <input type="text" class="vip-form-input" id="vip-pix-copy-input" readonly />
             <button type="button" class="vip-copy-btn" id="vip-pix-copy-btn" onclick="copyVipPix()">Copiar Código</button>
           </div>
         </div>
 
-        <div style="text-align: center; margin-top: 16px;">
-          <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--vip-gold);">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div style="text-align: center; margin-top: 18px;">
+          <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--vip-gold-light);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="vip-spin">
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            <span>Aguardando pagamento... Liberação automática imediata.</span>
+            <span>Aguardando compensação... Liberação imediata em tempo real.</span>
           </div>
         </div>
       </div>
 
-      <!-- PASSO 3: SUCESSO / ATIVAÇÃO CONFIRMADA -->
+      <!-- PASSO 3: SUCESSO -->
       <div id="vip-modal-success-step" style="display: none; text-align: center; padding: 10px 0;">
-        <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(37, 211, 102, 0.15); color: #25d366; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(74, 222, 128, 0.15); color: #4ade80; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
         </div>
-        <h3 style="font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 6px;">Seja bem-vindo ao NT VIP!</h3>
-        <p style="font-size: 13.5px; color: #bbb; line-height: 1.5; margin-bottom: 24px;">
-          Sua assinatura foi ativada com sucesso. Acesse o grupo exclusivo de membros e resgate seu cupom:
+        <h3 style="font-family: var(--vip-font-serif); font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 6px;">Seja Bem-vindo ao NT VIP!</h3>
+        <p style="font-size: 13.5px; color: #a5a5ad; line-height: 1.5; margin-bottom: 24px;">
+          Sua assinatura foi ativada com sucesso. Acesse imediatamente nosso grupo fechado e aproveite o acesso prioritário:
         </p>
 
-        <a href="#" target="_blank" class="vip-btn-wpp" id="vip-success-wpp-btn" style="margin-bottom: 12px;">
+        <a href="#" target="_blank" class="vip-btn-wpp" id="vip-success-wpp-btn" style="margin-bottom: 14px;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"></path>
           </svg>
-          <span>Entrar no Grupo VIP</span>
+          <span>Entrar no Grupo VIP do WhatsApp</span>
         </a>
 
-        <div class="vip-coupon-box" style="margin-bottom: 20px;">
+        <div class="vip-coupon-bar" style="margin-bottom: 20px;">
           <div>
-            <div style="font-size: 11px; text-transform: uppercase; color: #888;">Cupom de Desconto Exclusivo</div>
-            <div class="vip-coupon-code" id="vip-success-coupon-code">VIP10</div>
+            <div style="font-size: 10.5px; text-transform: uppercase; color: #888;">Seu Cupom Exclusivo</div>
+            <div class="vip-coupon-bar__code" id="vip-success-coupon-code">VIP10</div>
           </div>
-          <button type="button" class="vip-copy-btn" onclick="copyVipCoupon(document.getElementById('vip-success-coupon-code').textContent)">
-            Copiar
+          <button type="button" class="vip-btn-copy-coupon" onclick="copyVipCoupon(document.getElementById('vip-success-coupon-code').textContent)">
+            Copiar Cupom
           </button>
         </div>
 
         <button type="button" class="vip-plan-btn vip-plan-btn--gold" onclick="closeVipSubscribeModal()">
-          Ir para a Loja
+          <span>Acessar a Loja</span>
         </button>
       </div>
 
@@ -346,32 +635,48 @@
   </div>
 
   <!-- ══════════════════════════════════════════
-       MODAL: JÁ SOU MEMBRO VIP (LOGIN RÁPIDO)
+       MODAL: JÁ SOU MEMBRO VIP (RECONEXÃO RÁPIDA)
   ══════════════════════════════════════════ -->
-  <div class="vip-modal-overlay" id="vip-login-modal">
-    <div class="vip-modal-dialog" style="max-width: 380px;">
-      <button class="vip-modal-close" onclick="closeVipLoginModal()" aria-label="Fechar">&times;</button>
+  <div class="vip-modal-overlay" id="vip-login-modal" onclick="if(event.target===this)closeVipLoginModal()">
+    <div class="vip-modal-dialog" style="max-width: 400px;">
+      <div class="vip-modal-handle" aria-hidden="true"></div>
+      <button class="vip-modal-close" onclick="closeVipLoginModal()" aria-label="Fechar modal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
       <div style="text-align: center; margin-bottom: 20px;">
-        <div style="width: 44px; height: 44px; border-radius: 50%; background: #222; color: var(--vip-gold); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="#c9a84c">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(212, 175, 55, 0.12); color: var(--vip-gold); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; border: 1px solid rgba(212, 175, 55, 0.3);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
           </svg>
         </div>
-        <h3 style="font-size: 18px; font-weight: 800; margin-bottom: 4px;">Identificação de Membro</h3>
-        <p style="font-size: 12.5px; color: #aaa;">Digite o WhatsApp cadastrado na sua assinatura VIP para liberar seus benefícios:</p>
+        <h3 style="font-family: var(--vip-font-serif); font-size: 19px; font-weight: 700; margin-bottom: 4px; color: #fff;">Identificação de Membro</h3>
+        <p style="font-size: 12.5px; color: var(--vip-text-muted);">Digite seu @ do Instagram ou o WhatsApp cadastrado para restaurar seus benefícios:</p>
       </div>
 
       <div class="vip-form-group">
-        <label class="vip-form-label">WhatsApp com DDD</label>
-        <input type="tel" class="vip-form-input" id="vip-login-phone" placeholder="(11) 99999-9999" required />
+        <label class="vip-form-label" for="vip-login-identifier">Seu @ do Instagram ou WhatsApp</label>
+        <div class="vip-input-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <input type="text" class="vip-form-input" id="vip-login-identifier" placeholder="@seuperfil ou (11) 99999-9999" required autocomplete="username" />
+        </div>
+        <div class="vip-form-hint">Sua sessão ficará salva neste navegador para compras futuras.</div>
       </div>
 
       <button type="button" class="vip-btn-submit" id="vip-btn-login-submit" onclick="submitVipLogin()">
-        Acessar Área VIP
+        <span>Acessar Meus Benefícios</span>
       </button>
     </div>
   </div>
 
-  <script src="../js/vip.js?v=20261112b"></script>
+  <script src="../js/vip.js?v=20261112c"></script>
 </body>
 </html>

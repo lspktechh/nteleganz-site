@@ -8,11 +8,42 @@
 (function () {
   'use strict';
 
-  const STORAGE_TOKEN_KEY = 'nte_vip_token';
-  const STORAGE_PHONE_KEY = 'nte_vip_phone';
+  const STORAGE_ACTIVE_KEY    = 'nte_vip_active';
+  const STORAGE_TOKEN_KEY     = 'nte_vip_token';
+  const STORAGE_PHONE_KEY     = 'nte_vip_phone';
+  const STORAGE_INSTAGRAM_KEY = 'nte_vip_instagram';
 
   let isInitialized = false;
   let cachedSettings = null;
+
+  function updateHeaderVipButtons() {
+    const isAct = localStorage.getItem(STORAGE_ACTIVE_KEY) === 'true';
+    const btns = document.querySelectorAll('.header-vip-btn');
+    btns.forEach(btn => {
+      if (isAct) {
+        btn.classList.add('is-vip-active');
+        btn.setAttribute('title', 'Você é Membro VIP Ativo · Acesso Privé');
+        let dot = btn.querySelector('.header-vip-btn__dot');
+        if (!dot) {
+          btn.insertAdjacentHTML('afterbegin', '<span class="header-vip-btn__dot" aria-hidden="true"></span>');
+        }
+      } else {
+        btn.classList.remove('is-vip-active');
+        let dot = btn.querySelector('.header-vip-btn__dot');
+        if (dot) dot.remove();
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      updateHeaderVipButtons();
+      window.isVipMember().catch(() => {});
+    });
+  } else {
+    updateHeaderVipButtons();
+    window.isVipMember().catch(() => {});
+  }
 
   async function fetchSettings() {
     if (cachedSettings) return cachedSettings;
@@ -186,16 +217,47 @@
   };
 
   window.isVipMember = async function () {
+    const isAct = localStorage.getItem(STORAGE_ACTIVE_KEY) === 'true';
     const token = localStorage.getItem(STORAGE_TOKEN_KEY) || '';
     const phone = localStorage.getItem(STORAGE_PHONE_KEY) || '';
-    if (!token && !phone) return false;
+    const insta = localStorage.getItem(STORAGE_INSTAGRAM_KEY) || '';
+
+    // Se marcado ativo com credenciais locais, resposta instantânea para evitar atrasos na interface
+    if (isAct && (insta || phone || token)) {
+      updateHeaderVipButtons();
+      return true;
+    }
+
+    if (!token && !phone && !insta) {
+      updateHeaderVipButtons();
+      return false;
+    }
 
     try {
-      const res = await fetch(`/api/vip.php?action=check_member&token=${encodeURIComponent(token)}&phone=${encodeURIComponent(phone)}`);
-      const data = await res.json();
-      return !!data.isVip;
+      const q = new URLSearchParams();
+      if (token) q.set('token', token);
+      if (phone) q.set('phone', phone.replace(/\D/g, ''));
+      if (insta) q.set('instagram', insta.replace(/^@/, ''));
+
+      const res = await fetch(`/api/vip.php?action=check_member&${q.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.isVip) {
+          localStorage.setItem(STORAGE_ACTIVE_KEY, 'true');
+          if (data.instagram) localStorage.setItem(STORAGE_INSTAGRAM_KEY, data.instagram);
+          if (data.phone) localStorage.setItem(STORAGE_PHONE_KEY, data.phone);
+          if (data.vipToken) localStorage.setItem(STORAGE_TOKEN_KEY, data.vipToken);
+          updateHeaderVipButtons();
+          return true;
+        } else {
+          localStorage.removeItem(STORAGE_ACTIVE_KEY);
+          updateHeaderVipButtons();
+          return false;
+        }
+      }
+      return isAct;
     } catch (e) {
-      return false;
+      return isAct;
     }
   };
 
@@ -205,6 +267,10 @@
 
   window.getVipPhone = function () {
     return localStorage.getItem(STORAGE_PHONE_KEY) || '';
+  };
+
+  window.getVipInstagram = function () {
+    return localStorage.getItem(STORAGE_INSTAGRAM_KEY) || '';
   };
 
 })();
