@@ -59,6 +59,33 @@
     .vip-form-input::placeholder {
       color: #9a9aa2 !important;
     }
+    /* Botão mostrar/ocultar senha (criado por js/vip.js em todo campo de senha) */
+    .vip-input-wrap .vip-form-input.has-pwd-toggle {
+      padding-right: 46px;
+    }
+    .vip-pwd-toggle {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      color: #8c8c94;
+      cursor: pointer;
+    }
+    .vip-pwd-toggle:hover { color: #111114; }
+    .vip-pwd-toggle:focus-visible { outline: 2px solid #b8932b; outline-offset: 1px; }
+    .vip-input-wrap .vip-pwd-toggle svg {
+      position: static;
+      left: auto;
+      color: currentColor !important;
+    }
     .vip-form-hint {
       color: #6e6e76 !important;
     }
@@ -771,6 +798,6 @@
     </div>
   </div>
 
-  <script src="../js/vip.js?v=20261112-senha"></script>
+  <script src="../js/vip.js?v=20261112-ver-senha"></script>
 </body>
 </html>
