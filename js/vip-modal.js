@@ -35,16 +35,6 @@
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      updateHeaderVipButtons();
-      window.isVipMember().catch(() => {});
-    });
-  } else {
-    updateHeaderVipButtons();
-    window.isVipMember().catch(() => {});
-  }
-
   async function fetchSettings() {
     if (cachedSettings) return cachedSettings;
     try {
@@ -92,7 +82,7 @@
           <div class="nte-vip-modal__kicker">COMUNIDADE NT ELEGANZ</div>
           <h2 class="nte-vip-modal__title">Entre para o NT VIP</h2>
           <p class="nte-vip-modal__subtitle">
-            Peças raras antes de todo mundo, desconto exclusivo e prioridade absoluta em lançamentos.
+            Peças raras antes de todo mundo, curadoria de luxo e prioridade absoluta em lançamentos.
           </p>
 
           <div class="nte-vip-modal__list">
@@ -109,17 +99,17 @@
               </div>
             </div>
 
-            <!-- 2: Cupom Exclusivo -->
+            <!-- 2: Selo de Membro -->
             <div class="nte-vip-modal__item">
               <div class="nte-vip-modal__item-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
-                  <path d="M13 5v2"></path><path d="M13 17v2"></path>
+                  <path d="M4 16 2 6l5.5 4.5L12 3l4.5 7.5L22 6l-2 10z"></path>
+                  <path d="M2.5 18h19v2.5h-19z"></path>
                 </svg>
               </div>
               <div>
-                <div class="nte-vip-modal__item-title">Cupom exclusivo</div>
-                <div class="nte-vip-modal__item-desc">Desconto que só funciona para membros.</div>
+                <div class="nte-vip-modal__item-title">Selo de membro VIP</div>
+                <div class="nte-vip-modal__item-desc">Acesso prive e prioridade absoluta no atendimento.</div>
               </div>
             </div>
 
@@ -275,5 +265,15 @@
   window.getVipInstagram = function () {
     return localStorage.getItem(STORAGE_INSTAGRAM_KEY) || '';
   };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      updateHeaderVipButtons();
+      window.isVipMember().catch(() => {});
+    });
+  } else {
+    updateHeaderVipButtons();
+    window.isVipMember().catch(() => {});
+  }
 
 })();

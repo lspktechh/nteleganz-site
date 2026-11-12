@@ -148,17 +148,6 @@
       }
     }
 
-    if (member.vipCouponCode) {
-      const cBox = document.getElementById('vip-dash-coupon-wrap');
-      const cCode = document.getElementById('vip-dash-coupon-code');
-      const cDesc = document.getElementById('vip-dash-coupon-desc');
-      if (cBox && cCode) {
-        cCode.textContent = member.vipCouponCode;
-        if (cDesc) cDesc.textContent = `${member.vipCouponDiscount || 10}% OFF automático em qualquer compra no site.`;
-        cBox.style.display = 'flex';
-      }
-    }
-
     dash.style.display = 'block';
     if (plansSec) plansSec.style.display = 'none';
 
@@ -464,11 +453,6 @@
       if (sWpp) sWpp.href = vipData.whatsappGroupLink;
     }
 
-    if (vipData.vipCouponCode) {
-      const sCoup = document.getElementById('vip-success-coupon-code');
-      if (sCoup) sCoup.textContent = vipData.vipCouponCode;
-    }
-
     // Atualiza dashboard na página
     checkMemberSession();
   }
@@ -553,13 +537,8 @@
     });
   };
 
-  // ── Copiar Cupom VIP ──
-  window.copyVipCoupon = function (code) {
-    if (!code) return;
-    navigator.clipboard.writeText(code).then(() => {
-      alert(`Cupom ${code} copiado com sucesso! Use no checkout para aplicar seu desconto VIP.`);
-    });
-  };
+  // ── Helper no-op ──
+  window.copyVipCoupon = function () {};
 
   // ── Máscaras de Inputs ──
   function setupMasks() {

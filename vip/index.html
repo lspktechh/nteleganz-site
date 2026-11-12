@@ -4,9 +4,107 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>NT VIP — Comunidade Exclusiva & Acesso Antecipado | NT Eleganz</title>
-  <meta name="description" content="A comunidade fechada de quem garimpa antes. Peças raras primeiro pra você, drops no WhatsApp e Instagram, descontos exclusivos e liberação antecipada no site." />
+  <meta name="description" content="A comunidade fechada de quem garimpa antes. Peças raras primeiro pra você, drops no WhatsApp e Instagram e liberação antecipada no site." />
   <link rel="icon" type="image/x-icon" href="../assets/images/favicon.ico" />
-  <link rel="stylesheet" href="../css/vip.css?v=20261112c" />
+  <link rel="stylesheet" href="../css/vip.css?v=20261112f" />
+  <style>
+    /* ── BLINDAGEM DE TEMA CLARO PARA MODAIS (CADASTRO E LOGIN) ── */
+    .vip-modal-overlay {
+      background: rgba(15, 28, 46, 0.48) !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
+    }
+    .vip-modal-dialog {
+      background: #ffffff !important;
+      color: #111114 !important;
+      border: 1px solid #e2ded5 !important;
+      box-shadow: 0 -15px 50px rgba(15, 28, 46, 0.16) !important;
+    }
+    @media (min-width: 640px) {
+      .vip-modal-dialog {
+        border-radius: 24px !important;
+        box-shadow: 0 25px 60px rgba(15, 28, 46, 0.18) !important;
+      }
+    }
+    .vip-modal-handle {
+      background: #d9d5cb !important;
+    }
+    .vip-modal-close {
+      background: #f4f2ec !important;
+      color: #55555c !important;
+    }
+    .vip-modal-close:hover {
+      background: #e9e6dd !important;
+      color: #111114 !important;
+    }
+    .vip-form-label {
+      color: #111114 !important;
+    }
+    .vip-form-label span.req {
+      color: #b8932b !important;
+    }
+    .vip-input-wrap svg {
+      color: #8c8c94 !important;
+    }
+    .vip-form-input {
+      background: #fbfaf8 !important;
+      border: 1px solid #d9d5cb !important;
+      color: #111114 !important;
+    }
+    .vip-form-input:focus {
+      background: #ffffff !important;
+      border-color: #b8932b !important;
+      box-shadow: 0 0 0 3px rgba(184, 147, 43, 0.15) !important;
+    }
+    .vip-form-input::placeholder {
+      color: #9a9aa2 !important;
+    }
+    .vip-form-hint {
+      color: #6e6e76 !important;
+    }
+    .vip-tabs {
+      background: #f2efe9 !important;
+      border: 1px solid #e2ded5 !important;
+    }
+    .vip-tab-btn {
+      color: #6a6a72 !important;
+      background: none !important;
+      border: 1px solid transparent !important;
+    }
+    .vip-tab-btn.active {
+      background: #ffffff !important;
+      color: #111114 !important;
+      border: 1px solid #d9d5cb !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    }
+    .vip-btn-submit {
+      background: #000000 !important;
+      color: #ffffff !important;
+      border: 1px solid #000000 !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16) !important;
+    }
+    .vip-btn-submit:hover:not(:disabled) {
+      background: #1c1c22 !important;
+      color: #ffffff !important;
+      transform: translateY(-2px) !important;
+    }
+    .vip-pix-box {
+      background: #fbfaf8 !important;
+      border: 1px solid #e2ded5 !important;
+    }
+    .vip-copy-row input {
+      background: #ffffff !important;
+      border: 1px solid #d9d5cb !important;
+      color: #111114 !important;
+    }
+    .vip-copy-btn {
+      background: #000000 !important;
+      color: #ffffff !important;
+    }
+    .vip-copy-btn:hover {
+      background: #24242e !important;
+    }
+  </style>
 </head>
 <body class="vip-body">
 
@@ -126,18 +224,6 @@
         </a>
       </div>
 
-      <!-- Cupom VIP Permanente -->
-      <div class="vip-coupon-bar" id="vip-dash-coupon-wrap">
-        <div>
-          <div style="font-size: 11px; text-transform: uppercase; color: var(--vip-text-muted); letter-spacing: 0.08em;">Seu Cupom de Desconto Exclusivo</div>
-          <div class="vip-coupon-bar__code" id="vip-dash-coupon-code">VIP10</div>
-          <div style="font-size: 11.5px; color: #8e8e93; margin-top: 2px;" id="vip-dash-coupon-desc">10% OFF automático aplicado em todas as peças do site.</div>
-        </div>
-        <button type="button" class="vip-btn-copy-coupon" onclick="copyVipCoupon(document.getElementById('vip-dash-coupon-code').textContent)">
-          Copiar Cupom
-        </button>
-      </div>
-
       <div style="text-align: center; margin-top: 20px;">
         <button type="button" onclick="disconnectVipSession()" style="background: none; border: none; color: #6e6e76; font-size: 11.5px; text-decoration: underline; cursor: pointer;">
           Desconectar deste dispositivo
@@ -252,19 +338,7 @@
         <div class="vip-benefit-row__desc">Peças selecionadas ficam liberadas só pra VIP antes de todo mundo.</div>
       </div>
 
-      <!-- 3: Cupom Exclusivo -->
-      <div class="vip-benefit-row">
-        <div class="vip-benefit-row__icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
-            <path d="M13 5v2"></path><path d="M13 17v2"></path>
-          </svg>
-        </div>
-        <div class="vip-benefit-row__title">Cupom exclusivo</div>
-        <div class="vip-benefit-row__desc">Um cupom de desconto que só funciona para membros com assinatura ativa.</div>
-      </div>
-
-      <!-- 4: Curadoria Garantida -->
+      <!-- 3: Curadoria Garantida -->
       <div class="vip-benefit-row">
         <div class="vip-benefit-row__icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -276,7 +350,7 @@
         <div class="vip-benefit-row__desc">Toda peça passa por autenticação e conferência antes de chegar até você.</div>
       </div>
 
-      <!-- 5: Selo de Membro (Coroa Real) -->
+      <!-- 4: Selo de Membro (Coroa Real) -->
       <div class="vip-benefit-row">
         <div class="vip-benefit-row__icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -334,7 +408,7 @@
             </li>
             <li class="vip-plan-card__item">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              <span>Cupom de desconto permanente</span>
+              <span>Atendimento e suporte prioritário</span>
             </li>
           </ul>
 
@@ -599,22 +673,12 @@
           Sua assinatura foi ativada com sucesso. Acesse imediatamente nosso grupo fechado e aproveite o acesso prioritário:
         </p>
 
-        <a href="#" target="_blank" class="vip-btn-wpp" id="vip-success-wpp-btn" style="margin-bottom: 14px;">
+        <a href="#" target="_blank" class="vip-btn-wpp" id="vip-success-wpp-btn" style="margin-bottom: 18px;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"></path>
           </svg>
           <span>Entrar no Grupo VIP do WhatsApp</span>
         </a>
-
-        <div class="vip-coupon-bar" style="margin-bottom: 20px;">
-          <div>
-            <div style="font-size: 10.5px; text-transform: uppercase; color: #888;">Seu Cupom Exclusivo</div>
-            <div class="vip-coupon-bar__code" id="vip-success-coupon-code">VIP10</div>
-          </div>
-          <button type="button" class="vip-btn-copy-coupon" onclick="copyVipCoupon(document.getElementById('vip-success-coupon-code').textContent)">
-            Copiar Cupom
-          </button>
-        </div>
 
         <button type="button" class="vip-plan-btn vip-plan-btn--dark" onclick="closeVipSubscribeModal()">
           <span>Acessar a Loja</span>
@@ -667,6 +731,6 @@
     </div>
   </div>
 
-  <script src="../js/vip.js?v=20261112d"></script>
+  <script src="../js/vip.js?v=20261112f"></script>
 </body>
 </html>
