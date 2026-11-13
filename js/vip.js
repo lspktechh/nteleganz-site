@@ -163,17 +163,20 @@
       }
     }
 
+    const greetEl = document.getElementById('vip-dash-greeting');
+    if (greetEl) {
+      const first = String(member.name || '').trim().split(/\s+/)[0] || '';
+      greetEl.textContent = first ? `, ${first.charAt(0).toUpperCase()}${first.slice(1).toLowerCase()}` : '';
+    }
+
     dash.style.display = 'block';
     if (plansSec) plansSec.style.display = 'none';
+    document.body.classList.add('is-vip-member');
 
     const loginBtn = document.getElementById('vip-login-toggle-btn');
     if (loginBtn) {
-      loginBtn.innerHTML = `
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="#4ade80">
-          <circle cx="12" cy="12" r="10"></circle>
-        </svg>
-        <span style="color:#4ade80;">VIP Ativo</span>
-      `;
+      loginBtn.classList.add('is-active');
+      loginBtn.innerHTML = '<span class="vip-live-dot" aria-hidden="true"></span><span>VIP Ativo</span>';
       loginBtn.onclick = () => {
         dash.scrollIntoView({ behavior: 'smooth' });
       };
