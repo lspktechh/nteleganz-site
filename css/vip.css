@@ -279,108 +279,347 @@ body.vip-body {
   animation: vipFadeInUp 0.5s ease-out;
 }
 
-/* Cartão Black & Gold de Alta Costura para o Membro */
-.vip-card-metal {
-  background: linear-gradient(135deg, #16161b 0%, #0d0d10 60%, #17171e 100%);
-  border: 1.5px solid rgba(212, 175, 55, 0.45);
-  border-radius: var(--vip-radius-lg);
-  padding: 24px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15);
-  margin-bottom: 24px;
-  color: #ffffff;
+/* Cartão Black & Gold de Alta Costura para o Membro
+   Proporção real de cartão de crédito (ISO/IEC 7810 ID-1: 85,6 x 54 mm = 1,586).
+   Tamanhos internos em cqw (relativos à largura do cartão) para o layout escalar igual
+   no celular e no desktop; o valor em px antes de cada um é o fallback.
+   O container é o .vip-card-wrap: cqw no próprio cartão mediria a caixa de conteúdo dele. */
+.vip-card-wrap {
+  container-type: inline-size;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto 22px;
 }
 
+.vip-card-metal {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.586 / 1;
+  padding: 24px 28px;
+  padding: 6.2cqw 7cqw;
+  border-radius: 18px;
+  border-radius: 4.2cqw;
+  overflow: hidden;
+  color: #f3efe6;
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
+  background:
+    /* reflexo de luz no metal */
+    radial-gradient(120% 90% at 12% -10%, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0) 45%),
+    radial-gradient(90% 80% at 110% 120%, rgba(212, 175, 55, 0.14) 0%, rgba(212, 175, 55, 0) 55%),
+    /* metal escovado */
+    repeating-linear-gradient(100deg, rgba(255, 255, 255, 0.018) 0 1px, rgba(0, 0, 0, 0) 1px 3px),
+    linear-gradient(135deg, #1d1d22 0%, #0b0b0d 48%, #050506 70%, #18181d 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 0 0 1px rgba(212, 175, 55, 0.38) inset,
+    0 24px 48px -14px rgba(0, 0, 0, 0.55),
+    0 10px 20px -10px rgba(0, 0, 0, 0.4);
+  transform: perspective(900px) rotateX(0deg);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
+}
+
+/* Guilloché (linhas finas em arco), como a gravação de cartões premium */
+.vip-card-metal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.55;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 252'%3E%3Cg fill='none' stroke='%23d4af37' stroke-opacity='0.13' stroke-width='0.7'%3E%3Ccircle cx='400' cy='0' r='60'/%3E%3Ccircle cx='400' cy='0' r='80'/%3E%3Ccircle cx='400' cy='0' r='100'/%3E%3Ccircle cx='400' cy='0' r='120'/%3E%3Ccircle cx='400' cy='0' r='140'/%3E%3Ccircle cx='400' cy='0' r='160'/%3E%3Ccircle cx='400' cy='0' r='180'/%3E%3Ccircle cx='400' cy='0' r='200'/%3E%3Ccircle cx='400' cy='0' r='220'/%3E%3Ccircle cx='400' cy='0' r='240'/%3E%3Ccircle cx='400' cy='0' r='260'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  pointer-events: none;
+}
+
+/* Brilho que atravessa o metal */
 .vip-card-metal::after {
   content: '';
   position: absolute;
   top: 0;
   left: -150%;
-  width: 100%;
+  width: 70%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
-  transform: skewX(-25deg);
-  animation: vipShimmer 5s infinite;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09), transparent);
+  transform: skewX(-22deg);
+  animation: vipShimmer 7s infinite;
+  pointer-events: none;
 }
 
 @keyframes vipShimmer {
   0% { left: -150%; }
-  35%, 100% { left: 150%; }
+  30%, 100% { left: 160%; }
+}
+
+@media (hover: hover) {
+  .vip-card-metal:hover {
+    transform: perspective(900px) rotateX(4deg) translateY(-3px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.1) inset,
+      0 0 0 1px rgba(212, 175, 55, 0.5) inset,
+      0 32px 56px -14px rgba(0, 0, 0, 0.6),
+      0 12px 24px -10px rgba(0, 0, 0, 0.45);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vip-card-metal::after { animation: none; display: none; }
+  .vip-card-metal, .vip-card-metal:hover { transition: none; transform: none; }
 }
 
 .vip-card-metal__top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 22px;
 }
 
 .vip-card-metal__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1;
+}
+
+.vip-card-metal__brand-name {
   font-family: var(--vip-font-serif);
-  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.18em;
-  color: #eeddb2;
+  font-size: 15px;
+  font-size: 4.1cqw;
+  letter-spacing: 0.22em;
+  background: linear-gradient(180deg, #f8e7b0 0%, #d4af37 55%, #a07c2c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.vip-card-metal__brand-tier {
+  font-size: 8.5px;
+  font-size: 2.3cqw;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(238, 221, 178, 0.6);
+}
+
+.vip-card-metal__contactless {
+  width: 24px;
+  width: 6.4cqw;
+  height: auto;
+  color: rgba(243, 239, 230, 0.75);
+  transform: translateY(-1px);
 }
 
 .vip-card-metal__chip {
-  width: 36px;
-  height: 26px;
-  border-radius: 4px;
-  background: linear-gradient(135deg, #d4af37, #9a7627);
-  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.5);
-  position: relative;
+  display: block;
+  width: 46px;
+  width: 12.5cqw;
+  height: auto;
+  margin-top: auto;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
 }
 
-.vip-card-metal__chip::before {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  border: 1px solid rgba(0, 0, 0, 0.35);
-  border-radius: 2px;
+/* Número em relevo (efeito de gravação) */
+.vip-card-metal__number {
+  margin-top: 4.5%;
+  font-family: var(--vip-font-sans);
+  font-weight: 500;
+  font-size: 18px;
+  font-size: 5.4cqw;
+  letter-spacing: 0.16em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #e9e4d8;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.9), 0 -1px 0 rgba(255, 255, 255, 0.12);
 }
 
-.vip-card-metal__info {
-  margin-bottom: 18px;
+.vip-card-metal__bottom {
+  display: flex;
+  align-items: flex-end;
+  gap: 4%;
+  margin-top: auto;
+  padding-top: 3%;
+  min-width: 0;
+}
+
+.vip-card-metal__label {
+  display: block;
+  font-size: 7px;
+  font-size: 1.9cqw;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(243, 239, 230, 0.45);
+  margin-bottom: 3px;
+  margin-bottom: 0.8cqw;
+}
+
+.vip-card-metal__holder {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.vip-card-metal__name {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  font-size: 3.5cqw;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #ece7dc;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.9), 0 -1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .vip-card-metal__insta {
-  font-size: 20px;
-  font-weight: 700;
-  color: #ffffff;
-  letter-spacing: 0.03em;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
+  margin-top: 4px;
+  margin-top: 1cqw;
+  min-width: 0;
+  font-size: 10.5px;
+  font-size: 2.8cqw;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: #d4af37;
 }
 
+.vip-card-metal__insta svg {
+  width: 12px;
+  width: 3.1cqw;
+  height: auto;
+  flex-shrink: 0;
+}
+
+.vip-card-metal__insta span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vip-card-metal__valid {
+  flex: 0 0 auto;
+}
+
+.vip-card-metal__valid-value {
+  display: block;
+  font-weight: 600;
+  font-size: 12px;
+  font-size: 3.3cqw;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  color: #ece7dc;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.9);
+}
+
+/* Bandeira da loja */
+.vip-card-metal__network {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1;
+}
+
+.vip-card-metal__network svg {
+  width: 44px;
+  width: 12cqw;
+  height: auto;
+  margin-bottom: 3px;
+  margin-bottom: 0.9cqw;
+}
+
+.vip-card-metal__network-name {
+  font-family: var(--vip-font-serif);
+  font-weight: 800;
+  font-size: 12px;
+  font-size: 3.4cqw;
+  letter-spacing: 0.24em;
+  margin-right: -0.24em;
+  color: #f3efe6;
+}
+
+.vip-card-metal__network-tier {
+  margin-top: 2px;
+  margin-top: 0.6cqw;
+  font-size: 6.5px;
+  font-size: 1.8cqw;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
+  text-transform: uppercase;
+  color: #d4af37;
+}
+
+/* Faixa de plano e status, abaixo do cartão */
 .vip-card-metal__meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 8px 16px;
+  max-width: 440px;
+  margin: 0 auto 26px;
+  padding: 12px 16px;
+  border: 1px solid var(--vip-card-border);
+  border-radius: var(--vip-radius-md);
+  background: var(--vip-bg);
   font-size: 12px;
-  color: #9a9aa4;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 14px;
-  margin-top: 14px;
+}
+
+.vip-card-metal__meta-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--vip-text-dim);
+  margin-bottom: 2px;
+}
+
+.vip-card-metal__meta-value {
+  font-weight: 700;
+  color: var(--vip-text);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .vip-dashboard {
+    padding: 22px 16px;
+  }
+  .vip-card-metal__meta {
+    font-size: 11px;
+  }
+  /* No celular: duas linhas "rótulo ··· valor" em vez de duas colunas que quebram */
+  .vip-card-metal__meta > div {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: left !important;
+  }
+  .vip-card-metal__meta-label {
+    margin-bottom: 0;
+  }
 }
 
 .vip-card-metal__status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #4ade80;
+  color: #15803d;
   font-weight: 700;
   letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
 .vip-card-metal__status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 8px #4ade80;
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);
   animation: vipPulseDot 2s infinite;
 }
 

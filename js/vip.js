@@ -20,6 +20,7 @@
   const STORAGE_PLAN_KEY      = 'nte_vip_plan';
   const STORAGE_COUPON_KEY    = 'nte_vip_coupon';
   const STORAGE_LINK_KEY      = 'nte_vip_group_link';
+  const STORAGE_SINCE_KEY     = 'nte_vip_since';
 
   // ── Inicialização ──
   document.addEventListener('DOMContentLoaded', async () => {
@@ -79,7 +80,8 @@
         phone: savedPhone,
         name: savedName || savedInsta,
         whatsappGroupLink: savedGroup,
-        vipCouponCode: savedCoup
+        vipCouponCode: savedCoup,
+        startedAt: localStorage.getItem(STORAGE_SINCE_KEY) || null
       });
     }
 
@@ -104,6 +106,7 @@
           if (data.vipToken) localStorage.setItem(STORAGE_TOKEN_KEY, data.vipToken);
           if (data.plan) localStorage.setItem(STORAGE_PLAN_KEY, data.plan);
           if (data.name) localStorage.setItem(STORAGE_NAME_KEY, data.name);
+          if (data.startedAt) localStorage.setItem(STORAGE_SINCE_KEY, data.startedAt);
           if (data.whatsappGroupLink) localStorage.setItem(STORAGE_LINK_KEY, data.whatsappGroupLink);
           if (data.vipCouponCode) localStorage.setItem(STORAGE_COUPON_KEY, data.vipCouponCode);
 
@@ -133,7 +136,16 @@
     if (userEl) userEl.textContent = cleanInsta ? (cleanInsta.startsWith('@') ? cleanInsta : `@${cleanInsta}`) : '@membro_vip';
 
     const fullEl = document.getElementById('vip-dash-fullname');
-    if (fullEl) fullEl.textContent = displayName;
+    if (fullEl) {
+      fullEl.textContent = cardHolderName(displayName);
+      fullEl.title = displayName;
+    }
+
+    const numberEl = document.getElementById('vip-dash-number');
+    if (numberEl) numberEl.textContent = '•••• •••• •••• ' + cardLastDigits(cleanInsta.replace(/^@/, '') || displayName);
+
+    const sinceEl = document.getElementById('vip-dash-since');
+    if (sinceEl) sinceEl.textContent = formatCardDate(member.startedAt);
 
     const planEl = document.getElementById('vip-dash-plan');
     if (planEl) planEl.textContent = planName;
@@ -185,6 +197,37 @@
     localStorage.removeItem(STORAGE_PLAN_KEY);
     localStorage.removeItem(STORAGE_COUPON_KEY);
     localStorage.removeItem(STORAGE_LINK_KEY);
+    localStorage.removeItem(STORAGE_SINCE_KEY);
+  }
+
+  // Data de entrada no VIP em MM/AA (como a validade impressa num cartão).
+  function formatCardDate(value) {
+    if (!value) return '--/--';
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '--/--';
+    return String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getFullYear()).slice(-2);
+  }
+
+  // Nome como sai impresso num cartão: nomes longos viram "PRIMEIRO I I ÚLTIMO" (sem da/de/do/dos/das/e).
+  function cardHolderName(fullName) {
+    const name = String(fullName || '').trim().replace(/\s+/g, ' ');
+    if (name.length <= 22) return name;
+    const parts = name.split(' ').filter(p => !/^(da|de|do|das|dos|e)$/i.test(p));
+    if (parts.length <= 2) return name;
+    const middle = parts.slice(1, -1).map(p => p.charAt(0)).join(' ');
+    return [parts[0], middle, parts[parts.length - 1]].join(' ');
+  }
+
+  // Últimos 4 dígitos do cartão: derivados do @ (decorativo e estável). Não usa token nem telefone,
+  // para o print do cartão não expor nada do membro.
+  function cardLastDigits(seed) {
+    let h = 2166136261;
+    const str = String(seed || 'nte-vip').toLowerCase();
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return String((h >>> 0) % 10000).padStart(4, '0');
   }
 
   // ── Abre Modal de Assinatura ──

@@ -6,7 +6,7 @@
   <title>NT VIP — Comunidade Exclusiva & Acesso Antecipado | NT Eleganz</title>
   <meta name="description" content="A comunidade fechada de quem garimpa antes. Peças raras primeiro pra você, drops no WhatsApp e Instagram e liberação antecipada no site." />
   <link rel="icon" type="image/x-icon" href="../assets/images/favicon.ico" />
-  <link rel="stylesheet" href="../css/vip.css?v=20261112f" />
+  <link rel="stylesheet" href="../css/vip.css?v=20261113-cartao-black" />
   <style>
     /* ── BLINDAGEM DE TEMA CLARO PARA MODAIS (CADASTRO E LOGIN) ── */
     .vip-modal-overlay {
@@ -194,37 +194,90 @@
 
     <!-- DASHBOARD DO MEMBRO VIP ATIVO (Visível automaticamente quando logado) -->
     <section class="vip-dashboard" id="vip-member-dashboard" style="display: none;">
-      <!-- CARTÃO DIGITAL METAL BLACK & GOLD -->
-      <div class="vip-card-metal">
+      <!-- CARTÃO DIGITAL METAL BLACK & GOLD (proporção de cartão de crédito, ISO 85,6 x 54 mm) -->
+      <div class="vip-card-wrap">
+      <div class="vip-card-metal" aria-label="Cartão de membro NT Eleganz Privé Black">
         <div class="vip-card-metal__top">
-          <div class="vip-card-metal__brand">NT ELEGANZ · VIP PRIVÉ</div>
-          <div class="vip-card-metal__chip" aria-hidden="true"></div>
+          <div class="vip-card-metal__brand">
+            <span class="vip-card-metal__brand-name">NT ELEGANZ</span>
+            <span class="vip-card-metal__brand-tier">Privé Black</span>
+          </div>
+          <svg class="vip-card-metal__contactless" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <path d="M8.5 8.5a5 5 0 0 1 0 7"></path>
+            <path d="M12 6a8.5 8.5 0 0 1 0 12"></path>
+            <path d="M15.5 3.5a12 12 0 0 1 0 17"></path>
+          </svg>
         </div>
 
-        <div class="vip-card-metal__info">
-          <div style="font-size: 11px; text-transform: uppercase; color: var(--vip-text-muted); letter-spacing: 0.1em; margin-bottom: 4px;">Membro Identificado</div>
-          <div class="vip-card-metal__insta" id="vip-dash-insta">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2">
-              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+        <svg class="vip-card-metal__chip" viewBox="0 0 50 38" aria-hidden="true">
+          <defs>
+            <linearGradient id="vipChipGold" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f3dd9a"></stop>
+              <stop offset="0.45" stop-color="#c9a24a"></stop>
+              <stop offset="1" stop-color="#8a6a24"></stop>
+            </linearGradient>
+          </defs>
+          <rect x="0.5" y="0.5" width="49" height="37" rx="6" fill="url(#vipChipGold)" stroke="#6f5419" stroke-opacity="0.6"></rect>
+          <g fill="none" stroke="#5c4514" stroke-opacity="0.55" stroke-width="1">
+            <path d="M0.5 13h14M0.5 25h14M35.5 13h14M35.5 25h14"></path>
+            <path d="M14.5 0.5v37M35.5 0.5v37"></path>
+            <rect x="18" y="9" width="14" height="20" rx="3"></rect>
+          </g>
+        </svg>
+
+        <div class="vip-card-metal__number" id="vip-dash-number" aria-label="Número do cartão de membro">•••• •••• •••• 0000</div>
+
+        <div class="vip-card-metal__bottom">
+          <div class="vip-card-metal__holder">
+            <span class="vip-card-metal__label">Membro</span>
+            <span class="vip-card-metal__name" id="vip-dash-fullname">Cliente VIP</span>
+            <span class="vip-card-metal__insta" id="vip-dash-insta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+              </svg>
+              <span id="vip-dash-username">@membro_vip</span>
+            </span>
+          </div>
+
+          <div class="vip-card-metal__valid">
+            <span class="vip-card-metal__label">Membro desde</span>
+            <span class="vip-card-metal__valid-value" id="vip-dash-since">--/--</span>
+          </div>
+
+          <!-- Bandeira própria da loja (não usar marcas de bandeiras reais) -->
+          <div class="vip-card-metal__network" aria-hidden="true">
+            <svg viewBox="0 0 48 30">
+              <defs>
+                <linearGradient id="vipNetGold" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#f6e3a6"></stop>
+                  <stop offset="0.5" stop-color="#c9a24a"></stop>
+                  <stop offset="1" stop-color="#8a6a24"></stop>
+                </linearGradient>
+              </defs>
+              <circle cx="17" cy="15" r="13" fill="none" stroke="url(#vipNetGold)" stroke-width="2.2"></circle>
+              <circle cx="31" cy="15" r="13" fill="none" stroke="#d8d8de" stroke-opacity="0.85" stroke-width="2.2"></circle>
+              <path d="M18 19.5 16 11l4.2 3.4L24 9l3.8 5.4L32 11l-2 8.5z" fill="url(#vipNetGold)"></path>
             </svg>
-            <span id="vip-dash-username">@membro_vip</span>
+            <span class="vip-card-metal__network-name">BLACK</span>
+            <span class="vip-card-metal__network-tier">Ilimitado</span>
           </div>
-          <div style="font-size: 13px; color: #a5a5ad; margin-top: 4px;" id="vip-dash-fullname">Cliente VIP</div>
         </div>
+      </div>
+      </div>
 
-        <div class="vip-card-metal__meta">
-          <div>
-            <div style="font-size: 10px; text-transform: uppercase; color: #777;">Modalidade</div>
-            <div style="font-weight: 700; color: #fff;" id="vip-dash-plan">Plano Vitalício</div>
-          </div>
-          <div style="text-align: right;">
-            <div style="font-size: 10px; text-transform: uppercase; color: #777;">Status</div>
-            <div class="vip-card-metal__status">
-              <span class="vip-card-metal__status-dot"></span>
-              <span id="vip-dash-status-text">ACESSO ATIVO</span>
-            </div>
+      <!-- Plano e status do membro -->
+      <div class="vip-card-metal__meta">
+        <div>
+          <div class="vip-card-metal__meta-label">Modalidade</div>
+          <div class="vip-card-metal__meta-value" id="vip-dash-plan">Plano Vitalício</div>
+        </div>
+        <div style="text-align: right;">
+          <div class="vip-card-metal__meta-label">Status</div>
+          <div class="vip-card-metal__status">
+            <span class="vip-card-metal__status-dot"></span>
+            <span id="vip-dash-status-text">ACESSO ATIVO</span>
           </div>
         </div>
       </div>
@@ -798,6 +851,6 @@
     </div>
   </div>
 
-  <script src="../js/vip.js?v=20261112-ver-senha"></script>
+  <script src="../js/vip.js?v=20261113-cartao-black"></script>
 </body>
 </html>
