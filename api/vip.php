@@ -79,12 +79,16 @@ function getMercadoPagoAccessToken(): string {
     return 'APP_USR-4148777530483800-110522-7c2732adbccc669d7ba002abde4ccd4c-662355896';
 }
 
-function callMercadoPago(string $url, string $method, ?array $body, string $accessToken): array {
+function callMercadoPago(string $url, string $method, ?array $body, string $accessToken, ?string $idempotencyKey = null): array {
     $ch = curl_init($url);
     $headers = [
         'Content-Type: application/json',
         'Authorization: Bearer ' . $accessToken
     ];
+    // O Mercado Pago recusa POST /v1/payments sem este cabeçalho ("Header X-Idempotency-Key can't be null")
+    if ($idempotencyKey) {
+        $headers[] = 'X-Idempotency-Key: ' . $idempotencyKey;
+    }
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 12);
@@ -377,7 +381,7 @@ if ($action === 'subscribe' && $method === 'POST') {
             'statement_descriptor' => 'NT VIP'
         ];
 
-        $res = callMercadoPago(MP_PAYMENTS_URL, 'POST', $pixPayload, $accessToken);
+        $res = callMercadoPago(MP_PAYMENTS_URL, 'POST', $pixPayload, $accessToken, 'vip-pix-' . $subCode);
         $payData = $res['data'] ?? [];
 
         if ($res['httpCode'] >= 400 || empty($payData['id'])) {
@@ -457,7 +461,7 @@ if ($action === 'subscribe' && $method === 'POST') {
             'statement_descriptor' => 'NT VIP'
         ];
 
-        $res = callMercadoPago(MP_PAYMENTS_URL, 'POST', $cardPayload, $accessToken);
+        $res = callMercadoPago(MP_PAYMENTS_URL, 'POST', $cardPayload, $accessToken, 'vip-card-' . $subCode);
         $payData = $res['data'] ?? [];
 
         if ($res['httpCode'] >= 400 || empty($payData['id'])) {
