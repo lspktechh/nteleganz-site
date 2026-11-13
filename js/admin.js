@@ -305,6 +305,263 @@
     fetch('/api/sync-images.php', { cache: 'no-store' }).catch(() => {});
   }
 
+  // ── MAIS VENDIDOS: SEMPRE 4 PRODUTOS EM ESTOQUE ──
+  const BESTSELLERS_SLOTS = 4;
+
+  function isProductInStock(p) {
+    if (!p || p.active === false || p.inStock === false || p.available === false) return false;
+    return !(p.stock !== undefined && p.stock !== null && Number(p.stock) <= 0);
+  }
+
+  function featuredInStock() {
+    return allProducts.filter(p => p.featured === true && isProductInStock(p));
+  }
+
+  let bestsellersPickerReason = '';
+
+  /** Ao abrir o painel: se faltar produto em estoque nos Mais Vendidos (ex.: esgotou numa venda), pede o substituto. Uma vez por sessão. */
+  function checkBestsellersSlots() {
+    const missing = BESTSELLERS_SLOTS - featuredInStock().length;
+    if (missing <= 0) return;
+    if (!allProducts.some(p => p.featured !== true && isProductInStock(p))) return;
+    try {
+      if (sessionStorage.getItem('nte_bestsellers_prompted') === '1') return;
+      sessionStorage.setItem('nte_bestsellers_prompted', '1');
+    } catch (e) { /* sem sessionStorage: pergunta mesmo assim */ }
+    openBestsellersPicker('Há vagas em Mais Vendidos sem produto em estoque.');
+  }
+
+  window.openBestsellersPicker = function (reason = '') {
+    bestsellersPickerReason = reason;
+    const search = document.getElementById('bestsellers-picker-search');
+    if (search) search.value = '';
+    renderBestsellersPicker();
+    document.getElementById('bestsellers-picker-modal')?.classList.add('open');
+  };
+
+  window.closeBestsellersPicker = function () {
+    document.getElementById('bestsellers-picker-modal')?.classList.remove('open');
+  };
+
+  window.renderBestsellersPicker = function () {
+    const intro = document.getElementById('bestsellers-picker-intro');
+    const list = document.getElementById('bestsellers-picker-list');
+    if (!intro || !list) return;
+
+    const filled = featuredInStock().length;
+    const open = Math.max(0, BESTSELLERS_SLOTS - filled);
+    intro.textContent = `${bestsellersPickerReason ? bestsellersPickerReason + ' ' : ''}`
+      + (open > 0
+        ? `${filled} de ${BESTSELLERS_SLOTS} vagas preenchidas com produtos em estoque. Escolha ${open === 1 ? 'o produto' : `${open} produtos`} para completar a seção.`
+        : `As ${BESTSELLERS_SLOTS} vagas estão preenchidas.`);
+
+    const q = (document.getElementById('bestsellers-picker-search')?.value || '').trim().toLowerCase();
+    const candidates = allProducts
+      .filter(p => p.featured !== true && isProductInStock(p))
+      .filter(p => !q || `${p.brand || ''} ${p.name || ''}`.toLowerCase().includes(q))
+      .slice(0, 80);
+
+    if (!candidates.length) {
+      list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Nenhum produto em estoque disponível.</div>';
+      return;
+    }
+    list.innerHTML = candidates.map(p => {
+      const img = p.image ? resolveAdminProductImg(p.image) : '';
+      const price = Number(p.priceNum) || fmt.parsePrice(p.price);
+      return `
+        <div style="display:flex; align-items:center; gap:12px; padding:8px; border:1px solid var(--border); border-radius:10px;">
+          ${img ? `<img loading="lazy" decoding="async" src="${escHtml(img)}" alt="" style="width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0;" />` : '<div style="width:44px; height:44px; border-radius:8px; background:var(--bg-surface); flex-shrink:0;"></div>'}
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escHtml([p.brand, p.name].filter(Boolean).join(' '))}</div>
+            <div style="font-size:12px; color:var(--text-muted);">${price ? fmt.currency(price) : ''} · estoque ${escHtml(String(p.stock ?? '—'))}</div>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" data-id="${escHtml(String(p.id))}" onclick="addToBestsellers(this.dataset.id, this)" style="flex-shrink:0;" ${open === 0 ? 'disabled' : ''}>Colocar</button>
+        </div>`;
+    }).join('');
+  };
+
+  window.addToBestsellers = async function (id, button) {
+    const product = allProducts.find(p => String(p.id) === String(id));
+    if (!product) return;
+    if (button) { button.disabled = true; button.textContent = 'Salvando…'; }
+    try {
+      const saved = await window.ntDB.products.update(product.id, { featured: true });
+      allProducts = allProducts.map(p => (p.id === product.id ? { ...p, ...(saved || {}), featured: true } : p));
+      renderProductsTable();
+      showToast('check', 'Mais Vendidos atualizado', product.name || '');
+      if (featuredInStock().length >= BESTSELLERS_SLOTS) {
+        closeBestsellersPicker();
+        showToast('check', 'Mais Vendidos completo', `${BESTSELLERS_SLOTS} produtos em estoque na vitrine.`);
+      } else {
+        renderBestsellersPicker();
+      }
+    } catch (e) {
+      alert('Não foi possível colocar o produto em Mais Vendidos: ' + e.message);
+      if (button) { button.disabled = false; button.textContent = 'Colocar'; }
+    }
+  };
+
+  // ── DESCONTO VIP DO PRODUTO ──
+  function readVipDiscountInput() {
+    const raw = Number(document.getElementById('p-vip-discount')?.value || 0);
+    return Number.isFinite(raw) ? Math.max(0, Math.min(90, Math.round(raw))) : 0;
+  }
+
+  window.updateVipDiscountPreview = function () {
+    const out = document.getElementById('p-vip-discount-preview');
+    if (!out) return;
+    const pct = readVipDiscountInput();
+    const price = fmt.parsePrice(getVal('p-price'));
+    out.textContent = (pct > 0 && price > 0)
+      ? `Preço VIP: ${fmt.currency(Math.round(price * (100 - pct)) / 100)}`
+      : '';
+  };
+
+  // ── MENSAGEM PARA O GRUPO VIP (WhatsApp) ──
+  const productIsVipExclusive = p => !!(p && (p.isVipExclusive || p.vipExclusive || p.vipOnly));
+  const productVipDiscount = p => Math.max(0, Math.min(90, Math.round(Number(p?.vipDiscountPercent) || 0)));
+
+  /** Vale avisar o grupo? Só quando o produto tem benefício VIP e algo VIP mudou (ou é novo). */
+  function vipChangeWorthAnnouncing(before, after) {
+    const hasBenefit = productIsVipExclusive(after) || productVipDiscount(after) > 0;
+    if (!hasBenefit) return false;
+    if (!before) return true;
+    return productIsVipExclusive(before) !== productIsVipExclusive(after)
+      || productVipDiscount(before) !== productVipDiscount(after)
+      || (productIsVipExclusive(after) && String(before.vipReleaseDuration || '48') !== String(after.vipReleaseDuration || '48'))
+      || Number(before.priceNum || 0) !== Number(after.priceNum || 0);
+  }
+
+  function vipDurationLabel(duration) {
+    const d = String(duration || '48');
+    if (d === 'forever') return null;
+    const hours = Number(d) || 48;
+    return hours >= 168 && hours % 24 === 0 ? `${hours / 24} dias` : `${hours} horas`;
+  }
+
+  function buildProductVipMessage(product, isNew) {
+    const origin = window.location.origin;
+    const title = [product.brand, product.name].filter(Boolean).join(' ');
+    const price = Number(product.priceNum) || fmt.parsePrice(product.price);
+    const pct = productVipDiscount(product);
+    const lines = [
+      isNew ? '*NT ELEGANZ VIP | NOVIDADE EXCLUSIVA*' : '*NT ELEGANZ VIP | ATUALIZAÇÃO PARA ASSINANTES*',
+      '',
+      `*${title}*`,
+    ];
+    if (price > 0 && pct > 0) {
+      lines.push(`De ${fmt.currency(price)} por *${fmt.currency(Math.round(price * (100 - pct)) / 100)}* para membros VIP (${pct}% OFF).`);
+    } else if (price > 0) {
+      lines.push(`Preço: ${fmt.currency(price)}`);
+    }
+    if (productIsVipExclusive(product)) {
+      const label = vipDurationLabel(product.vipReleaseDuration);
+      lines.push(label
+        ? `Acesso antecipado: só assinantes VIP compram nas próximas ${label}. Depois abre para a loja toda.`
+        : 'Peça exclusiva: só assinantes VIP podem comprar.');
+    }
+    const sizes = Array.isArray(product.sizes) ? product.sizes.filter(Boolean) : [];
+    if (sizes.length) lines.push(`Tamanhos: ${sizes.join(', ')}`);
+    lines.push('', `Ver a peça: ${origin}/products/?id=${encodeURIComponent(product.id || '')}`);
+    lines.push(`Entre na Área VIP com seu @ e sua senha para garantir o benefício: ${origin}/vip/`);
+    return lines.join('\n');
+  }
+
+  function buildVipSettingsMessage(settings) {
+    const origin = window.location.origin;
+    const money = v => fmt.currency(Number(v) || 0);
+    return [
+      `*${settings.title || 'NT ELEGANZ VIP'}*`,
+      '',
+      settings.subtitle || 'Novidades da Área VIP para os assinantes.',
+      '',
+      `Planos: Mensal ${money(settings.monthlyPrice)} | Vitalício ${money(settings.lifetimePrice)}`,
+      'As peças com acesso antecipado e os descontos exclusivos chegam primeiro aqui no grupo.',
+      '',
+      `Área VIP: ${origin}/vip/`,
+    ].join('\n');
+  }
+
+  function vipBroadcastFeedback(text, isError = false) {
+    const el = document.getElementById('vip-broadcast-feedback');
+    if (!el) return;
+    el.textContent = text;
+    el.style.color = isError ? '#b91c1c' : '#166534';
+  }
+
+  window.openVipBroadcast = function (text) {
+    const modal = document.getElementById('vip-broadcast-modal');
+    const area = document.getElementById('vip-broadcast-text');
+    if (!modal || !area) return;
+    area.value = typeof text === 'string' && text ? text : buildVipSettingsMessage({});
+    vipBroadcastFeedback('');
+    modal.classList.add('open');
+  };
+
+  window.closeVipBroadcast = function () {
+    document.getElementById('vip-broadcast-modal')?.classList.remove('open');
+  };
+
+  async function copyBroadcastText() {
+    const text = document.getElementById('vip-broadcast-text')?.value || '';
+    if (!text.trim()) return { ok: false, text };
+    try {
+      await navigator.clipboard.writeText(text);
+      return { ok: true, text };
+    } catch (e) {
+      // Navegador sem permissão de área de transferência: seleciona para Ctrl+C manual.
+      const area = document.getElementById('vip-broadcast-text');
+      area?.focus();
+      area?.select();
+      return { ok: false, text };
+    }
+  }
+
+  window.copyVipBroadcast = async function () {
+    const { ok } = await copyBroadcastText();
+    vipBroadcastFeedback(ok ? 'Mensagem copiada. Cole no grupo VIP do WhatsApp.' : 'Não foi possível copiar sozinho: o texto está selecionado, use Ctrl+C.', !ok);
+  };
+
+  window.sendVipBroadcast = async function () {
+    const { ok, text } = await copyBroadcastText();
+    if (!text.trim()) {
+      vipBroadcastFeedback('Escreva a mensagem antes de enviar.', true);
+      return;
+    }
+    // O WhatsApp não aceita postar direto num grupo por link: abre com o texto pronto e o
+    // dono escolhe o grupo VIP. A cópia garante que o texto também possa ser colado.
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    vipBroadcastFeedback(ok
+      ? 'WhatsApp aberto com a mensagem. Escolha o grupo VIP e envie. (O texto também foi copiado.)'
+      : 'WhatsApp aberto com a mensagem. Escolha o grupo VIP e envie.');
+  };
+
+  // ── REDEFINIR SENHA DE UM MEMBRO ──
+  window.setVipMemberPassword = async function (id) {
+    const password = window.prompt('Nova senha de acesso do membro (mínimo 6 caracteres).\nEnvie a senha para ele pelo WhatsApp depois de salvar.');
+    if (password === null) return;
+    if (password.length < 6) {
+      alert('A senha precisa ter pelo menos 6 caracteres.');
+      return;
+    }
+    try {
+      const res = await fetch('../api/vip.php?action=set_password', {
+        method: 'POST',
+        headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ id, password })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        showToast('check', 'Senha atualizada', 'Envie a nova senha para o membro.');
+        await window.loadVipPanel?.();
+      } else {
+        alert(data.error || 'Não foi possível atualizar a senha.');
+      }
+    } catch (e) {
+      alert('Erro de conexão ao atualizar a senha.');
+    }
+  };
+
   // ── Init ──
   async function init() {
     scheduleLoader();
@@ -1705,7 +1962,8 @@
       if (!exists) list.push(val);
     });
     renderTags(type, list);
-    if (type === 'sizes') renderStockBySize();
+    // (Havia uma chamada a renderStockBySize(), função que nunca existiu: quebrava logo depois
+    // de adicionar o tamanho e, dentro do Salvar, impediria o produto de ser salvo.)
   }
   window.commitPendingTag = commitPendingTag;
 
@@ -5876,263 +6134,6 @@ window.showConfirm = function (msg, callback) {
       `;
     }).join('');
   }
-
-  // ── MAIS VENDIDOS: SEMPRE 4 PRODUTOS EM ESTOQUE ──
-  const BESTSELLERS_SLOTS = 4;
-
-  function isProductInStock(p) {
-    if (!p || p.active === false || p.inStock === false || p.available === false) return false;
-    return !(p.stock !== undefined && p.stock !== null && Number(p.stock) <= 0);
-  }
-
-  function featuredInStock() {
-    return allProducts.filter(p => p.featured === true && isProductInStock(p));
-  }
-
-  let bestsellersPickerReason = '';
-
-  /** Ao abrir o painel: se faltar produto em estoque nos Mais Vendidos (ex.: esgotou numa venda), pede o substituto. Uma vez por sessão. */
-  function checkBestsellersSlots() {
-    const missing = BESTSELLERS_SLOTS - featuredInStock().length;
-    if (missing <= 0) return;
-    if (!allProducts.some(p => p.featured !== true && isProductInStock(p))) return;
-    try {
-      if (sessionStorage.getItem('nte_bestsellers_prompted') === '1') return;
-      sessionStorage.setItem('nte_bestsellers_prompted', '1');
-    } catch (e) { /* sem sessionStorage: pergunta mesmo assim */ }
-    openBestsellersPicker('Há vagas em Mais Vendidos sem produto em estoque.');
-  }
-
-  window.openBestsellersPicker = function (reason = '') {
-    bestsellersPickerReason = reason;
-    const search = document.getElementById('bestsellers-picker-search');
-    if (search) search.value = '';
-    renderBestsellersPicker();
-    document.getElementById('bestsellers-picker-modal')?.classList.add('open');
-  };
-
-  window.closeBestsellersPicker = function () {
-    document.getElementById('bestsellers-picker-modal')?.classList.remove('open');
-  };
-
-  window.renderBestsellersPicker = function () {
-    const intro = document.getElementById('bestsellers-picker-intro');
-    const list = document.getElementById('bestsellers-picker-list');
-    if (!intro || !list) return;
-
-    const filled = featuredInStock().length;
-    const open = Math.max(0, BESTSELLERS_SLOTS - filled);
-    intro.textContent = `${bestsellersPickerReason ? bestsellersPickerReason + ' ' : ''}`
-      + (open > 0
-        ? `${filled} de ${BESTSELLERS_SLOTS} vagas preenchidas com produtos em estoque. Escolha ${open === 1 ? 'o produto' : `${open} produtos`} para completar a seção.`
-        : `As ${BESTSELLERS_SLOTS} vagas estão preenchidas.`);
-
-    const q = (document.getElementById('bestsellers-picker-search')?.value || '').trim().toLowerCase();
-    const candidates = allProducts
-      .filter(p => p.featured !== true && isProductInStock(p))
-      .filter(p => !q || `${p.brand || ''} ${p.name || ''}`.toLowerCase().includes(q))
-      .slice(0, 80);
-
-    if (!candidates.length) {
-      list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Nenhum produto em estoque disponível.</div>';
-      return;
-    }
-    list.innerHTML = candidates.map(p => {
-      const img = p.image ? resolveAdminProductImg(p.image) : '';
-      const price = Number(p.priceNum) || fmt.parsePrice(p.price);
-      return `
-        <div style="display:flex; align-items:center; gap:12px; padding:8px; border:1px solid var(--border); border-radius:10px;">
-          ${img ? `<img loading="lazy" decoding="async" src="${escHtml(img)}" alt="" style="width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0;" />` : '<div style="width:44px; height:44px; border-radius:8px; background:var(--bg-surface); flex-shrink:0;"></div>'}
-          <div style="flex:1; min-width:0;">
-            <div style="font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escHtml([p.brand, p.name].filter(Boolean).join(' '))}</div>
-            <div style="font-size:12px; color:var(--text-muted);">${price ? fmt.currency(price) : ''} · estoque ${escHtml(String(p.stock ?? '—'))}</div>
-          </div>
-          <button type="button" class="btn btn-primary btn-sm" data-id="${escHtml(String(p.id))}" onclick="addToBestsellers(this.dataset.id, this)" style="flex-shrink:0;" ${open === 0 ? 'disabled' : ''}>Colocar</button>
-        </div>`;
-    }).join('');
-  };
-
-  window.addToBestsellers = async function (id, button) {
-    const product = allProducts.find(p => String(p.id) === String(id));
-    if (!product) return;
-    if (button) { button.disabled = true; button.textContent = 'Salvando…'; }
-    try {
-      const saved = await window.ntDB.products.update(product.id, { featured: true });
-      allProducts = allProducts.map(p => (p.id === product.id ? { ...p, ...(saved || {}), featured: true } : p));
-      renderProductsTable();
-      showToast('check', 'Mais Vendidos atualizado', product.name || '');
-      if (featuredInStock().length >= BESTSELLERS_SLOTS) {
-        closeBestsellersPicker();
-        showToast('check', 'Mais Vendidos completo', `${BESTSELLERS_SLOTS} produtos em estoque na vitrine.`);
-      } else {
-        renderBestsellersPicker();
-      }
-    } catch (e) {
-      alert('Não foi possível colocar o produto em Mais Vendidos: ' + e.message);
-      if (button) { button.disabled = false; button.textContent = 'Colocar'; }
-    }
-  };
-
-  // ── DESCONTO VIP DO PRODUTO ──
-  function readVipDiscountInput() {
-    const raw = Number(document.getElementById('p-vip-discount')?.value || 0);
-    return Number.isFinite(raw) ? Math.max(0, Math.min(90, Math.round(raw))) : 0;
-  }
-
-  window.updateVipDiscountPreview = function () {
-    const out = document.getElementById('p-vip-discount-preview');
-    if (!out) return;
-    const pct = readVipDiscountInput();
-    const price = fmt.parsePrice(getVal('p-price'));
-    out.textContent = (pct > 0 && price > 0)
-      ? `Preço VIP: ${fmt.currency(Math.round(price * (100 - pct)) / 100)}`
-      : '';
-  };
-
-  // ── MENSAGEM PARA O GRUPO VIP (WhatsApp) ──
-  const productIsVipExclusive = p => !!(p && (p.isVipExclusive || p.vipExclusive || p.vipOnly));
-  const productVipDiscount = p => Math.max(0, Math.min(90, Math.round(Number(p?.vipDiscountPercent) || 0)));
-
-  /** Vale avisar o grupo? Só quando o produto tem benefício VIP e algo VIP mudou (ou é novo). */
-  function vipChangeWorthAnnouncing(before, after) {
-    const hasBenefit = productIsVipExclusive(after) || productVipDiscount(after) > 0;
-    if (!hasBenefit) return false;
-    if (!before) return true;
-    return productIsVipExclusive(before) !== productIsVipExclusive(after)
-      || productVipDiscount(before) !== productVipDiscount(after)
-      || (productIsVipExclusive(after) && String(before.vipReleaseDuration || '48') !== String(after.vipReleaseDuration || '48'))
-      || Number(before.priceNum || 0) !== Number(after.priceNum || 0);
-  }
-
-  function vipDurationLabel(duration) {
-    const d = String(duration || '48');
-    if (d === 'forever') return null;
-    const hours = Number(d) || 48;
-    return hours >= 168 && hours % 24 === 0 ? `${hours / 24} dias` : `${hours} horas`;
-  }
-
-  function buildProductVipMessage(product, isNew) {
-    const origin = window.location.origin;
-    const title = [product.brand, product.name].filter(Boolean).join(' ');
-    const price = Number(product.priceNum) || fmt.parsePrice(product.price);
-    const pct = productVipDiscount(product);
-    const lines = [
-      isNew ? '*NT ELEGANZ VIP | NOVIDADE EXCLUSIVA*' : '*NT ELEGANZ VIP | ATUALIZAÇÃO PARA ASSINANTES*',
-      '',
-      `*${title}*`,
-    ];
-    if (price > 0 && pct > 0) {
-      lines.push(`De ${fmt.currency(price)} por *${fmt.currency(Math.round(price * (100 - pct)) / 100)}* para membros VIP (${pct}% OFF).`);
-    } else if (price > 0) {
-      lines.push(`Preço: ${fmt.currency(price)}`);
-    }
-    if (productIsVipExclusive(product)) {
-      const label = vipDurationLabel(product.vipReleaseDuration);
-      lines.push(label
-        ? `Acesso antecipado: só assinantes VIP compram nas próximas ${label}. Depois abre para a loja toda.`
-        : 'Peça exclusiva: só assinantes VIP podem comprar.');
-    }
-    const sizes = Array.isArray(product.sizes) ? product.sizes.filter(Boolean) : [];
-    if (sizes.length) lines.push(`Tamanhos: ${sizes.join(', ')}`);
-    lines.push('', `Ver a peça: ${origin}/products/?id=${encodeURIComponent(product.id || '')}`);
-    lines.push(`Entre na Área VIP com seu @ e sua senha para garantir o benefício: ${origin}/vip/`);
-    return lines.join('\n');
-  }
-
-  function buildVipSettingsMessage(settings) {
-    const origin = window.location.origin;
-    const money = v => fmt.currency(Number(v) || 0);
-    return [
-      `*${settings.title || 'NT ELEGANZ VIP'}*`,
-      '',
-      settings.subtitle || 'Novidades da Área VIP para os assinantes.',
-      '',
-      `Planos: Mensal ${money(settings.monthlyPrice)} | Vitalício ${money(settings.lifetimePrice)}`,
-      'As peças com acesso antecipado e os descontos exclusivos chegam primeiro aqui no grupo.',
-      '',
-      `Área VIP: ${origin}/vip/`,
-    ].join('\n');
-  }
-
-  function vipBroadcastFeedback(text, isError = false) {
-    const el = document.getElementById('vip-broadcast-feedback');
-    if (!el) return;
-    el.textContent = text;
-    el.style.color = isError ? '#b91c1c' : '#166534';
-  }
-
-  window.openVipBroadcast = function (text) {
-    const modal = document.getElementById('vip-broadcast-modal');
-    const area = document.getElementById('vip-broadcast-text');
-    if (!modal || !area) return;
-    area.value = typeof text === 'string' && text ? text : buildVipSettingsMessage({});
-    vipBroadcastFeedback('');
-    modal.classList.add('open');
-  };
-
-  window.closeVipBroadcast = function () {
-    document.getElementById('vip-broadcast-modal')?.classList.remove('open');
-  };
-
-  async function copyBroadcastText() {
-    const text = document.getElementById('vip-broadcast-text')?.value || '';
-    if (!text.trim()) return { ok: false, text };
-    try {
-      await navigator.clipboard.writeText(text);
-      return { ok: true, text };
-    } catch (e) {
-      // Navegador sem permissão de área de transferência: seleciona para Ctrl+C manual.
-      const area = document.getElementById('vip-broadcast-text');
-      area?.focus();
-      area?.select();
-      return { ok: false, text };
-    }
-  }
-
-  window.copyVipBroadcast = async function () {
-    const { ok } = await copyBroadcastText();
-    vipBroadcastFeedback(ok ? 'Mensagem copiada. Cole no grupo VIP do WhatsApp.' : 'Não foi possível copiar sozinho: o texto está selecionado, use Ctrl+C.', !ok);
-  };
-
-  window.sendVipBroadcast = async function () {
-    const { ok, text } = await copyBroadcastText();
-    if (!text.trim()) {
-      vipBroadcastFeedback('Escreva a mensagem antes de enviar.', true);
-      return;
-    }
-    // O WhatsApp não aceita postar direto num grupo por link: abre com o texto pronto e o
-    // dono escolhe o grupo VIP. A cópia garante que o texto também possa ser colado.
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
-    vipBroadcastFeedback(ok
-      ? 'WhatsApp aberto com a mensagem. Escolha o grupo VIP e envie. (O texto também foi copiado.)'
-      : 'WhatsApp aberto com a mensagem. Escolha o grupo VIP e envie.');
-  };
-
-  // ── REDEFINIR SENHA DE UM MEMBRO ──
-  window.setVipMemberPassword = async function (id) {
-    const password = window.prompt('Nova senha de acesso do membro (mínimo 6 caracteres).\nEnvie a senha para ele pelo WhatsApp depois de salvar.');
-    if (password === null) return;
-    if (password.length < 6) {
-      alert('A senha precisa ter pelo menos 6 caracteres.');
-      return;
-    }
-    try {
-      const res = await fetch('../api/vip.php?action=set_password', {
-        method: 'POST',
-        headers: await adminApiHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ id, password })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success) {
-        showToast('check', 'Senha atualizada', 'Envie a nova senha para o membro.');
-        await loadVipPanel();
-      } else {
-        alert(data.error || 'Não foi possível atualizar a senha.');
-      }
-    } catch (e) {
-      alert('Erro de conexão ao atualizar a senha.');
-    }
-  };
 
   window.filterVipMembersTable = function() {
     const q = (document.getElementById('vip-member-search')?.value || '').toLowerCase().trim();
