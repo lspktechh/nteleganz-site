@@ -4,7 +4,7 @@
    - cartão de metal que inclina e reflete a luz seguindo o mouse/dedo ([data-tilt]),
      e o giroscópio no Android
    - cabeçalho que ganha borda ao rolar
-   - barra fixa "Ver planos" no celular (some na seção de planos e para membros)
+   - barra fixa "Ver planos" no celular (some na seção de planos, no rodapé e para membros)
    A lógica de assinatura/login continua toda em js/vip.js.
    ============================================================ */
 (function () {
@@ -111,13 +111,15 @@
   const sticky = document.getElementById('vip-sticky-cta');
   const hero = document.getElementById('vip-hero');
   const plans = document.getElementById('vip-plans-section');
+  const footer = document.querySelector('footer.site-footer');
   let heroVisible = true;
   let plansVisible = false;
+  let footerVisible = false;
 
   function updateSticky() {
     if (!sticky) return;
     const isMember = document.body.classList.contains('is-vip-member') || (plans && plans.style.display === 'none');
-    const show = !heroVisible && !plansVisible && !isMember;
+    const show = !heroVisible && !plansVisible && !footerVisible && !isMember;
     sticky.classList.toggle('is-visible', show);
     sticky.setAttribute('aria-hidden', String(!show));
     const link = sticky.querySelector('a');
@@ -129,11 +131,13 @@
       entries.forEach(entry => {
         if (entry.target === hero) heroVisible = entry.isIntersecting;
         if (entry.target === plans) plansVisible = entry.isIntersecting;
+        if (entry.target === footer) footerVisible = entry.isIntersecting;
       });
       updateSticky();
     }, { threshold: 0 });
     if (hero) stickyObserver.observe(hero);
     if (plans) stickyObserver.observe(plans);
+    if (footer) stickyObserver.observe(footer);
   }
 
   // Preço da barra acompanha o preço mensal vindo do painel (js/vip.js atualiza #val-monthly-price)
