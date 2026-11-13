@@ -95,6 +95,8 @@ DirectoryIndex index.php index.html index.htm
 
     # Roteamento amigável para PDP dinâmica, fotos limpas, checkout, página de pedido (/order ou /pedido) e rota VIP (/vip)
     RewriteRule ^vip/?$ vip/index.html [L]
+    # Coleção VIP: só peças com desconto VIP ou acesso antecipado (js/catalog.js, modo VIP)
+    RewriteRule ^collection_vip/?$ collection_vip/index.html [L]
     RewriteRule ^checkout/?$ checkout/index.html [L]
     RewriteRule ^products(?:/([a-zA-Z0-9_.-]+))?/?$ products/index.php?p=$1 [L,QSA]
     RewriteRule ^foto(?:/([a-zA-Z0-9_.-]+))?/?$ foto/index.php?p=$1 [L,QSA]

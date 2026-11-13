@@ -39,7 +39,7 @@
   <link rel="stylesheet" href="css/animations.css" />
   <link rel="stylesheet" href="css/components.css?v=20261110-peca-v4" />
   <link rel="stylesheet" href="css/main.css" />
-  <link rel="stylesheet" href="css/vip-modal.css?v=20261112c" />
+  <link rel="stylesheet" href="css/vip-modal.css?v=20261113-btn-vip" />
 
   <style>
     /* Product page — editorial product detail */
@@ -582,7 +582,7 @@
 <script src="/js/image-loader.js?v=20261027"></script>
 <script src="js/whatsapp.js?v=20261107c"></script>
 <script src="js/customer-orders.js?v=20261003b"></script>
-<script src="js/cart.js?v=20261007wpp"></script>
+<script src="js/cart.js?v=20261113-preco-vip"></script>
 <script src="js/checkout.js?v=20261006"></script>
 <script src="/js/dynamic-checkout.js?v=20261101"></script>
 <script src="js/menu.js?v=20260930"></script>
@@ -597,6 +597,10 @@
   'use strict';
 
   let currentProduct = null;
+  // Modo VIP: produto aberto pela Coleção VIP (/collection_vip/ -> /products/?id=...&vip=1).
+  const VIP_MODE = new URLSearchParams(location.search).get('vip') === '1';
+  // Preço VIP calculado para o membro ativo neste produto (null fora do fluxo VIP).
+  let vipPricing = null;
   let selectedSize = null;
   let selectedColor = null;
   let selectedQty = 1;
@@ -854,21 +858,28 @@
       }
     }
 
-    // Desconto exclusivo VIP: o membro logado vê o próprio preço; os demais, o convite.
-    // Só exibição — o valor cobrado é recalculado no servidor de pagamento.
+    // Preço VIP só existe no fluxo VIP: produto aberto pela Coleção VIP (?vip=1) por um
+    // membro ativo. Na loja normal o produto mostra só o preço normal, sem menção ao VIP.
+    // O valor cobrado é recalculado no servidor (só itens marcados como preço VIP + token válido).
+    vipPricing = null;
     const vipPriceEl = document.getElementById('product-vip-price');
+    if (vipPriceEl) vipPriceEl.style.display = 'none';
     const vipPct = Math.max(0, Math.min(90, Math.round(Number(product.vipDiscountPercent) || 0)));
-    if (vipPriceEl) {
-      vipPriceEl.style.display = 'none';
-      const basePrice = Number(product.priceNum)
-        || parseFloat(String(product.price || '').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      if (available && vipPct > 0 && basePrice > 0) {
+    const basePrice = Number(product.priceNum)
+      || parseFloat(String(product.price || '').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    if (VIP_MODE && available && vipPct > 0 && basePrice > 0) {
+      const isUserVipForPrice = (typeof window.isVipMember === 'function') ? await window.isVipMember() : false;
+      if (isUserVipForPrice) {
         const vipFmt = (Math.round(basePrice * (100 - vipPct)) / 100)
           .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        const isUserVipForPrice = (typeof window.isVipMember === 'function') ? await window.isVipMember() : false;
-        vipPriceEl.innerHTML = isUserVipForPrice
-          ? `Seu preço VIP: <strong>${vipFmt}</strong> (${vipPct}% OFF)`
-          : `Membros VIP pagam <strong>${vipFmt}</strong> (${vipPct}% OFF). <a href="/vip/" style="color:#7a5d12; text-decoration:underline;">Conheça a Área VIP</a>`;
+        vipPricing = { price: vipFmt, percent: vipPct };
+        document.getElementById('product-price').textContent = vipFmt;
+        if (vipPriceEl) {
+          vipPriceEl.innerHTML = `Preço exclusivo VIP (${vipPct}% OFF). Preço na loja: <s>${product.price}</s>`;
+          vipPriceEl.style.display = 'block';
+        }
+      } else if (vipPriceEl) {
+        vipPriceEl.innerHTML = 'Entre na <a href="/vip/" style="color:#7a5d12; text-decoration:underline;">Área VIP</a> para ver o preço exclusivo desta peça.';
         vipPriceEl.style.display = 'block';
       }
     }
@@ -1009,12 +1020,16 @@
     if (addBtn) {
       addBtn.onclick = () => {
         const itemToAdd = { ...currentProduct, size: selectedSize, color: selectedColor, qty: selectedQty };
+        // Veio da Coleção VIP com membro ativo: o item entra no carrinho com o preço VIP
+        // e marcado, para o checkout (e o servidor) aplicarem o desconto só nele.
+        if (vipPricing) Object.assign(itemToAdd, { price: vipPricing.price, vipPricing: true, vipDiscountPercent: vipPricing.percent });
         window.ntCart?.add(itemToAdd);
       };
     }
     if (buyBtn) {
       buyBtn.onclick = () => {
-        window.ntWpp?.orderProduct(currentProduct, selectedSize, selectedColor, selectedQty);
+        const productForOrder = vipPricing ? { ...currentProduct, price: vipPricing.price, vipPricing: true } : currentProduct;
+        window.ntWpp?.orderProduct(productForOrder, selectedSize, selectedColor, selectedQty);
       };
     }
   }
@@ -1094,7 +1109,8 @@
         const cleanSlug = window.ntWpp?.getCleanSlug ? window.ntWpp.getCleanSlug(product, products) : (product.slug || product.id);
         const currentUrl = new URL(window.location.href);
         if (currentUrl.searchParams.get('id') || currentUrl.searchParams.get('p') !== cleanSlug) {
-          const newUrl = `${currentUrl.origin}${currentUrl.pathname}?p=${encodeURIComponent(cleanSlug)}`;
+          // Mantém o modo VIP na URL limpa: sem isso, recarregar a página perdia o preço VIP.
+          const newUrl = `${currentUrl.origin}${currentUrl.pathname}?p=${encodeURIComponent(cleanSlug)}${VIP_MODE ? '&vip=1' : ''}`;
           window.history.replaceState({ productId: product.id }, '', newUrl);
         }
       } catch {}

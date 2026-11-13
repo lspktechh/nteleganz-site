@@ -567,7 +567,8 @@ foreach ($items as $item) {
         }
 
         $unitPrice = !empty($catProduct['priceNum']) ? (float)$catProduct['priceNum'] : parsePriceToFloat($catProduct['price'] ?? 0);
-        if ($buyerIsVip && nte_vip_discount_percent($catProduct) > 0) {
+        // Desconto VIP só no item que veio da Coleção VIP (vipPricing) E com token válido.
+        if ($buyerIsVip && !empty($item['vipPricing']) && nte_vip_discount_percent($catProduct) > 0) {
             $item['vipDiscountPercent'] = nte_vip_discount_percent($catProduct);
             $unitPrice = nte_vip_apply_discount($unitPrice, $catProduct);
         }

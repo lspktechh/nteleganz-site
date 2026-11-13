@@ -64,6 +64,9 @@
         type: item.type || '',
         category: item.category || '',
         qty: Math.max(1, Number(item.qty) || 1),
+        // Item adicionado pela Coleção VIP: preço VIP (o servidor confere o token antes de aplicar).
+        vipPricing: item.vipPricing === true,
+        vipDiscountPercent: item.vipPricing === true ? Number(item.vipDiscountPercent) || 0 : 0,
       };
     },
     load() {
@@ -247,6 +250,8 @@
     // with different type/category fields, so identity + size + color is what
     // defines a variant here.
     return firstIdentity === secondIdentity
+      // Mesmo produto com preço normal e com preço VIP são linhas diferentes no carrinho.
+      && (firstItem.vipPricing === true) === (secondItem.vipPricing === true)
       && canonicalSize(firstItem, catalogProduct) === canonicalSize(secondItem, catalogProduct)
       && canonicalColor(firstItem, catalogProduct) === canonicalColor(secondItem, catalogProduct);
   }

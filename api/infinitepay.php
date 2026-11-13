@@ -120,7 +120,8 @@ foreach ($items as $item) {
         }
 
         $unitPriceCents = !empty($catProduct['priceNum']) ? (int)round((float)$catProduct['priceNum'] * 100) : parsePriceToCents($catProduct['price'] ?? 0);
-        if ($buyerIsVip && nte_vip_discount_percent($catProduct) > 0) {
+        // Desconto VIP só no item que veio da Coleção VIP (vipPricing) E com token válido.
+        if ($buyerIsVip && !empty($item['vipPricing']) && nte_vip_discount_percent($catProduct) > 0) {
             $unitPriceCents = (int)round(nte_vip_apply_discount($unitPriceCents / 100, $catProduct) * 100);
         }
         $item['name'] = $catProduct['name'] ?? ($item['name'] ?? 'Produto NT Eleganz');

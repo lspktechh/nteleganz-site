@@ -167,27 +167,37 @@
     });
   }
 
+  /**
+   * Preço VIP só vale para itens que entraram no carrinho pela Coleção VIP
+   * (vipPricing) e só com sessão VIP ativa — a mesma regra do servidor, que
+   * recalcula o valor cobrado. Itens normais ficam sempre com o preço normal.
+   */
   async function applyVipPricesForDisplay() {
-    const token = localStorage.getItem('nte_vip_token') || '';
-    if (!token || localStorage.getItem('nte_vip_active') !== 'true') return;
+    const vipItems = cartItems.filter(item => item.vipPricing === true);
+    if (!vipItems.length) return;
+    const hasVipSession = !!localStorage.getItem('nte_vip_token') && localStorage.getItem('nte_vip_active') === 'true';
     try {
       const res = await fetch('/api/products.php', { cache: 'no-store' });
       if (!res.ok) return;
       const payload = await res.json();
       const list = Array.isArray(payload) ? payload : (payload?.products || []);
       const byId = new Map(list.map(p => [String(p.id), p]));
-      cartItems.forEach(item => {
+      vipItems.forEach(item => {
         const product = byId.get(String(item.id ?? item.productId ?? ''));
-        const pct = Math.max(0, Math.min(90, Math.round(Number(product?.vipDiscountPercent) || 0)));
-        if (!product || !pct) return;
+        if (!product) return;
         const base = Number(product.priceNum) || parsePrice(product.price);
+        const pct = Math.max(0, Math.min(90, Math.round(Number(product.vipDiscountPercent) || 0)));
         if (!base) return;
-        const vipPrice = Math.round(base * (100 - pct)) / 100;
-        item.vipDiscountPercent = pct;
-        item.price = fmtMoney(vipPrice);
+        if (hasVipSession && pct > 0) {
+          item.vipDiscountPercent = pct;
+          item.price = fmtMoney(Math.round(base * (100 - pct)) / 100);
+        } else {
+          // Sem sessão VIP (ou sem desconto agora): o servidor cobra o preço normal.
+          item.price = fmtMoney(base);
+        }
       });
     } catch (e) {
-      // Sem catálogo: mostra o preço normal; o servidor aplica o desconto de qualquer forma.
+      // Sem catálogo: mantém o preço guardado; o servidor recalcula de qualquer forma.
     }
   }
 

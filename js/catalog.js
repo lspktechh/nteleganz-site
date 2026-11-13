@@ -29,13 +29,45 @@
   let page = 1;
   const PER_PAGE = 500;
   const CATEGORY_LABELS = { todos:'Collections', camisetas:'Camisetas', shorts:'Shorts', calcados:'Calçados', hoodies:'Hoodies' };
-  const getCategoryLabel = cat => CATEGORY_LABELS[cat] || (cat ? cat.charAt(0).toUpperCase() + cat.slice(1) : 'Collections');
+  const getCategoryLabel = cat => {
+    const label = CATEGORY_LABELS[cat] || (cat ? cat.charAt(0).toUpperCase() + cat.slice(1) : 'Collections');
+    if (window.NTE_VIP_COLLECTION !== true) return label;
+    return !cat || cat === 'todos' ? 'Coleção VIP' : `Coleção VIP — ${label}`;
+  };
   let currentGridCols = 4;
   const rules = window.NTCatalogFilters;
   const selected = { brands: [], sizes: [], stock: false, sale: false };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   priceMax = Infinity;
   const pathCategory = location.pathname.match(/\/collections\/([^/]+)(?:\/|$)/)?.[1];
+
+  // ── Coleção VIP (/collection_vip/) ──
+  // Mesma página da coleção normal, mas só com peças que têm desconto VIP ou acesso
+  // antecipado, e só para membro ativo. É o ÚNICO lugar da loja que mostra preço VIP:
+  // a coleção normal mostra sempre o preço normal, mesmo das peças com desconto VIP.
+  const VIP_COLLECTION = window.NTE_VIP_COLLECTION === true;
+  let vipMemberStatus = VIP_COLLECTION ? null : false; // null = verificando
+  const vipDiscountOf = p => Math.max(0, Math.min(90, Math.round(Number(p?.vipDiscountPercent) || 0)));
+  const isVipProduct = p => vipDiscountOf(p) > 0 || !!p?.vipEarlyAccessActive;
+  const fmtBRL = n => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  function vipPriceFor(p) {
+    const pct = vipDiscountOf(p);
+    const base = Number(p.priceNum) || rules.price(p.price);
+    if (!pct || !base) return null;
+    return { pct, base, text: fmtBRL(Math.round(base * (100 - pct)) / 100) };
+  }
+  async function resolveVipMembership() {
+    // vip-modal.js carrega com defer, depois deste arquivo: espera a função aparecer.
+    for (let i = 0; i < 40 && typeof window.isVipMember !== 'function'; i++) {
+      await new Promise(r => setTimeout(r, 100));
+    }
+    try {
+      vipMemberStatus = typeof window.isVipMember === 'function' ? !!(await window.isVipMember()) : false;
+    } catch (e) {
+      vipMemberStatus = false;
+    }
+    render();
+  }
 
   function loadFiltersFromUrl() {
     const sp = new URLSearchParams(window.location.search);
@@ -155,7 +187,10 @@
       params.set('ordem', activeSort);
     }
 
-    const basePath = isDedicatedCategoryPath
+    if (VIP_COLLECTION && activeCategory && activeCategory !== 'todos') {
+      params.set('categoria', activeCategory);
+    }
+    const basePath = VIP_COLLECTION ? '/collection_vip/' : isDedicatedCategoryPath
       ? `/collections/${pathCategory}/`
       : (activeCategory && activeCategory !== 'todos' ? `/collections/${activeCategory}/` : '/collections/');
     const queryString = params.toString();
@@ -453,7 +488,8 @@
   //  11. RENDER GRID
   // ══════════════════════════════════════════
   function getVisible() {
-    return rules.filter(ALL_PRODUCTS, filterState());
+    const base = VIP_COLLECTION ? ALL_PRODUCTS.filter(isVipProduct) : ALL_PRODUCTS;
+    return rules.filter(base, filterState());
   }
 
   function cardSrcset(src) {
@@ -479,7 +515,14 @@
     const rawImg = p.image || (Array.isArray(p.images) && p.images[0]) || '';
     const vpsUrl = resolveProductImg(rawImg);
     const image = esc(vpsUrl);
-    const productUrl = (window.ntWpp?.getProductUrl ? window.ntWpp.getProductUrl(p) : `/products/?id=${esc(p.id)}`);
+    let productUrl = (window.ntWpp?.getProductUrl ? window.ntWpp.getProductUrl(p) : `/products/?id=${esc(p.id)}`);
+    const vipPrice = VIP_COLLECTION && vipMemberStatus === true ? vipPriceFor(p) : null;
+    if (VIP_COLLECTION) {
+      // A página do produto só mostra preço VIP quando aberta pela Coleção VIP.
+      const u = new URL(productUrl, location.origin);
+      u.searchParams.set('vip', '1');
+      productUrl = esc(u.pathname + u.search);
+    }
     const isAboveFold = (index < 4);
     const loadAttrs = isAboveFold ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" decoding="async"';
 
@@ -511,7 +554,7 @@
           ${badgesHtml}
           ${!isOutOfStock ? (
             isVipEarlyAccess
-              ? `<button class="catalog-card__quick-add" style="background:#0d0d0f; color:#c9a84c; border-color:#c9a84c;" onclick="event.preventDefault();event.stopPropagation();(window.isVipMemberCached ? catalogAddToCart('${esc(p.id)}') : window.nteOpenVipModal?.())">
+              ? `<button class="catalog-card__quick-add" style="background:#0d0d0f; color:#c9a84c; border-color:#c9a84c;" onclick="event.preventDefault();event.stopPropagation();((window.isVipMemberCached || ${VIP_COLLECTION && vipMemberStatus === true}) ? catalogAddToCart('${esc(p.id)}') : window.nteOpenVipModal?.())">
                   Liberar com NT VIP
                 </button>`
               : `<button class="catalog-card__quick-add" onclick="event.preventDefault();event.stopPropagation();catalogAddToCart('${esc(p.id)}')">
@@ -525,8 +568,12 @@
             <span class="catalog-card__name">${name}</span>
           </a>
           <div class="catalog-card__price-row">
-            <span class="catalog-card__price">${esc(p.price)}</span>
-            ${p.oldPrice ? `<span class="catalog-card__price-old">${esc(p.oldPrice)}</span>` : ''}
+            ${vipPrice
+              ? `<span class="catalog-card__price" style="color:#7a5d12;">${esc(vipPrice.text)}</span>
+                 <span class="catalog-card__price-old">${esc(p.price)}</span>
+                 <span style="font-size:11px; font-weight:700; color:#7a5d12;">VIP ${vipPrice.pct}% OFF</span>`
+              : `<span class="catalog-card__price">${esc(p.price)}</span>
+                 ${p.oldPrice ? `<span class="catalog-card__price-old">${esc(p.oldPrice)}</span>` : ''}`}
           </div>
         </div>
       </article>`;
@@ -540,10 +587,27 @@
     const showEl  = document.getElementById('showing-count');
     const loadWrap = document.getElementById('load-more-wrap');
 
+    if (VIP_COLLECTION && vipMemberStatus !== true) {
+      grid.innerHTML = vipMemberStatus === null
+        ? `<div class="catalog-empty" style="grid-column:1/-1;"><p>Verificando seu acesso VIP…</p></div>`
+        : `<div class="catalog-empty" style="grid-column:1/-1;">
+            <p><strong>Coleção exclusiva para membros NT VIP.</strong><br>Entre com seu @ e sua senha na Área VIP para ver as peças com preço exclusivo e acesso antecipado.</p>
+            <a href="/vip/" class="filter-reset" style="display:inline-block; text-decoration:none;">Entrar na Área VIP</a>
+          </div>`;
+      if (countEl) countEl.textContent = '';
+      if (showEl) showEl.textContent = '';
+      if (loadWrap) loadWrap.style.display = 'none';
+      return;
+    }
+
     const visible = getVisible();
     const slice = visible.slice(0, page * PER_PAGE);
 
-    if (visible.length === 0) {
+    if (visible.length === 0 && VIP_COLLECTION) {
+      grid.innerHTML = `<div class="catalog-empty" style="grid-column:1/-1;">
+          <p>Nenhuma peça VIP liberada no momento.<br>As novidades com desconto e acesso antecipado aparecem aqui e no grupo VIP.</p>
+        </div>`;
+    } else if (visible.length === 0) {
       grid.innerHTML = `<div class="catalog-empty" style="grid-column:1/-1;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <p>Nenhum produto encontrado.<br>Tente ajustar os filtros.</p><button class="filter-reset" data-clear-filters>Limpar filtros e ver produtos</button>
@@ -753,7 +817,10 @@
     const p = ALL_PRODUCTS.find(x => x.id === productId);
     if (!p) return;
     const variant = window.ntCart?.defaultVariant?.(p) || {};
-    window.ntCart?.add({ ...p, size: variant.size, color: variant.color });
+    const item = { ...p, size: variant.size, color: variant.color };
+    const vipPrice = VIP_COLLECTION && vipMemberStatus === true ? vipPriceFor(p) : null;
+    if (vipPrice) Object.assign(item, { price: vipPrice.text, vipPricing: true, vipDiscountPercent: vipPrice.pct });
+    window.ntCart?.add(item);
 
     // Bounce cart badge
     const badge = document.getElementById('cart-badge');
@@ -846,6 +913,9 @@
       render();
       hideLoader();
     }
+
+    // Coleção VIP: confere a sessão do membro e re-renderiza (preço VIP ou tela de acesso).
+    if (VIP_COLLECTION) resolveVipMembership();
 
     // 2. Revalidação assíncrona com o backend (atualiza sem travar a interface)
     loadProducts().then(() => {
