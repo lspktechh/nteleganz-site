@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/vip.css?v=20261113-rodape" />
+  <link rel="stylesheet" href="../css/vip.css?v=20261113-pixplano" />
   <!-- Os efeitos de entrada só escondem conteúdo quando o JS está ativo -->
   <script>document.documentElement.classList.add('vip-js');</script>
 </head>
@@ -686,6 +686,13 @@
           <p style="font-size: 12.5px; color: var(--vip-text-muted);">Escaneie o QR Code ou copie a chave Pix para pagar pelo aplicativo do seu banco:</p>
         </div>
 
+        <div class="vip-pix-plan" id="vip-pix-plan-summary">
+          <span class="vip-pix-plan__label">Você está pagando</span>
+          <strong class="vip-pix-plan__name" id="vip-pix-plan-name">Plano Vitalício NT VIP</strong>
+          <span class="vip-pix-plan__detail" id="vip-pix-plan-detail">Pagamento único · acesso vitalício à Área VIP</span>
+          <span class="vip-pix-plan__payee">Recebedor: NT Eleganz (via Mercado Pago)</span>
+        </div>
+
         <div class="vip-pix-box">
           <div class="vip-pix-qr">
             <img id="vip-pix-qr-img" src="" alt="QR Code Pix" />
@@ -786,7 +793,7 @@
     </div>
   </div>
 
-  <script src="../js/vip.js?v=20261113-premium"></script>
+  <script src="../js/vip.js?v=20261113-pixplano"></script>
   <script src="../js/vip-fx.js?v=20261113-rodape" defer></script>
   <!-- Se os efeitos não carregarem, nada fica escondido -->
   <script>setTimeout(function () { if (!window.__vipFx) document.documentElement.classList.remove('vip-js'); }, 2500);</script>

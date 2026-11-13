@@ -479,6 +479,17 @@
       valEl.textContent = pixData.amountFormatted || 'R$ 69,90';
     }
 
+    // Deixa claro qual plano está sendo pago
+    const isLifetime = currentPlan === 'lifetime';
+    const planNameEl = document.getElementById('vip-pix-plan-name');
+    const planDetailEl = document.getElementById('vip-pix-plan-detail');
+    if (planNameEl) planNameEl.textContent = isLifetime ? 'Plano Vitalício NT VIP' : 'Plano Mensal NT VIP';
+    if (planDetailEl) {
+      planDetailEl.textContent = isLifetime
+        ? 'Pagamento único · acesso vitalício à Área VIP'
+        : 'Mensalidade · 30 dias de acesso à Área VIP';
+    }
+
     // Inicia verificação do status a cada 2.5s
     if (pixPollInterval) clearInterval(pixPollInterval);
     pixPollInterval = setInterval(async () => {

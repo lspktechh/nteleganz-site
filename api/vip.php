@@ -367,13 +367,26 @@ if ($action === 'subscribe' && $method === 'POST') {
         ];
     }
 
+    // Texto que a cliente vê no app do banco / comprovante do Mercado Pago
     $planLabel = ($plan === 'lifetime') ? 'Vitalício' : 'Mensal';
-    $description = "Assinatura NT VIP ({$planLabel}) - {$custName}";
+    $planDetail = ($plan === 'lifetime') ? 'pagamento único, acesso vitalício' : '30 dias de acesso';
+    $description = "NT Eleganz - Plano VIP {$planLabel} ({$planDetail})";
+    $additionalInfo = [
+        'items' => [[
+            'id' => 'nt-vip-' . $plan,
+            'title' => "Plano VIP {$planLabel} - NT Eleganz",
+            'description' => "Assinatura da Área VIP NT Eleganz: {$planDetail}",
+            'category_id' => 'services',
+            'quantity' => 1,
+            'unit_price' => $amount
+        ]]
+    ];
 
     if ($paymentMethod === 'pix') {
         $pixPayload = [
             'transaction_amount' => $amount,
             'description' => $description,
+            'additional_info' => $additionalInfo,
             'payment_method_id' => 'pix',
             'payer' => $payer,
             'external_reference' => $subCode,
@@ -453,6 +466,7 @@ if ($action === 'subscribe' && $method === 'POST') {
             'transaction_amount' => $amount,
             'token' => $token,
             'description' => $description,
+            'additional_info' => $additionalInfo,
             'installments' => $installments,
             'payment_method_id' => $paymentMethodId,
             'payer' => $payer,

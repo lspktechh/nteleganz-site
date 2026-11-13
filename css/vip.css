@@ -1507,6 +1507,16 @@ h1, h2, h3, p { margin: 0; }
 .vip-btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Pix gerado */
+.vip-pix-plan {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  text-align: center; margin: 0 0 14px; padding: 12px 14px;
+  border: 1px solid var(--vip-line); border-radius: 10px; background: var(--vip-ivory-2);
+}
+.vip-pix-plan__label { font-size: 10px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--vip-dim); }
+.vip-pix-plan__name { font-family: var(--vip-serif); font-size: 20px; font-weight: 600; color: var(--vip-ink); line-height: 1.2; }
+.vip-pix-plan__detail { font-size: 12.5px; color: var(--vip-muted); }
+.vip-pix-plan__payee { font-size: 11px; color: var(--vip-dim); margin-top: 2px; }
+
 .vip-pix-box {
   background: #ffffff;
   border: 1px solid var(--vip-line);
