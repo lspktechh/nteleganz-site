@@ -396,6 +396,7 @@
 
       // Load overview
       loadOverview();
+      checkBestsellersSlots();
 
     // Mobile sidebar toggle
     const mobileMenuBtn = document.getElementById('mobile-menu-button');
@@ -1516,6 +1517,9 @@
 
   window.saveProduct = async function () {
     const id = document.getElementById('product-edit-id').value;
+    // Tamanho/cor digitado sem Enter também conta (ex.: "GG" no campo ao clicar em Salvar).
+    commitPendingTag('sizes');
+    commitPendingTag('colors');
     syncImageUrls();
 
     const productId = id || (Date.now().toString(36) + Math.random().toString(36).slice(2));
@@ -1604,6 +1608,15 @@
 
     const previousProduct = id ? allProducts.find(p => p.id === id) : null;
 
+    // Produto esgotado não fica em Mais Vendidos: sai ao salvar e o painel abre a
+    // escolha do substituto para a vitrine continuar com 4 produtos.
+    const soldOutBestseller = productData.featured === true && Number(productData.stock) <= 0;
+    if (soldOutBestseller) {
+      productData.featured = false;
+      const featuredBox = document.getElementById('p-featured');
+      if (featuredBox) featuredBox.checked = false;
+    }
+
     try {
       if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'Salvando produto…'; }
       let savedProduct;
@@ -1632,6 +1645,9 @@
       }
       showToast('check', id ? 'Produto atualizado!' : 'Produto adicionado!', productData.name);
       const finalProduct = { ...productData, ...(savedProduct || {}) };
+      if (soldOutBestseller) {
+        openBestsellersPicker(`"${productData.name}" esgotou e saiu dos Mais Vendidos.`);
+      }
       if (vipChangeWorthAnnouncing(previousProduct, finalProduct)) {
         openVipBroadcast(buildProductVipMessage(finalProduct, !id));
       }
@@ -1666,20 +1682,32 @@
   window.addTag = function (e, type) {
     if (e.key !== 'Enter' && e.key !== ',') return;
     e.preventDefault();
-    const input = document.getElementById(type + '-input');
-    const val = input.value.trim();
-    if (!val) return;
-
-    if (type === 'sizes') {
-      editingSizes.push(val);
-      renderTags('sizes', editingSizes);
-      renderStockBySize();
-    } else if (type === 'colors') {
-      editingColors.push(val);
-      renderTags('colors', editingColors);
-    }
-    input.value = '';
+    commitPendingTag(type);
   };
+
+  /**
+   * Passa para a lista o que ficou digitado no campo de tamanhos/cores.
+   * Antes só entrava com Enter ou vírgula: quem digitava "GG" e clicava em
+   * Salvar perdia o tamanho sem aviso (e alguns teclados de celular nem
+   * mandam "Enter"). Aceita vários separados por vírgula e não duplica.
+   */
+  function commitPendingTag(type) {
+    const input = document.getElementById(type + '-input');
+    if (!input) return;
+    const values = input.value.split(',').map(v => v.trim()).filter(Boolean);
+    input.value = '';
+    if (!values.length) return;
+
+    const list = type === 'sizes' ? editingSizes : type === 'colors' ? editingColors : null;
+    if (!list) return;
+    values.forEach(val => {
+      const exists = list.some(existing => String(existing).toLowerCase() === val.toLowerCase());
+      if (!exists) list.push(val);
+    });
+    renderTags(type, list);
+    if (type === 'sizes') renderStockBySize();
+  }
+  window.commitPendingTag = commitPendingTag;
 
   function renderTags(type, tags) {
     const container = document.getElementById(type + '-tags');
@@ -5848,6 +5876,102 @@ window.showConfirm = function (msg, callback) {
       `;
     }).join('');
   }
+
+  // ── MAIS VENDIDOS: SEMPRE 4 PRODUTOS EM ESTOQUE ──
+  const BESTSELLERS_SLOTS = 4;
+
+  function isProductInStock(p) {
+    if (!p || p.active === false || p.inStock === false || p.available === false) return false;
+    return !(p.stock !== undefined && p.stock !== null && Number(p.stock) <= 0);
+  }
+
+  function featuredInStock() {
+    return allProducts.filter(p => p.featured === true && isProductInStock(p));
+  }
+
+  let bestsellersPickerReason = '';
+
+  /** Ao abrir o painel: se faltar produto em estoque nos Mais Vendidos (ex.: esgotou numa venda), pede o substituto. Uma vez por sessão. */
+  function checkBestsellersSlots() {
+    const missing = BESTSELLERS_SLOTS - featuredInStock().length;
+    if (missing <= 0) return;
+    if (!allProducts.some(p => p.featured !== true && isProductInStock(p))) return;
+    try {
+      if (sessionStorage.getItem('nte_bestsellers_prompted') === '1') return;
+      sessionStorage.setItem('nte_bestsellers_prompted', '1');
+    } catch (e) { /* sem sessionStorage: pergunta mesmo assim */ }
+    openBestsellersPicker('Há vagas em Mais Vendidos sem produto em estoque.');
+  }
+
+  window.openBestsellersPicker = function (reason = '') {
+    bestsellersPickerReason = reason;
+    const search = document.getElementById('bestsellers-picker-search');
+    if (search) search.value = '';
+    renderBestsellersPicker();
+    document.getElementById('bestsellers-picker-modal')?.classList.add('open');
+  };
+
+  window.closeBestsellersPicker = function () {
+    document.getElementById('bestsellers-picker-modal')?.classList.remove('open');
+  };
+
+  window.renderBestsellersPicker = function () {
+    const intro = document.getElementById('bestsellers-picker-intro');
+    const list = document.getElementById('bestsellers-picker-list');
+    if (!intro || !list) return;
+
+    const filled = featuredInStock().length;
+    const open = Math.max(0, BESTSELLERS_SLOTS - filled);
+    intro.textContent = `${bestsellersPickerReason ? bestsellersPickerReason + ' ' : ''}`
+      + (open > 0
+        ? `${filled} de ${BESTSELLERS_SLOTS} vagas preenchidas com produtos em estoque. Escolha ${open === 1 ? 'o produto' : `${open} produtos`} para completar a seção.`
+        : `As ${BESTSELLERS_SLOTS} vagas estão preenchidas.`);
+
+    const q = (document.getElementById('bestsellers-picker-search')?.value || '').trim().toLowerCase();
+    const candidates = allProducts
+      .filter(p => p.featured !== true && isProductInStock(p))
+      .filter(p => !q || `${p.brand || ''} ${p.name || ''}`.toLowerCase().includes(q))
+      .slice(0, 80);
+
+    if (!candidates.length) {
+      list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Nenhum produto em estoque disponível.</div>';
+      return;
+    }
+    list.innerHTML = candidates.map(p => {
+      const img = p.image ? resolveAdminProductImg(p.image) : '';
+      const price = Number(p.priceNum) || fmt.parsePrice(p.price);
+      return `
+        <div style="display:flex; align-items:center; gap:12px; padding:8px; border:1px solid var(--border); border-radius:10px;">
+          ${img ? `<img loading="lazy" decoding="async" src="${escHtml(img)}" alt="" style="width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0;" />` : '<div style="width:44px; height:44px; border-radius:8px; background:var(--bg-surface); flex-shrink:0;"></div>'}
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escHtml([p.brand, p.name].filter(Boolean).join(' '))}</div>
+            <div style="font-size:12px; color:var(--text-muted);">${price ? fmt.currency(price) : ''} · estoque ${escHtml(String(p.stock ?? '—'))}</div>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" data-id="${escHtml(String(p.id))}" onclick="addToBestsellers(this.dataset.id, this)" style="flex-shrink:0;" ${open === 0 ? 'disabled' : ''}>Colocar</button>
+        </div>`;
+    }).join('');
+  };
+
+  window.addToBestsellers = async function (id, button) {
+    const product = allProducts.find(p => String(p.id) === String(id));
+    if (!product) return;
+    if (button) { button.disabled = true; button.textContent = 'Salvando…'; }
+    try {
+      const saved = await window.ntDB.products.update(product.id, { featured: true });
+      allProducts = allProducts.map(p => (p.id === product.id ? { ...p, ...(saved || {}), featured: true } : p));
+      renderProductsTable();
+      showToast('check', 'Mais Vendidos atualizado', product.name || '');
+      if (featuredInStock().length >= BESTSELLERS_SLOTS) {
+        closeBestsellersPicker();
+        showToast('check', 'Mais Vendidos completo', `${BESTSELLERS_SLOTS} produtos em estoque na vitrine.`);
+      } else {
+        renderBestsellersPicker();
+      }
+    } catch (e) {
+      alert('Não foi possível colocar o produto em Mais Vendidos: ' + e.message);
+      if (button) { button.disabled = false; button.textContent = 'Colocar'; }
+    }
+  };
 
   // ── DESCONTO VIP DO PRODUTO ──
   function readVipDiscountInput() {

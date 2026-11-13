@@ -1563,14 +1563,14 @@
           <label id="sizes-label">Tamanhos</label>
           <div id="size-suggestions" class="size-suggestions" aria-label="Sugestões de tamanhos"></div>
           <div class="tags-input" id="sizes-tags" onclick="this.querySelector('input').focus()">
-            <input type="text" id="sizes-input" onkeydown="addTag(event, 'sizes')"/>
+            <input type="text" id="sizes-input" onkeydown="addTag(event, 'sizes')" onblur="commitPendingTag('sizes')"/>
           </div>
         </div>
 
         <div class="form-group form-col-full">
           <label>Cores (HEX, pressione Enter para adicionar)</label>
           <div class="tags-input" id="colors-tags" onclick="this.querySelector('input').focus()">
-            <input type="text" placeholder="#000000, #ffffff..." id="colors-input" onkeydown="addTag(event, 'colors')" />
+            <input type="text" placeholder="#000000, #ffffff..." id="colors-input" onkeydown="addTag(event, 'colors')" onblur="commitPendingTag('colors')" />
           </div>
           <div class="color-chips" id="color-chips-preview"></div>
         </div>
@@ -1855,6 +1855,23 @@
 <!-- ══════════════════════════════════════════
      MODAL: ADICIONAR MEMBRO VIP MANUAL
 ══════════════════════════════════════════ -->
+<div id="bestsellers-picker-modal" class="modal-overlay" style="z-index:255;" onclick="if(event.target===this)closeBestsellersPicker()">
+  <div class="modal" style="max-width:560px; width:100%;">
+    <div class="modal-header">
+      <div class="modal-title">Completar os Mais Vendidos</div>
+      <button class="modal-close" onclick="closeBestsellersPicker()" aria-label="Fechar">×</button>
+    </div>
+    <div class="modal-body" style="padding:18px 24px;">
+      <p id="bestsellers-picker-intro" style="margin:0 0 10px; font-size:13px; color:var(--text-secondary); line-height:1.45;"></p>
+      <input type="search" id="bestsellers-picker-search" class="form-control" placeholder="Buscar por nome ou marca..." oninput="renderBestsellersPicker()" style="width:100%; margin-bottom:12px;" />
+      <div id="bestsellers-picker-list" style="display:flex; flex-direction:column; gap:8px; max-height:52vh; overflow-y:auto;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeBestsellersPicker()">Escolher depois</button>
+    </div>
+  </div>
+</div>
+
 <div id="vip-broadcast-modal" class="modal-overlay" style="z-index:260;" onclick="if(event.target===this)closeVipBroadcast()">
   <div class="modal" style="max-width:520px; width:100%;">
     <div class="modal-header">
@@ -1937,7 +1954,7 @@
 <!-- Scripts -->
 <script src="../js/auth.js?v=20261007c"></script>
 <script src="../js/db.js?v=20261110-peca-auto-v1"></script>
-<script src="../js/admin.js?v=20261112-vip-desconto"></script>
+<script src="../js/admin.js?v=20261113-salvar-estoque"></script>
 <script>
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');

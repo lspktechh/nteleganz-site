@@ -37,13 +37,16 @@ const DATA_DIR = __DIR__ . '/../data';
 const PRODUCTS_FILE = DATA_DIR . '/products.json';
 const BACKUP_DIR = DATA_DIR . '/backups';
 const BACKUP_KEEP = 20;
+// Fila de sincronização com a VPS (cópia de segurança): id => 'upsert' | 'delete'.
+const VPS_QUEUE_FILE = DATA_DIR . '/vps_product_queue.json';
 
 const VPS_API_BASE = 'https://137-131-233-254.sslip.io/nteleganz/api';
 
 require_once __DIR__ . '/lib/image_store.php';
 
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
-const WRITE_RATE_MAX = 120;
+// Só o admin logado grava; 120/h travava o dono editando vários produtos seguidos.
+const WRITE_RATE_MAX = 600;
 const WRITE_RATE_WINDOW = 3600;
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -57,7 +60,7 @@ $productId = isset($_GET['id']) ? trim((string)$_GET['id']) : '';
 /**
  * Realiza requisição para a API do PostgreSQL na VPS (137.131.233.254)
  */
-function callVpsApi(string $method, string $path, ?array $body = null, ?string $token = null, int $timeout = 3): ?array
+function callVpsApi(string $method, string $path, ?array $body = null, ?string $token = null, int $timeout = 3, ?int &$httpStatus = null): ?array
 {
     $url = VPS_API_BASE . $path;
     $ch = curl_init($url);
@@ -84,8 +87,9 @@ function callVpsApi(string $method, string $path, ?array $body = null, ?string $
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 
     $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+    $httpStatus = $response === false ? 0 : $httpCode;
 
     if ($response === false || $httpCode < 200 || $httpCode >= 400) {
         return null;
@@ -163,17 +167,31 @@ if ($method === 'GET' || $method === 'HEAD') {
         }
     }
 
-    // 2. Se temos cache local atualizado recentemente (< 30s) e listagem geral,
-    // responde IMEDIATAMENTE do cache local de alta velocidade!
-    $cacheFile = PRODUCTS_FILE;
-    $cacheAge = file_exists($cacheFile) ? (time() - filemtime($cacheFile)) : 999999;
-    if ($localCat !== null && $cacheAge < 30 && $productId === '') {
+    // 2. O catálogo LOCAL é a fonte da verdade. Antes, depois de 30s a lista da VPS era mesclada
+    // por cima dele: se uma gravação não tinha chegado à VPS (lenta, 0,5–7s), a versão antiga
+    // voltava — produto esgotado "voltava ao estoque", tamanho novo sumia, excluído reaparecia.
+    // A VPS agora é só cópia de segurança (sincronizada depois de cada gravação, com fila).
+    if ($localCat === null) {
+        $localCat = readCatalog();
+    }
+    if ($localCat !== null && !empty($localCat['products'])) {
         etag($localCat['etag']);
-        header('X-Catalog-Source: local-fast-cache');
-        respond(200, null, ['products' => $localCat['products'], 'version' => $localCat['version']]);
+        header('X-Catalog-Source: local');
+        // Mesma normalização de antes (estoque -> inStock/available, janela VIP ainda ativa e
+        // segundos restantes): calculada na hora, sobre o catálogo local.
+        $normalized = mergeCatalogs([], $localCat['products']);
+        if ($productId !== '') {
+            foreach ($normalized as $product) {
+                if (($product['id'] ?? '') === $productId) {
+                    respond(200, null, ['product' => $product, 'version' => $localCat['version']]);
+                }
+            }
+            respond(404, 'Produto não encontrado.');
+        }
+        respondThenHeal($normalized, (int)$localCat['version']);
     }
 
-    // 3. Consulta o PostgreSQL na VPS com timeout ágil (2s máx)
+    // 3. Sem catálogo local (primeira subida ou arquivo perdido): recupera da VPS
     $path = '/products' . ($productId !== '' ? '?id=' . urlencode($productId) : '');
     $vps = callVpsApi('GET', $path, null, null, 2);
 
@@ -281,26 +299,19 @@ switch ($method) {
             }
         }
 
-        // Salva primeiro na VPS (PostgreSQL)
-        $vps = callVpsApi('POST', '/products', $input, $token);
-        if ($vps !== null && isset($vps['product'])) {
-            $created = $vps['product'];
-            $version = (int)($vps['version'] ?? 45);
-            $catalog = readCatalog() ?: ['version' => 45, 'products' => []];
-            insertProduct($created, $catalog);
-            respond(201, null, ['product' => $created, 'version' => $version]);
+        // Grava no catálogo local (fonte da verdade) e responde na hora; a VPS é atualizada depois.
+        if (empty($input['id'])) {
+            $input['id'] = 'prod_' . round(microtime(true) * 1000) . '_' . substr(bin2hex(random_bytes(4)), 0, 5);
         }
-
-        // Fallback local se VPS indisponível
         $catalog = readCatalog();
         if ($catalog === null) {
             respond(500, 'Catálogo corrompido: products.json não pôde ser lido. Restaure um backup.');
         }
         $created = insertProduct($input, $catalog);
         if ($created === null) {
-            respond(400, 'Produto inválido: id, brand, name e price são obrigatórios.');
+            respond(400, 'Produto inválido: marca, nome e preço são obrigatórios.');
         }
-        respond(201, null, ['product' => $created, 'version' => $catalog['version']]);
+        respondThenSyncVps(201, ['product' => $created, 'version' => $catalog['version']], (string)$created['id'], 'upsert');
 
     case 'PUT':
         $id = trim((string)($input['id'] ?? $productId));
@@ -318,29 +329,18 @@ switch ($method) {
             }
         }
 
-        // Salva no PostgreSQL na VPS
-        $vps = callVpsApi('PUT', '/products/' . urlencode($id), $input, $token);
-        if ($vps !== null && isset($vps['product'])) {
-            $updated = $vps['product'];
-            $version = (int)($vps['version'] ?? 45);
-            $catalog = readCatalog() ?: ['version' => 45, 'products' => []];
-            updateProduct($id, $updated, $catalog);
-            respond(200, null, ['product' => $updated, 'version' => $version]);
-        }
-
-        // Fallback local se VPS indisponível
         $catalog = readCatalog();
         if ($catalog === null) {
             respond(500, 'Catálogo corrompido: products.json não pôde ser lido. Restaure um backup.');
         }
         $updated = updateProduct($id, $input, $catalog);
         if ($updated['status'] === 'invalid') {
-            respond(400, 'Produto inválido: brand, name e price não podem ficar vazios.');
+            respond(400, 'Produto inválido: marca, nome e preço não podem ficar vazios.');
         }
         if ($updated['status'] === 'not_found') {
             respond(404, 'Produto não encontrado.');
         }
-        respond(200, null, ['product' => $updated['product'], 'version' => $catalog['version']]);
+        respondThenSyncVps(200, ['product' => $updated['product'], 'version' => $catalog['version']], $id, 'upsert');
 
     case 'DELETE':
         $id = trim((string)($productId !== '' ? $productId : ($input['id'] ?? '')));
@@ -348,20 +348,11 @@ switch ($method) {
             respond(400, 'Informe o id do produto a excluir.');
         }
 
-        // Deleta no PostgreSQL na VPS
-        $vps = callVpsApi('DELETE', '/products/' . urlencode($id), null, $token);
-        if ($vps !== null && !empty($vps['success'])) {
-            deleteProduct($id);
-            $version = (int)($vps['version'] ?? 45);
-            respond(200, null, ['deleted' => $id, 'version' => $version]);
-        }
-
-        // Fallback local
         $removed = deleteProduct($id);
         if (!$removed['ok']) {
             respond(404, 'Produto não encontrado.');
         }
-        respond(200, null, ['deleted' => $id, 'version' => $removed['version']]);
+        respondThenSyncVps(200, ['deleted' => $id, 'version' => $removed['version']], $id, 'delete');
 
     default:
         header('Allow: GET, POST, PUT, DELETE, OPTIONS');
@@ -371,6 +362,111 @@ switch ($method) {
 // ─────────────────────────────────────────────────────────────────────
 //  Leitura do catálogo com ETag
 // ─────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────
+//  Espelho na VPS (cópia de segurança) com fila de nova tentativa
+// ─────────────────────────────────────────────────────────────────────
+
+/** Lê/atualiza a fila sob lock. $mutator recebe a fila e devolve a nova. */
+function withVpsQueue(callable $mutator): array
+{
+    $fh = @fopen(VPS_QUEUE_FILE, 'c+');
+    if (!$fh) return [];
+    flock($fh, LOCK_EX);
+    $raw = stream_get_contents($fh);
+    $queue = $raw ? json_decode($raw, true) : [];
+    if (!is_array($queue)) $queue = [];
+    $next = $mutator($queue);
+    ftruncate($fh, 0);
+    rewind($fh);
+    fwrite($fh, json_encode($next, JSON_UNESCAPED_SLASHES));
+    fflush($fh);
+    flock($fh, LOCK_UN);
+    fclose($fh);
+    return $next;
+}
+
+function enqueueVpsSync(string $id, string $op): void
+{
+    withVpsQueue(static function (array $queue) use ($id, $op): array {
+        $queue[$id] = $op; // a última operação sobre o produto é a que vale
+        return $queue;
+    });
+}
+
+/** Envia para a VPS o estado ATUAL do produto (ou a exclusão). true = VPS em dia. */
+function pushProductToVps(string $id, string $op, array $localProducts): bool
+{
+    $current = null;
+    foreach ($localProducts as $product) {
+        if (($product['id'] ?? '') === $id) { $current = $product; break; }
+    }
+    if ($op === 'upsert' && $current === null) {
+        $op = 'delete'; // foi excluído depois de entrar na fila
+    }
+
+    $status = 0;
+    if ($op === 'delete') {
+        $res = callVpsApi('DELETE', '/products/' . urlencode($id), null, null, 5, $status);
+        return ($res !== null && !empty($res['success'])) || $status === 404;
+    }
+    // POST da VPS é upsert pelo id: manda o registro completo, não só o que mudou.
+    $res = callVpsApi('POST', '/products', $current, null, 5, $status);
+    if ($res !== null && isset($res['product'])) return true;
+    // A VPS recusou o registro (4xx que não é limite/timeout): reenviar não muda nada.
+    // Sai da fila para não ficar tentando para sempre; o catálogo local continua certo.
+    if ($status >= 400 && $status < 500 && $status !== 408 && $status !== 429) {
+        error_log("[products] VPS recusou o produto {$id} (HTTP {$status}); removido da fila de espelho.");
+        return true;
+    }
+    return false;
+}
+
+/** Tenta esvaziar a fila (até $max itens). Roda depois de a resposta já ter saído. */
+function drainVpsQueue(int $max = 5): void
+{
+    $queue = withVpsQueue(static function (array $q): array { return $q; });
+    if (!$queue) return;
+    $catalog = readCatalog();
+    $products = $catalog['products'] ?? [];
+    $done = [];
+    foreach (array_slice($queue, 0, $max, true) as $id => $op) {
+        if (pushProductToVps((string)$id, (string)$op, $products)) {
+            $done[(string)$id] = $op;
+        }
+    }
+    if ($done) {
+        withVpsQueue(static function (array $q) use ($done): array {
+            foreach ($done as $id => $op) {
+                if (($q[$id] ?? null) === $op) unset($q[$id]); // não remove se mudou nesse meio-tempo
+            }
+            return $q;
+        });
+    }
+}
+
+/**
+ * Responde ao painel IMEDIATAMENTE (a gravação local já aconteceu) e só depois espelha na VPS.
+ * Antes a resposta esperava a VPS (até 3s) e, se ela falhasse, a VPS ficava com a versão antiga.
+ */
+function respondThenSyncVps(int $code, array $payload, string $id, string $op): void
+{
+    enqueueVpsSync($id, $op);
+    $finish = function_exists('fastcgi_finish_request') ? 'fastcgi_finish_request'
+        : (function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : null);
+
+    $body = json_encode($payload, JSON_UNESCAPED_UNICODE);
+    ignore_user_abort(true);
+    http_response_code($code);
+    echo $body;
+    if ($finish !== null) {
+        $finish();
+        drainVpsQueue();
+    }
+    // Sem como liberar a conexão antes: não segura o painel esperando a VPS; a fila é
+    // processada nas próximas leituras do catálogo (respondThenHeal).
+    exit;
+}
 
 /**
  * @return array{products: array, version: int, etag: string}|null
@@ -680,6 +776,7 @@ function respondThenHeal(array $products, int $version): void
     http_response_code(200);
     echo $body;
     $finish();
+    drainVpsQueue(3);
     healCatalogImages($products);
     exit;
 }
@@ -902,12 +999,18 @@ function sanitizeProduct(array $input, bool $partial = false): ?array
         }
     }
 
-    $stkInput = (int)($input['stock'] ?? $record['stock'] ?? 0);
-    $singleVal = ($stkInput === 1);
-    $record['singlePiece'] = $singleVal;
-    $record['pecaUnica'] = $singleVal;
-    $record['peca_unica'] = $singleVal;
-    $record['single_piece'] = $singleVal;
+    // Campos derivados do estoque só são recalculados quando o estoque veio na requisição.
+    // Antes, uma atualização parcial sem "stock" (ex.: marcar Mais Vendidos) gravava
+    // inStock/available = false e o produto aparecia esgotado mesmo tendo estoque.
+    $hasStock = !$partial || array_key_exists('stock', $input);
+    if ($hasStock) {
+        $stkInput = (int)($record['stock'] ?? 0);
+        $singleVal = ($stkInput === 1);
+        $record['singlePiece'] = $singleVal;
+        $record['pecaUnica'] = $singleVal;
+        $record['peca_unica'] = $singleVal;
+        $record['single_piece'] = $singleVal;
+    }
 
     // Acesso Antecipado / Exclusividade VIP
     if (array_key_exists('isVipExclusive', $input) || array_key_exists('vipExclusive', $input) || array_key_exists('vipOnly', $input)) {
@@ -940,9 +1043,11 @@ function sanitizeProduct(array $input, bool $partial = false): ?array
 
     // Produtos NUNCA são inativados: sempre ativos, apenas esgotados via estoque
     $record['active'] = true;
-    $stkVal = (int)($record['stock'] ?? 0);
-    $record['inStock'] = $stkVal > 0;
-    $record['available'] = $stkVal > 0;
+    if ($hasStock) {
+        $stkVal = (int)($record['stock'] ?? 0);
+        $record['inStock'] = $stkVal > 0;
+        $record['available'] = $stkVal > 0;
+    }
 
     // Derivados: o storefront e a vitrine esperam image = images[0].
     if (array_key_exists('image', $input) || array_key_exists('images', $input)) {

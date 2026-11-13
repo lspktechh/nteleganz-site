@@ -241,11 +241,17 @@
     // de esconder a seção. Esconder agora causaria um salto de layout, porque a
     // seção voltaria some milissegundos depois com os produtos reais.
     if (!productsLoaded) return;
-    let featured = ACTIVE_PRODUCTS.filter(p => p.featured === true && p.active !== false);
-    if (featured.length === 0) {
-      // Sem destaque marcado, mostra os ativos do servidor: assim um produto
-      // recém-criado aparece mesmo sem ter sido marcado como destaque.
-      featured = ACTIVE_PRODUCTS.slice(0, 8);
+    // Mais Vendidos: sempre 4 produtos EM ESTOQUE. Esgotado sai na hora; as vagas
+    // abertas são completadas com outros produtos em estoque até o dono escolher o
+    // substituto no painel (que abre sozinho quando um destaque esgota).
+    const BESTSELLERS_SLOTS = 4;
+    const inStock = p => p.active !== false
+      && !((p.stock !== undefined && Number(p.stock) <= 0) || p.inStock === false || p.available === false);
+    let featured = ACTIVE_PRODUCTS.filter(p => p.featured === true && inStock(p)).slice(0, BESTSELLERS_SLOTS);
+    if (featured.length < BESTSELLERS_SLOTS) {
+      const chosen = new Set(featured.map(p => p.id));
+      const fillers = ACTIVE_PRODUCTS.filter(p => !chosen.has(p.id) && inStock(p));
+      featured = featured.concat(fillers.slice(0, BESTSELLERS_SLOTS - featured.length));
     }
     if (featured.length === 0) {
       // Catálogo confirmado e vazio. Não se recorre a NT_PRODUCT_DEFAULTS aqui:

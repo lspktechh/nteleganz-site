@@ -11,6 +11,7 @@ data/backups/
 data/vps_secret.txt
 data/vip_login_attempts.json
 data/.orders_vps_sync_at
+data/vps_product_queue.json
 
 # Arquivos de sistema operacional e metadados
 .DS_Store
