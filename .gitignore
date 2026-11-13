@@ -8,6 +8,8 @@ data/products.json
 data/backups/
 
 # Segredos e estado gerado no servidor (o repositório é público)
+# Dados cadastrados no painel/loja (membros VIP, pedidos, configurações): ver api/lib/live_data.php
+data/*.live.json
 data/vps_secret.txt
 data/vip_login_attempts.json
 data/.orders_vps_sync_at

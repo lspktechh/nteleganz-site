@@ -10,19 +10,35 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/live_data.php';
+
+/**
+ * Semente versionada no git. Os membros de verdade ficam em data/vip_subscriptions.live.json (fora do
+ * git, ver live_data.php). Antes tudo era gravado na semente, e cada deploy (a Hostinger puxa o
+ * repositório) substituía o arquivo pela cópia do git — os membros VIP sumiam a cada push.
+ */
 if (!defined('NTE_VIP_SUBSCRIPTIONS_FILE')) {
     define('NTE_VIP_SUBSCRIPTIONS_FILE', __DIR__ . '/../../data/vip_subscriptions.json');
 }
 
-/** Lista de assinaturas como está no arquivo. */
+/** Lista de assinaturas (arquivo vivo). */
 function nte_vip_subscriptions(): array
 {
-    if (!file_exists(NTE_VIP_SUBSCRIPTIONS_FILE)) return [];
-    $raw = @file_get_contents(NTE_VIP_SUBSCRIPTIONS_FILE);
-    $data = $raw ? @json_decode($raw, true) : null;
+    $data = nte_live_read(NTE_VIP_SUBSCRIPTIONS_FILE);
     return (is_array($data) && isset($data['subscriptions']) && is_array($data['subscriptions']))
         ? $data['subscriptions']
         : [];
+}
+
+/** Grava as assinaturas no arquivo vivo (nunca na semente versionada). */
+function nte_vip_save_subscriptions(array $subs): bool
+{
+    $payload = json_encode([
+        'updatedAt' => date('c'),
+        'count' => count($subs),
+        'subscriptions' => array_values($subs),
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    return $payload !== false && nte_live_write(NTE_VIP_SUBSCRIPTIONS_FILE, $payload);
 }
 
 /** Assinatura ativa e dentro da validade (vitalícia não expira). */

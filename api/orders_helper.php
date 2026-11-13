@@ -7,6 +7,7 @@
 date_default_timezone_set('America/Sao_Paulo');
 
 require_once __DIR__ . '/lib/vps_secret.php';
+require_once __DIR__ . '/lib/live_data.php';
 
 /**
  * De quanto em quanto tempo (segundos) a lista de pedidos é mesclada com a VPS.
@@ -56,26 +57,24 @@ function callVpsOrders(string $method, string $url, ?array $body = null): ?array
     return is_array($decoded) ? $decoded : null;
 }
 
+/*
+ * Pedidos ficam em data/orders.live.json, fora do git (ver lib/live_data.php). data/orders.json é
+ * versionado: antes era gravado direto e cada deploy (a Hostinger puxa o repositório) o voltava para
+ * a cópia do git — pedidos recentes só voltavam pela mesclagem com a VPS.
+ */
 function readLocalOrders(): array {
-    if (!file_exists(ORDERS_FILE)) return [];
-    $raw = @file_get_contents(ORDERS_FILE);
-    if (!$raw) return [];
-    $data = @json_decode($raw, true);
+    $data = nte_live_read(ORDERS_FILE);
     return (is_array($data) && isset($data['orders']) && is_array($data['orders'])) ? $data['orders'] : [];
 }
 
 function saveLocalOrders(array $orders): bool {
-    $dir = dirname(ORDERS_FILE);
-    if (!is_dir($dir)) {
-        @mkdir($dir, 0755, true);
-    }
     $payload = json_encode([
         'updatedAt' => date('c'),
         'count' => count($orders),
         'orders' => array_values($orders)
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-    return @file_put_contents(ORDERS_FILE, $payload, LOCK_EX) !== false;
+    return $payload !== false && nte_live_write(ORDERS_FILE, $payload);
 }
 
 function normalizeOrderChannel(array $order): array {
@@ -159,6 +158,9 @@ function normalizeOrderChannel(array $order): array {
  * Nenhum pedido local é apagado caso a VPS falhe ou retorne lista incompleta.
  */
 function getMergedOrders(): array {
+    // Primeira leitura depois de migrar para o arquivo vivo: ele nasce da semente (cópia antiga do
+    // git), então mescla com a VPS já nesta chamada em vez de esperar o intervalo.
+    $firstLiveRead = !is_file(nte_live_path(ORDERS_FILE));
     $local = readLocalOrders();
     $indexed = [];
 
@@ -169,7 +171,7 @@ function getMergedOrders(): array {
     }
 
     // Consulta VPS com timeout rápido — no máximo uma vez a cada NTE_ORDERS_VPS_SYNC_INTERVAL.
-    $vps = nteOrdersVpsSyncDue() ? callVpsOrders('GET', VPS_API_ORDERS) : null;
+    $vps = ($firstLiveRead || nteOrdersVpsSyncDue()) ? callVpsOrders('GET', VPS_API_ORDERS) : null;
     if ($vps !== null && isset($vps['orders']) && is_array($vps['orders'])) {
         foreach ($vps['orders'] as $vItem) {
             $vKey = !empty($vItem['id']) ? (string)$vItem['id'] : (!empty($vItem['code']) ? (string)$vItem['code'] : null);

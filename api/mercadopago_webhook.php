@@ -159,11 +159,10 @@ $isApproved = ($status === 'approved');
 // Tratamento de assinaturas da Área VIP
 if ($orderCode !== '' && (stripos($orderCode, 'VIP-') === 0 || stripos($orderCode, '#VIP-') === 0)) {
     $cleanVipCode = strtoupper(ltrim($orderCode, '#'));
-    $vipSubsFile = __DIR__ . '/../data/vip_subscriptions.json';
-    if (file_exists($vipSubsFile)) {
-        $rawSubs = @file_get_contents($vipSubsFile);
-        $subsData = $rawSubs ? @json_decode($rawSubs, true) : null;
-        $subs = (is_array($subsData) && isset($subsData['subscriptions'])) ? $subsData['subscriptions'] : [];
+    // Membros ficam no arquivo vivo (fora do git): ver lib/vip_auth.php.
+    require_once __DIR__ . '/lib/vip_auth.php';
+    {
+        $subs = nte_vip_subscriptions();
         $found = false;
         foreach ($subs as &$s) {
             if ($s['subCode'] === $cleanVipCode || (string)($s['mercadopagoPaymentId'] ?? '') === (string)$paymentId) {
@@ -186,11 +185,7 @@ if ($orderCode !== '' && (stripos($orderCode, 'VIP-') === 0 || stripos($orderCod
         }
         unset($s);
         if ($found) {
-            @file_put_contents($vipSubsFile, json_encode([
-                'updatedAt' => date('c'),
-                'count' => count($subs),
-                'subscriptions' => $subs
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), LOCK_EX);
+            nte_vip_save_subscriptions($subs);
         }
     }
 

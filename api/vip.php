@@ -41,41 +41,31 @@ function defaultVipSettings(): array {
     ];
 }
 
+// Configurações e membros ficam nos arquivos VIVOS (data/*.live.json, fora do git — ver
+// lib/live_data.php). Os .json versionados são só a semente: antes eram gravados direto e cada
+// deploy os substituía pela cópia do repositório, apagando membros e o link do grupo.
 function readVipSettings(): array {
-    if (!file_exists(VIP_SETTINGS_FILE)) {
+    $data = nte_live_read(VIP_SETTINGS_FILE);
+    if (!is_array($data)) {
         $defaults = defaultVipSettings();
-        @file_put_contents(VIP_SETTINGS_FILE, json_encode($defaults, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        nte_live_write(VIP_SETTINGS_FILE, json_encode($defaults, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
         return $defaults;
     }
-    $raw = @file_get_contents(VIP_SETTINGS_FILE);
-    $data = $raw ? @json_decode($raw, true) : null;
-    return is_array($data) ? array_merge(defaultVipSettings(), $data) : defaultVipSettings();
+    return array_merge(defaultVipSettings(), $data);
 }
 
 function saveVipSettings(array $settings): bool {
     $settings['updatedAt'] = date('c');
     $payload = json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    return (bool)@file_put_contents(VIP_SETTINGS_FILE, $payload, LOCK_EX);
+    return $payload !== false && nte_live_write(VIP_SETTINGS_FILE, $payload);
 }
 
 function readVipSubscriptions(): array {
-    if (!file_exists(VIP_SUBSCRIPTIONS_FILE)) {
-        return [];
-    }
-    $raw = @file_get_contents(VIP_SUBSCRIPTIONS_FILE);
-    $data = $raw ? @json_decode($raw, true) : null;
-    return (is_array($data) && isset($data['subscriptions']) && is_array($data['subscriptions']))
-        ? $data['subscriptions']
-        : [];
+    return nte_vip_subscriptions();
 }
 
 function saveVipSubscriptions(array $subs): bool {
-    $payload = json_encode([
-        'updatedAt' => date('c'),
-        'count' => count($subs),
-        'subscriptions' => $subs
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    return (bool)@file_put_contents(VIP_SUBSCRIPTIONS_FILE, $payload, LOCK_EX);
+    return nte_vip_save_subscriptions($subs);
 }
 
 function getMercadoPagoAccessToken(): string {
