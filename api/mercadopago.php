@@ -116,7 +116,7 @@ function isCustomerVip(?string $token, ?string $phone = null, ?string $email = n
     return nte_vip_token_is_valid($token);
 }
 
-function callMercadoPagoApi(string $url, string $method, ?array $body, string $accessToken, ?string $idempotencyKey = null): array {
+function callMercadoPagoApi(string $url, string $method, ?array $body, string $accessToken, ?string $idempotencyKey = null, array $extraHeaders = []): array {
     $ch = curl_init($url);
     $headers = [
         'Content-Type: application/json',
@@ -124,6 +124,9 @@ function callMercadoPagoApi(string $url, string $method, ?array $body, string $a
     ];
     if ($idempotencyKey) {
         $headers[] = 'X-Idempotency-Key: ' . $idempotencyKey;
+    }
+    foreach ($extraHeaders as $k => $v) {
+        $headers[] = "{$k}: {$v}";
     }
 
     $opts = [
@@ -619,43 +622,116 @@ $totalAmount = round($itemsSubtotal + $effectiveShipping, 2);
 if ($totalAmount <= 0) $totalAmount = 1.00;
 $formattedTotal = 'R$ ' . number_format($totalAmount, 2, ',', '.');
 
+// Captura device ID para anti-fraude Mercado Pago
+$deviceId = trim((string)($data['deviceId'] ?? ''));
+
+// Captura IP real do cliente
+$clientIp = $_SERVER['HTTP_CF_CONNECTING_IP']
+    ?? $_SERVER['HTTP_X_FORWARDED_FOR']
+    ?? $_SERVER['HTTP_CLIENT_IP']
+    ?? $_SERVER['REMOTE_ADDR']
+    ?? '';
+if (strpos($clientIp, ',') !== false) {
+    $clientIp = trim(explode(',', $clientIp)[0]);
+}
+
 // Dados do Pagador
 $custName = trim((string)($customer['name'] ?? ''));
+if ($custName === '') {
+    $custName = 'Cliente NT Eleganz';
+}
 $nameParts = explode(' ', $custName, 2);
-$firstName = $nameParts[0] ?: 'Cliente';
-$lastName = $nameParts[1] ?? 'NT Eleganz';
-$cleanCpf = preg_replace('/\D/', '', (string)($customer['cpf'] ?? ''));
+$firstName = trim($nameParts[0]) ?: 'Cliente';
+$lastName = trim($nameParts[1] ?? '') ?: 'NT Eleganz';
+
+$cleanCpf = preg_replace('/\D/', '', (string)($customer['cpf'] ?? ($customer['cardholderCpf'] ?? '')));
 $cleanPhone = preg_replace('/\D/', '', (string)($customer['phone'] ?? ''));
 $areaCode = strlen($cleanPhone) >= 10 ? substr($cleanPhone, 0, 2) : '11';
 $phoneNum = strlen($cleanPhone) >= 10 ? substr($cleanPhone, 2) : $cleanPhone;
 
+$custEmail = trim((string)($customer['email'] ?? ''));
+if ($custEmail === '' || !filter_var($custEmail, FILTER_VALIDATE_EMAIL)) {
+    $custEmail = 'sac@nteleganz.com.br';
+}
+
 $addr = is_array($customer['address'] ?? null) ? $customer['address'] : [];
 $cleanCep = preg_replace('/\D/', '', (string)($addr['cep'] ?? ''));
 $streetNumber = (int)preg_replace('/\D/', '', (string)($addr['number'] ?? '0')) ?: 1;
+$streetName = trim((string)($addr['street'] ?? 'Endereço'));
+$neighborhood = trim((string)($addr['neighborhood'] ?? 'Bairro'));
+$city = trim((string)($addr['city'] ?? 'São Paulo'));
+$state = trim((string)($addr['state'] ?? 'SP'));
 
+// Objeto payer raiz do Mercado Pago
 $payer = [
-    'email' => trim((string)($customer['email'] ?? 'sac@nteleganz.com.br')),
-    'first_name' => $firstName,
-    'last_name' => $lastName,
+    'email' => $custEmail
+];
+if (strlen($cleanCpf) === 11) {
+    $payer['identification'] = [
+        'type' => 'CPF',
+        'number' => $cleanCpf
+    ];
+}
+
+// Constrói additional_info estritamente alinhado às diretrizes anti-fraude do Mercado Pago
+$additionalItems = [];
+if (!empty($items) && is_array($items)) {
+    foreach ($items as $idx => $it) {
+        $pQty = max(1, (int)($it['qty'] ?? $it['quantity'] ?? 1));
+        $pPrice = parsePriceToFloat($it['price'] ?? 0);
+        $pTitle = trim((string)($it['name'] ?? $it['title'] ?? ('Produto ' . ($idx + 1))));
+        $additionalItems[] = [
+            'id' => (string)($it['id'] ?? ('item_' . ($idx + 1))),
+            'title' => mb_substr($pTitle, 0, 128),
+            'description' => mb_substr($pTitle, 0, 256),
+            'category_id' => 'fashion',
+            'quantity' => $pQty,
+            'unit_price' => $pPrice > 0 ? $pPrice : round($totalAmount / max(1, count($items)), 2)
+        ];
+    }
+}
+if (empty($additionalItems)) {
+    $additionalItems[] = [
+        'id' => 'pedido_' . $orderCode,
+        'title' => 'Pedido NT Eleganz ' . $displayCode,
+        'description' => 'Produtos de Moda e Acessórios NT Eleganz',
+        'category_id' => 'fashion',
+        'quantity' => 1,
+        'unit_price' => $totalAmount
+    ];
+}
+
+$additionalPayer = [
+    'first_name' => mb_substr($firstName, 0, 30),
+    'last_name' => mb_substr($lastName, 0, 30),
     'phone' => [
         'area_code' => $areaCode,
         'number' => $phoneNum
     ],
     'address' => [
         'zip_code' => $cleanCep,
-        'street_name' => trim((string)($addr['street'] ?? 'Endereço')),
-        'street_number' => $streetNumber,
-        'neighborhood' => trim((string)($addr['neighborhood'] ?? 'Bairro')),
-        'city' => trim((string)($addr['city'] ?? 'São Paulo')),
-        'federal_unit' => trim((string)($addr['state'] ?? 'SP'))
+        'street_name' => mb_substr($streetName, 0, 60),
+        'street_number' => $streetNumber
     ]
 ];
 
-if (strlen($cleanCpf) === 11) {
-    $payer['identification'] = [
-        'type' => 'CPF',
-        'number' => $cleanCpf
+$additionalInfo = [
+    'items' => $additionalItems,
+    'payer' => $additionalPayer
+];
+
+if (!empty($cleanCep) && !empty($streetName)) {
+    $additionalInfo['shipments'] = [
+        'receiver_address' => [
+            'zip_code' => $cleanCep,
+            'street_name' => mb_substr($streetName, 0, 60),
+            'street_number' => $streetNumber
+        ]
     ];
+}
+
+if (!empty($clientIp)) {
+    $additionalInfo['ip_address'] = $clientIp;
 }
 
 $webhookUrl = 'https://nteleganz.com.br/api/mercadopago_webhook.php';
@@ -667,13 +743,19 @@ if ($action === 'process_pix') {
         'description' => "Pedido NT Eleganz {$displayCode}",
         'payment_method_id' => 'pix',
         'payer' => $payer,
+        'additional_info' => $additionalInfo,
         'external_reference' => $orderCode,
         'notification_url' => $webhookUrl,
         'statement_descriptor' => !empty($settings['statementDescriptor']) ? $settings['statementDescriptor'] : 'NT ELEGANZ'
     ];
 
+    $extraHeaders = [];
+    if ($deviceId !== '') {
+        $extraHeaders['X-Meli-Session-Id'] = $deviceId;
+    }
+
     $idempotencyKey = 'pix-' . $orderCode . '-' . time();
-    $res = callMercadoPagoApi(MP_PAYMENTS_URL, 'POST', $pixPayload, $accessToken, $idempotencyKey);
+    $res = callMercadoPagoApi(MP_PAYMENTS_URL, 'POST', $pixPayload, $accessToken, $idempotencyKey, $extraHeaders);
     $payData = $res['data'] ?? [];
 
     if ($res['httpCode'] >= 400 || empty($payData['id'])) {
@@ -729,7 +811,7 @@ if ($action === 'process_pix') {
         'pixQrCode' => $qrCode,
         'pixQrCodeBase64' => $qrCodeBase64,
         'ticketUrl' => $ticketUrl,
-        'clientIp' => $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '',
+        'clientIp' => $clientIp,
         'userAgent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
         'createdAt' => date('c'),
         'updatedAt' => date('c')
@@ -770,6 +852,16 @@ if ($action === 'process_card') {
         : $totalAmount;
     $cardFormattedTotal = 'R$ ' . number_format($cardTotalAmount, 2, ',', '.');
 
+    // Ajusta o unit_price dos itens em additional_info se 1x com taxa
+    $cardAdditionalInfo = $additionalInfo;
+    if ($cardTotalAmount !== $totalAmount && !empty($cardAdditionalInfo['items'])) {
+        $ratio = $cardTotalAmount / max(0.01, $totalAmount);
+        foreach ($cardAdditionalInfo['items'] as &$it) {
+            $it['unit_price'] = round($it['unit_price'] * $ratio, 2);
+        }
+        unset($it);
+    }
+
     $cardPayload = [
         'transaction_amount' => $cardTotalAmount,
         'token' => $token,
@@ -777,6 +869,7 @@ if ($action === 'process_card') {
         'installments' => $installments,
         'payment_method_id' => $paymentMethodId,
         'payer' => $payer,
+        'additional_info' => $cardAdditionalInfo,
         'external_reference' => $orderCode,
         'notification_url' => $webhookUrl,
         'statement_descriptor' => !empty($settings['statementDescriptor']) ? $settings['statementDescriptor'] : 'NT ELEGANZ'
@@ -785,8 +878,13 @@ if ($action === 'process_card') {
         $cardPayload['issuer_id'] = $issuerId;
     }
 
+    $extraHeaders = [];
+    if ($deviceId !== '') {
+        $extraHeaders['X-Meli-Session-Id'] = $deviceId;
+    }
+
     $idempotencyKey = 'card-' . $orderCode . '-' . time();
-    $res = callMercadoPagoApi(MP_PAYMENTS_URL, 'POST', $cardPayload, $accessToken, $idempotencyKey);
+    $res = callMercadoPagoApi(MP_PAYMENTS_URL, 'POST', $cardPayload, $accessToken, $idempotencyKey, $extraHeaders);
     $payData = $res['data'] ?? [];
 
     if ($res['httpCode'] >= 400 || empty($payData['id'])) {

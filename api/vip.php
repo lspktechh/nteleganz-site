@@ -79,7 +79,7 @@ function getMercadoPagoAccessToken(): string {
     return 'APP_USR-4148777530483800-110522-7c2732adbccc669d7ba002abde4ccd4c-662355896';
 }
 
-function callMercadoPago(string $url, string $method, ?array $body, string $accessToken, ?string $idempotencyKey = null): array {
+function callMercadoPago(string $url, string $method, ?array $body, string $accessToken, ?string $idempotencyKey = null, array $extraHeaders = []): array {
     $ch = curl_init($url);
     $headers = [
         'Content-Type: application/json',
@@ -88,6 +88,9 @@ function callMercadoPago(string $url, string $method, ?array $body, string $acce
     // O Mercado Pago recusa POST /v1/payments sem este cabeçalho ("Header X-Idempotency-Key can't be null")
     if ($idempotencyKey) {
         $headers[] = 'X-Idempotency-Key: ' . $idempotencyKey;
+    }
+    foreach ($extraHeaders as $k => $v) {
+        $headers[] = "{$k}: {$v}";
     }
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -347,6 +350,16 @@ if ($action === 'subscribe' && $method === 'POST') {
     $accessToken = getMercadoPagoAccessToken();
     $webhookUrl = 'https://nteleganz.com.br/api/mercadopago_webhook.php';
 
+    $deviceId = trim((string)($input['deviceId'] ?? ''));
+    $clientIp = $_SERVER['HTTP_CF_CONNECTING_IP']
+        ?? $_SERVER['HTTP_X_FORWARDED_FOR']
+        ?? $_SERVER['HTTP_CLIENT_IP']
+        ?? $_SERVER['REMOTE_ADDR']
+        ?? '';
+    if (strpos($clientIp, ',') !== false) {
+        $clientIp = trim(explode(',', $clientIp)[0]);
+    }
+
     $cleanPhoneDigits = preg_replace('/\D/', '', $custPhone);
     $areaCode = strlen($cleanPhoneDigits) >= 10 ? substr($cleanPhoneDigits, 0, 2) : '11';
     $phoneNum = strlen($cleanPhoneDigits) >= 10 ? substr($cleanPhoneDigits, 2) : $cleanPhoneDigits;
@@ -379,8 +392,24 @@ if ($action === 'subscribe' && $method === 'POST') {
             'category_id' => 'services',
             'quantity' => 1,
             'unit_price' => $amount
-        ]]
+        ]],
+        'payer' => [
+            'first_name' => explode(' ', $custName)[0],
+            'last_name' => explode(' ', $custName)[1] ?? 'VIP',
+            'phone' => [
+                'area_code' => $areaCode,
+                'number' => $phoneNum
+            ]
+        ]
     ];
+    if (!empty($clientIp)) {
+        $additionalInfo['ip_address'] = $clientIp;
+    }
+
+    $extraHeaders = [];
+    if ($deviceId !== '') {
+        $extraHeaders['X-Meli-Session-Id'] = $deviceId;
+    }
 
     if ($paymentMethod === 'pix') {
         $pixPayload = [
@@ -394,7 +423,7 @@ if ($action === 'subscribe' && $method === 'POST') {
             'statement_descriptor' => 'NT VIP'
         ];
 
-        $res = callMercadoPago(MP_PAYMENTS_URL, 'POST', $pixPayload, $accessToken, 'vip-pix-' . $subCode);
+        $res = callMercadoPago(MP_PAYMENTS_URL, 'POST', $pixPayload, $accessToken, 'vip-pix-' . $subCode, $extraHeaders);
         $payData = $res['data'] ?? [];
 
         if ($res['httpCode'] >= 400 || empty($payData['id'])) {
@@ -475,7 +504,7 @@ if ($action === 'subscribe' && $method === 'POST') {
             'statement_descriptor' => 'NT VIP'
         ];
 
-        $res = callMercadoPago(MP_PAYMENTS_URL, 'POST', $cardPayload, $accessToken, 'vip-card-' . $subCode);
+        $res = callMercadoPago(MP_PAYMENTS_URL, 'POST', $cardPayload, $accessToken, 'vip-card-' . $subCode, $extraHeaders);
         $payData = $res['data'] ?? [];
 
         if ($res['httpCode'] >= 400 || empty($payData['id'])) {

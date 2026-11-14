@@ -1160,11 +1160,15 @@
   function getCustomerPayload() {
     const vipToken = (typeof window.getVipToken === 'function' ? window.getVipToken() : (localStorage.getItem('nte_vip_token') || ''));
     const vipInsta = (typeof window.getVipInstagram === 'function' ? window.getVipInstagram() : (localStorage.getItem('nte_vip_instagram') || ''));
+    const rawCpf = (getVal('chk-cpf') || getVal('chk-card-cpf')).replace(/\D/g, '');
+    const rawCardCpf = (getVal('chk-card-cpf') || getVal('chk-cpf')).replace(/\D/g, '');
+    const custName = getVal('chk-name') || getVal('chk-card-name');
     return {
-      name: getVal('chk-name'),
+      name: custName,
       email: getVal('chk-email'),
       phone: getVal('chk-phone'),
-      cpf: getVal('chk-cpf'),
+      cpf: rawCpf,
+      cardholderCpf: rawCardCpf,
       vipToken: vipToken,
       instagram: vipInsta,
       address: {
@@ -1194,6 +1198,12 @@
 
   // ── 1. FLUXO PIX TRANSPARENTE NA TELA ──
   async function submitPixPayment() {
+    if (!validateCheckoutForm()) {
+      if (!validateStep1()) goToStep(1);
+      else if (!validateStep2() || !validateStep3()) goToStep(2);
+      return;
+    }
+
     const btn = document.getElementById('chk-btn-finish-order') || document.getElementById('chk-card-btn-pix') || document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
     const originalContent = btn ? btn.innerHTML : '';
 
@@ -1210,6 +1220,7 @@
     const isFree = selectedShipping.freeAbove && subtotal >= selectedShipping.freeAbove;
     const effectiveShippingPrice = isFree ? 0 : Number(selectedShipping.price || 0);
     const trackingData = window.nteTracking ? window.nteTracking.getTrackingData() : {};
+    const deviceId = window.MP_DEVICE_SESSION_ID || (document.getElementById('deviceId')?.value) || '';
 
     currentOrderCode = 'NTE-' + Math.floor(1000 + Math.random() * 9000);
 
@@ -1222,7 +1233,8 @@
         effectivePrice: effectiveShippingPrice
       },
       code: currentOrderCode,
-      tracking: trackingData
+      tracking: trackingData,
+      deviceId: deviceId
     };
 
     try {
@@ -1396,6 +1408,12 @@
 
   // ── 2. FLUXO CARTÃO DE CRÉDITO TRANSPARENTE ──
   async function submitCardPayment() {
+    if (!validateCheckoutForm()) {
+      if (!validateStep1()) goToStep(1);
+      else if (!validateStep2() || !validateStep3()) goToStep(2);
+      return;
+    }
+
     const btn = document.getElementById('chk-btn-finish-order') || document.getElementById('chk-card-btn-card') || document.getElementById('chk-submit-infinitepay') || document.getElementById('chk-submit-mercadopago');
     const originalContent = btn ? btn.innerHTML : '';
 
@@ -1432,7 +1450,11 @@
           cardExpirationYear: String(expYear),
           securityCode: cardCvv,
           identificationType: 'CPF',
-          identificationNumber: cardCpf
+          identificationNumber: cardCpf,
+          identification: {
+            type: 'CPF',
+            number: cardCpf
+          }
         });
         if (tokenRes && tokenRes.id) {
           cardToken = tokenRes.id;
@@ -1486,6 +1508,7 @@
     const isFree = selectedShipping.freeAbove && subtotal >= selectedShipping.freeAbove;
     const effectiveShippingPrice = isFree ? 0 : Number(selectedShipping.price || 0);
     const trackingData = window.nteTracking ? window.nteTracking.getTrackingData() : {};
+    const deviceId = window.MP_DEVICE_SESSION_ID || (document.getElementById('deviceId')?.value) || '';
     currentOrderCode = 'NTE-' + Math.floor(1000 + Math.random() * 9000);
 
     const payload = {
@@ -1500,7 +1523,8 @@
         effectivePrice: effectiveShippingPrice
       },
       code: currentOrderCode,
-      tracking: trackingData
+      tracking: trackingData,
+      deviceId: deviceId
     };
 
     try {
@@ -2190,9 +2214,15 @@
     if (btnCardCard) {
       btnCardCard.addEventListener('click', () => {
         selectedPaymentMethod = 'card';
-        if (validateStep4()) {
-          submitCardPayment();
+        if (!validateCheckoutForm()) {
+          if (!validateStep1()) {
+            goToStep(1);
+          } else if (!validateStep2() || !validateStep3()) {
+            goToStep(2);
+          }
+          return;
         }
+        submitCardPayment();
       });
     }
 
@@ -2218,15 +2248,21 @@
     const btnFinishOrder = document.getElementById('chk-btn-finish-order');
     if (btnFinishOrder) {
       btnFinishOrder.addEventListener('click', () => {
-        if (selectedPaymentMethod === 'pix') {
-          submitPixPayment();
-        } else if (selectedPaymentMethod === 'card') {
-          if (validateStep4()) {
-            submitCardPayment();
+        if (!validateCheckoutForm()) {
+          if (!validateStep1()) {
+            goToStep(1);
+          } else if (!validateStep2() || !validateStep3()) {
+            goToStep(2);
           } else {
             const cardEl = document.getElementById('card-pagamento');
             if (cardEl) cardEl.scrollIntoView({ behavior: 'smooth' });
           }
+          return;
+        }
+        if (selectedPaymentMethod === 'pix') {
+          submitPixPayment();
+        } else if (selectedPaymentMethod === 'card') {
+          submitCardPayment();
         } else {
           submitTransparentPayment();
         }

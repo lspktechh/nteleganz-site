@@ -394,7 +394,8 @@
             cardholderName: cardHolder,
             expirationMonth: expMonth,
             expirationYear: expYear,
-            securityCode: cardCvv
+            securityCode: cardCvv,
+            cpf: custCpf
           })
         });
 
@@ -408,6 +409,8 @@
         payload.token = tokenData.token;
         payload.paymentMethodId = tokenData.data?.payment_method_id || 'visa';
       }
+
+      payload.deviceId = window.MP_DEVICE_SESSION_ID || '';
 
       // Envia pedido de assinatura para o backend blindado
       const res = await fetch('/api/vip.php?action=subscribe', {
